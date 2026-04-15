@@ -1,0 +1,107 @@
+/* Базові стилі для ПК */
+.sidebar { 
+    width: var(--sidebar-width); 
+    background: #2c3e50; 
+    color: white; 
+    display: flex; 
+    flex-direction: column; 
+    padding: 20px 0; 
+    transition: transform 0.3s ease; /* Додаємо плавний рух */
+}
+
+/* Кнопка перемикача (бургер) */
+.mobile-nav-toggle {
+    display: none; /* Схована на комп'ютері */
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1100;
+    background: #2c3e50;
+    color: white;
+    border: none;
+    width: 45px;
+    height: 45px;
+    border-radius: 8px;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+/* Затемнення фону */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+}
+
+/* Робимо розрахунок таблиці фіксованим */
+.territory-table {
+    table-layout: fixed;
+    width: 100%; /* Таблиця розтягується на всю ширину, але стовпчики мають задані розміри */
+    border-collapse: collapse;
+}
+
+/* Перший стовпчик (Номер дільниці) */
+.territory-table th:nth-child(1),
+.territory-table td:nth-child(1) {
+    width: 60px;
+    text-align: center;
+}
+
+/* Другий стовпчик (Останнє опрацювання) */
+.territory-table th:nth-child(2),
+.territory-table td:nth-child(2) {
+    width: 103px;
+    text-align: center;
+}
+
+/* Третій стовпчик (Дільниця) */
+.territory-table th:nth-child(3),
+.territory-table td:nth-child(3) {
+    width: 207px;
+}
+
+/* Для всіх наступних стовпчиків, якщо вони є (наприклад, Отримано, Здано) */
+.territory-table th:nth-child(n+4),
+.territory-table td:nth-child(n+4) {
+    width: auto; /* Або задайте конкретну ширину, якщо потрібно */
+}
+
+/* Додаємо обрізку тексту, якщо він не влізає в 207px */
+.territory-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Адаптивність для телефонів */
+@media (max-width: 768px) {
+    .mobile-nav-toggle { display: block; }
+
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 1050;
+        transform: translateX(-100%); /* Виносимо за межі екрану */
+    }
+
+    /* Коли меню активне — висуваємо його */
+    .sidebar.active {
+        transform: translateX(0);
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+    }
+
+    .main-content {
+        padding-top: 70px !important; /* Місце для кнопки зверху */
+    }
+
+    .table-container {
+        overflow-x: auto;
+    }
+}

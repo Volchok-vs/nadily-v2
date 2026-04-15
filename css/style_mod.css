@@ -1,0 +1,95 @@
+.leaflet-top.leaflet-right {
+    display: flex;
+    gap: 10px;
+    flex-direction: row-reverse;
+    align-items: center;
+}
+
+.leaflet-touch .leaflet-bar {
+    border: none;
+}
+
+#filterMenu {
+    z-index: 10001 !important; /* Больше чем у Leaflet */
+}
+
+/* ПОВНА АДАПТАЦІЯ ПІД МОБІЛЬНІ ПРИСТРОЇ */
+@media screen and (max-width: 768px) {
+    
+    /* 1. Фільтр-меню: робимо компактним та з прокруткою */
+    #filterMenu {
+        top: 10px !important;
+        left: 10px !important;
+        right: 10px !important;
+        width: auto !important;
+        max-height: 85vh !important; /* Щоб не вилізало за екран */
+        overflow-y: auto !important; /* Додаємо внутрішню прокрутку */
+        transform: none !important;
+        padding: 12px !important;
+        box-sizing: border-box;
+    }
+
+    /* 2. Модальні вікна (Видача дільниці): центрування */
+    .modal, .logic-modal, .modal-container {
+        width: 92% !important;
+        max-width: 340px !important;
+        padding: 15px !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important; /* Чітко по центру */
+    }
+
+    /* 3. Кнопки керування: збільшуємо для пальців (стандарт 44px) */
+    .auth-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+       
+    }
+
+    .leaflet-custom-btn {
+        width: 46px !important;
+        height: 46px !important;
+        font-size: 24px !important;
+        justify-content: center;
+        margin-bottom: 10px;
+        border-radius: 6px;
+    }
+
+    /* 4. Попапи на мапі: адаптуємо під ширину екрану */
+    .leaflet-popup-content-wrapper {
+        width: 280px !important;
+    }
+
+    .popup-btn-row {
+        flex-direction: column !important; /* Кнопки в попапі одна під одною */
+        gap: 8px !important;
+    }
+
+    .popup-btn {
+        padding: 12px !important;
+        font-size: 16px !important;
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+
+    /* 5. Легенда (іконка питання) */
+    .legend {
+        bottom: 20px !important;
+        right: 15px !important;
+    }
+
+    .info-icon {
+        width: 48px !important;
+        height: 48px !important;
+        font-size: 26px !important;
+    }
+
+    /* Виправляємо відступи у списках всередині фільтра */
+    .filter-options label {
+        display: block;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 16px;
+    }
+}

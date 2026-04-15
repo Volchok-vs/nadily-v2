@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Налаштування розробника</title>
+    <link rel="stylesheet" href="css/style.css"> <style>
+        .dev-container { padding: 20px; max-width: 600px; margin: auto; }
+        .switch-card { 
+            background: #f4f4f4; padding: 15px; border-radius: 8px; 
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 10px; border: 1px solid #ddd;
+        }
+        /* Простий стилізований чекбокс */
+        .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { 
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; 
+            background-color: #ccc; transition: .4s; border-radius: 24px; 
+        }
+        input:checked + .slider { background-color: #ff9800; }
+        .slider:before { 
+            position: absolute; content: ""; height: 16px; width: 16px; 
+            left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; 
+        }
+        input:checked + .slider:before { transform: translateX(26px); }
+    </style>
+</head>
+<body>
+    <div class="dev-container">
+        <a href="profile.html" style="text-decoration: none;">← Назад до профілю</a>
+        <h1>Інструменти розробника</h1>
+        <hr>
+
+        <div class="switch-card">
+            <div>
+                <strong>Режим розробника</strong>
+                <p style="font-size: 0.8em; color: #666; margin: 0;">Активує приховані кнопки та лог в консолі</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="devModeToggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="switch-card">
+            <div>
+                <strong>Швидкий вихід</strong>
+                <p style="font-size: 0.8em; color: #666; margin: 0;">Показувати іконку 🚪 на головній карті</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="quickLogoutToggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="switch-card">
+            <div>
+                <strong>Лічильник завантаження</strong>
+                <p style="font-size: 0.8em; color: #666; margin: 0;">Час рендеру сторінки в кутку екрана</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="showLoadTimer">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <button onclick="clearAllCache()" style="margin-top: 20px; padding: 10px; width: 100%;">
+            Очистити весь LocalStorage (Full Reset)
+        </button>
+    </div>
+
+    <script src="js/dev-tools.js"></script>
+</body>
+</html>

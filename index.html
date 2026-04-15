@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Карта дільниць</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    
+
+
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        #map { height: 100vh; width: 100%; }
+
+        /* Стилизация попапов */
+        .leaflet-popup-content-wrapper {
+            background: #ffffff !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+        }
+        .popup-container { min-width: 200px; }
+        .popup-title { font-size: 17px; font-weight: bold; margin-bottom: 5px; display: block; text-align: center; }
+        .popup-status { font-size: 13px; display: block; text-align: center; margin-bottom: 10px; padding: 4px; border-radius: 4px; }
+        .status-free { background: #e6f4ea; color: #1e7e34; }
+        .status-taken { background: #feeeee; color: #d93025; }
+        .popup-btn-row { display: flex; gap: 8px; margin-top: 10px; }
+        .popup-btn {
+            flex: 1; padding: 8px; border: 1px solid #ddd; background: white;
+            border-radius: 6px; cursor: pointer; font-size: 12px; text-align: center; text-decoration: none; color: #333;
+        }
+        .popup-btn.primary { background: #007bff; color: white; border-color: #0056b3; }
+        
+        /* Меню фильтров */
+        #filterMenu {
+            position: fixed; top: 10px; right: 10px; z-index: 1000;
+            background: white; padding: 15px; border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: none; width: 250px;
+        }
+        .filter-group { margin-bottom: 15px; }
+        .filter-group label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; }
+        .search-input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        
+        .radio-group { display: flex; flex-direction: column; gap: 8px; }
+        .radio-item { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+    </style>
+    
+</head>
+
+<body>
+    <div id="map"></div>
+
+    <div id="filterMenu">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <span style="font-weight:bold;">Фільтри</span>
+            <button id="closeFilter" style="background:none; border:none; cursor:pointer; font-size:20px;">&times;</button>
+        </div>
+        
+        <div class="filter-group">
+            <label for="searchNumber">Пошук дільниці:</label>
+            <input type="number" id="searchNumber" class="search-input" placeholder="Введіть номер...">
+        </div>
+
+        <div class="filter-group">
+            <label>Статус:</label>
+            <div class="radio-group">
+                <label class="radio-item"><input type="radio" name="statusFilter" value="all" checked> Всі дільниці</label>
+                <label class="radio-item"><input type="radio" name="statusFilter" value="free"> Тільки вільні</label>
+                <label class="radio-item"><input type="radio" name="statusFilter" value="taken"> Тільки зайняті</label>
+                <label class="radio-item"><input type="radio" name="statusFilter" value="mine"> Мої дільниці</label>
+            </div>
+        </div>
+    </div>
+  
+    <script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+  
+  const supabaseUrl = "https://modsgjjtwxbdnlycvifp.supabase.co";
+  const supabaseKey = "sb_publishable_dbMty7e93fQwcZWdu_xeqw_3PUPc_3D";
+  
+  // ВОТ ЭТА СТРОКА: Привязываем клиент к объекту window
+  window.supabase = createClient(supabaseUrl, supabaseKey);
+  
+  console.log("Supabase ініціалізовано як модуль і додано у window");
+</script>
+    <script type="module">
+        
+        window.userRole = localStorage.getItem('userRole');
+        window.currentUserId = localStorage.getItem('userId');
+        window.userFullName = localStorage.getItem('userFullName');
+        window.isAdmin = (window.userRole === 'admin' || window.userRole === 'super_admin');
+        window.isAuth = !!localStorage.getItem('userKey');
+        window.allParcelLayers = [];
+
+        /**
+         * 2. ИНИЦИАЛИЗАЦИЯ КАРТЫ
+         */
+        function initMainMap() {
+            const satelliteOnly = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+            const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { pane: 'shadowPane' });
+            const satelliteHybrid = L.layerGroup([satelliteOnly, labels]);
+
+            const isMobile = window.innerWidth <= 768;
+
+            window.map = L.map('map', {
+                preferCanvas: true, // Исправление для Chrome iOS
+                center: [49.2321, 29.0577],
+                zoom: 15,
+                layers: [satelliteHybrid],
+                zoomControl: !isMobile
+            });
+
+            // Добавляем кнопку фильтров на карту
+            const FilterControl = L.Control.extend({
+                options: { position: 'topleft' },
+                onAdd: function() {
+                    const btn = L.DomUtil.create('button', 'leaflet-bar leaflet-custom-btn');
+                    btn.innerHTML = '🔍';
+                    btn.style.width = '34px';
+                    btn.style.height = '34px';
+                    btn.style.backgroundColor = 'white';
+                    btn.style.cursor = 'pointer';
+                    btn.onclick = () => {
+                        const menu = document.getElementById('filterMenu');
+                        menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+                    };
+                    return btn;
+                }
+            });
+            window.map.addControl(new FilterControl());
+        }
+
+        /**
+         * 3. ЛОГИКА СТИЛЕЙ (из map-styles.js)
+         */
+        function getParcelStyle(pData) {
+            let baseColor = '#008000'; // По умолчанию зеленый
+            if (pData.status === 'taken') baseColor = '#163e25';
+            if (pData.category === 'highrise') baseColor = '#FFA500';
+
+            return {
+                fillColor: baseColor,
+                fillOpacity: 0.5,
+                color: '#ffffff',
+                weight: 2,
+                opacity: 1
+            };
+        }
+
+        /**
+         * 4. ЗАГРУЗКА ДАННЫХ
+         */
+        async function loadParcels() {
+            // 1. Запит до бази (використовуємо window.supabase)
+            const { data: parcels, error } = await window.supabase.from('parcels').select('*');
+            
+            if (error) {
+                console.error("Помилка завантаження:", error);
+                return;
+            }
+
+            parcels.forEach(p => {
+                // 2. Використовуємо p.geom замість p.geojson
+                const geometryData = p.geom; 
+
+                if (!geometryData) {
+                    console.warn(`Дільниця №${p.name} не має геометрії в колонці 'geom'.`);
+                    return;
+                }
+
+                try {
+                    // Якщо дані прийшли як рядок, парсимо їх. Якщо вже об'єкт — використовуємо так.
+                    const geoData = (typeof geometryData === 'string') 
+                        ? JSON.parse(geometryData) 
+                        : geometryData;
+
+                    // 3. Створюємо шар на карті
+                    const layer = L.geoJSON(geoData, {
+                        style: getParcelStyle(p) // Функція стилів вже має працювати
+                    }).addTo(window.map);
+
+                    // 4. Логіка міток та попапів
+                    const center = layer.getBounds().getCenter();
+                    const label = L.marker(center, {
+                        icon: L.divIcon({
+                            className: 'parcel-label',
+                            html: `<b style="color:white; text-shadow: 1px 1px 2px black;">${p.name}</b>`,
+                            iconSize: [40, 20]
+                        })
+                    }).addTo(window.map);
+
+                    layer.bindPopup(`
+                        <div class="popup-container">
+                            <span class="popup-title">Дільниця №${p.name}</span>
+                            <span class="popup-status ${p.status === 'taken' ? 'status-taken' : 'status-free'}">
+                                ${p.status === 'taken' ? 'Зайнята' : 'Вільна'}
+                            </span>
+                            <div class="popup-btn-row">
+                                <a href="parcel-details.html?id=${p.id}" class="popup-btn">Деталі</a>
+                            </div>
+                        </div>
+                    `);
+
+                    // Зберігаємо для фільтрації
+                    window.allParcelLayers.push({
+                        id: p.id,
+                        name: p.name.toString().toLowerCase(),
+                        data: p,
+                        layer: layer,
+                        label: label
+                    });
+
+                } catch (e) {
+                    console.error(`Помилка обробки геометрії для дільниці №${p.name}:`, e);
+                }
+            });
+        }
+
+        /**
+         * 5. ФИЛЬТРАЦИЯ (из main.js)
+         */
+        window.applyFilters = () => {
+            const searchInput = document.getElementById('searchNumber');
+            const selectedRadio = document.querySelector('input[name="statusFilter"]:checked');
+            
+            if (!window.allParcelLayers || !window.map || !searchInput || !selectedRadio) return;
+
+            const searchValue = searchInput.value.trim().toLowerCase();
+            const filterType = selectedRadio.value;
+
+            window.allParcelLayers.forEach(item => {
+                let shouldShow = false;
+
+                if (searchValue !== "") {
+                    shouldShow = (item.name === searchValue);
+                } else {
+                    if (filterType === 'all') shouldShow = true;
+                    else if (filterType === 'free') shouldShow = (item.data.status !== 'taken');
+                    else if (filterType === 'taken') shouldShow = (item.data.status === 'taken');
+                    else if (filterType === 'mine') shouldShow = (String(item.data.taken_by_id) === String(window.currentUserId));
+                }
+
+                if (shouldShow) {
+                    item.layer.addTo(window.map);
+                    if (item.label) item.label.addTo(window.map);
+                } else {
+                    window.map.removeLayer(item.layer);
+                    if (item.label) window.map.removeLayer(item.label);
+                }
+            });
+        };
+
+        /**
+         * 6. СОБЫТИЯ И ЗАПУСК
+         */
+        document.addEventListener('DOMContentLoaded', async () => {
+            initMainMap();
+            await loadParcels();
+
+            // Обработчики фильтров
+            document.getElementById('searchNumber').addEventListener('input', (e) => {
+                if (e.target.value.trim() !== "") {
+                    document.querySelector('input[name="statusFilter"][value="all"]').checked = true;
+                }
+                window.applyFilters();
+            });
+
+            document.querySelectorAll('input[name="statusFilter"]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    document.getElementById('searchNumber').value = "";
+                    window.applyFilters();
+                });
+            });
+
+            document.getElementById('closeFilter').onclick = () => {
+                document.getElementById('filterMenu').style.display = 'none';
+            };
+        });
+
+        // Предотвращение кликов через меню на карту
+        const menuEl = document.getElementById('filterMenu');
+        L.DomEvent.disableClickPropagation(menuEl);
+        L.DomEvent.disableScrollPropagation(menuEl);
+    </script>
+</body>
+</html>
