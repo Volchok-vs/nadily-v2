@@ -3,8 +3,8 @@
  */
 
 // Об'єкт для керування модальними вікнами
+// Переконайтеся, що на початку і в кінці файлу немає слова "export"
 window.UI = {
-    // Відкрити або закрити конкретну модалку
     toggleModal(modalId, show = true) {
         const modal = document.getElementById(modalId);
         const overlay = document.getElementById('modalOverlay');
@@ -12,18 +12,21 @@ window.UI = {
         if (overlay) overlay.style.display = show ? 'block' : 'none';
     },
 
-    // Закрити абсолютно все активне (модалки, фільтри)
     closeAllModals() {
-        const elements = ['.modal', '.logic-modal', '.modal-container', '#modalOverlay'];
-        elements.forEach(selector => {
-            const el = document.querySelector(selector);
-            if (el) el.style.display = 'none';
+        const selectors = ['.modal', '.modal-container', '#logicModal', '#modalOverlay'];
+        selectors.forEach(selector => {
+            document.querySelectorAll(selector).forEach(el => {
+                el.style.display = 'none';
+            });
         });
     }
 };
+// Рядок 29 тепер має бути порожнім або закривати дужку, але НЕ містити "export default UI"
+
+
 
 // Функція перевірки прав доступу та оновлення кнопок
-export function checkAuthUI() {
+function checkAuthUI() {
     const role = localStorage.getItem('userRole');
     const isAuth = !!localStorage.getItem('userId');
     
