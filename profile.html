@@ -71,7 +71,7 @@
         <div class="nav-item active" onclick="switchTab('my-card')">👤 Моя картка</div>
         <div id="adminMenu" class="hidden">
             <div class="nav-item" onclick="switchTab('group-cards')">👥 Картки групи</div>
-            <div class="nav-item" onclick="switchTab('all-territories')">📋 Список територій</div>
+            <div class="nav-item" onclick="switchTab('all-territories')">📋 Облік опрацюваннь</div>
             <a href="dev-settings.html" id="devLink" class="nav-item" style="display: none; border-left: 3px solid #ff9800; color: #ff9800;">
                 🛠 Режим розробки
             </a>
@@ -216,7 +216,8 @@
 
 <script type="module">
     import { supabase } from "./js/config.js"; // Просто імпортуємо готову "розетку"
-    
+    import { returnParcel } from './js/parcel-logic.js';
+
     const userId = localStorage.getItem('userId');
     const userRole = localStorage.getItem('userRole');
 
@@ -296,24 +297,19 @@ window.switchTab = (tabName) => {
         window.location.href = 'index.html';
     };
 
-    window.returnParcel = async (id, parcelName) => {
-    if (!confirm(`Здати дільницю №${parcelName}?`)) return;
-
-    const { error } = await supabase.from('parcels').update({ 
-        status: 'free', 
-        taken_by_id: null, 
-        taken_by: null, 
-        taken_at: null,
-        last_returned: new Date().toISOString() 
-    }).eq('id', id);
-
-    if (!error) {
-        alert('Дільницю здано');
-        location.reload();
-    } else {
-        alert('Помилка: ' + error.message);
-    }
-};
+    // Робимо функцію глобальною для onclick у HTML
+    window.returnParcel = (id, name) => {
+        returnParcel(id, name, supabase, async () => {
+            // Тут ми просто викликаємо функцію завантаження даних, 
+            // яка вже є у вас на сторінці профілю (зазвичай це loadUserParcels)
+            if (typeof loadUserParcels === 'function') {
+                await loadUserParcels(); 
+            } else {
+                // Якщо назва інша, просто викличте ту функцію, що заповнює ваш список
+                location.reload(); // як запасний варіант
+            }
+        });
+    };
 
     // --- 2. ОСНОВНА ЛОГІКА ТА ІНІЦІАЛІЗАЦІЯ ---
 
@@ -359,107 +355,112 @@ window.switchTab = (tabName) => {
     }
 
     async function loadAllTerritoriesGrid() {
-        const tHead = document.getElementById('tHead');
-        const tBody = document.getElementById('tBody');
-        if (!tHead || !tBody) return;
+    const tHead = document.getElementById('tHead');
+    const tBody = document.getElementById('tBody');
+    if (!tHead || !tBody) return;
 
-        const rangeStart = getTheocraticStart();
-        const titleElement = document.querySelector('#tab-all-territories h1');
-        if (titleElement) titleElement.innerText = `📋 Реєстр обліку дільниць (${getTheocraticYearText()})`;
+    const rangeStart = getTheocraticStart();
+    const titleElement = document.querySelector('#tab-all-territories h1');
+    if (titleElement) titleElement.innerText = `📋 Реєстр обліку дільниць (${getTheocraticYearText()})`;
 
-        // Завантаження даних
-        const [parcelsRes, logsRes] = await Promise.all([
-            supabase.from('parcels').select('*'),
-            supabase.from('territory_logs')
-                .select('*')
-                .gte('taken_at', rangeStart.toISOString())
-                .order('taken_at', { ascending: true })
-        ]);
+    // Завантаження даних
+    const [parcelsRes, logsRes] = await Promise.all([
+        supabase.from('parcels').select('*'),
+        supabase.from('territory_logs')
+            .select('*')
+            .gte('taken_at', rangeStart.toISOString())
+            .order('taken_at', { ascending: true })
+    ]);
 
-        if (parcelsRes.error || logsRes.error) {
-            console.error("Помилка завантаження реєстру:", parcelsRes.error || logsRes.error);
-            return;
-        }
-
-        const parcels = parcelsRes.data.sort((a, b) => {
-            const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
-            const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
-            return numA - numB;
-        });
-
-        const allLogs = logsRes.data;
-        const combinedData = {};
-        
-        parcels.forEach(p => {
-            const pLogs = allLogs.filter(log => log.parcel_id === p.id).map(log => ({
-                name: log.publisher_name, 
-                in: log.taken_at, 
-                out: log.returned_at
-            }));
-
-            if (p.status === 'taken' && p.taken_at && new Date(p.taken_at) >= rangeStart) {
-                if (!pLogs.some(l => !l.out && l.name === p.taken_by)) {
-                    pLogs.push({ name: p.taken_by, in: p.taken_at, out: null });
-                }
-            }
-            combinedData[p.id] = pLogs;
-        });
-
-        let maxCols = 1;
-        Object.values(combinedData).forEach(list => { if (list.length > maxCols) maxCols = list.length; });
-
-        // Малюємо заголовок
-        tHead.innerHTML = `
-            <tr>
-                <th rowspan="2" class="num-col">№</th>
-                <th rowspan="2" class="last-done-col">Останнє опрацювання</th>
-                ${'<th colspan="2">ПРІЗВИЩЕ ВІСНИКА</th>'.repeat(maxCols)}
-            </tr>
-            <tr>
-                ${'<th style="background:#e2efda;">ОТРИМАНО</th><th style="background:#fce4d6;">ЗДАНО</th>'.repeat(maxCols)}
-            </tr>
-        `;
-
-        tBody.innerHTML = '';
-        parcels.forEach(p => {
-            const pSessions = combinedData[p.id] || [];
-            const lastReturn = p.last_returned ? new Date(p.last_returned) : null;
-            let lastDoneDate = (lastReturn && lastReturn < rangeStart) ? lastReturn.toLocaleDateString('uk-UA') : "-";
-
-            const tr1 = document.createElement('tr');
-            const tr2 = document.createElement('tr');
-
-            // ГЕНЕРУЄМО ПОСИЛАННЯ (from=all обов'язково)
-            let tr1Html = `
-                <td rowspan="2" class="num-col">
-                    <a href="parcel-details.html?id=${p.id}&from=all" style="text-decoration:none; color:#007bff; font-weight:bold;">
-                        №${p.name}
-                    </a>
-                </td>
-                <td rowspan="2" class="last-done-col">${lastDoneDate}</td>
-            `;
-            
-            let tr2Html = '';
-
-            for (let i = 0; i < maxCols; i++) {
-                const s = pSessions[i];
-                const pName = s ? s.name : '';
-                const dIn = s ? new Date(s.in).toLocaleDateString('uk-UA') : '';
-                const dOut = (s && s.out) ? new Date(s.out).toLocaleDateString('uk-UA') : '';
-
-                tr1Html += `<td colspan="2" class="name-row" style="border:1px solid #444;">${pName}</td>`;
-                tr2Html += `
-                    <td class="date-cell" style="background:#e8f5e9; border:1px solid #444;">${dIn}</td>
-                    <td class="date-cell" style="background:#fff3e0; border:1px solid #444;">${dOut}</td>
-                `;
-            }
-            
-            tr1.innerHTML = tr1Html;
-            tr2.innerHTML = tr2Html;
-            tBody.appendChild(tr1);
-            tBody.appendChild(tr2);
-        });
+    if (parcelsRes.error || logsRes.error) {
+        console.error("Помилка завантаження реєстру:", parcelsRes.error || logsRes.error);
+        return;
     }
+
+    const parcels = parcelsRes.data.sort((a, b) => {
+        const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
+        const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
+        return numA - numB;
+    });
+
+    const allLogs = logsRes.data;
+    const combinedData = {};
+    
+    parcels.forEach(p => {
+        const pLogs = allLogs.filter(log => log.parcel_id === p.id).map(log => ({
+            name: log.publisher_name, 
+            in: log.taken_at, 
+            out: log.returned_at
+        }));
+
+        if (p.status === 'taken' && p.taken_at && new Date(p.taken_at) >= rangeStart) {
+            if (!pLogs.some(l => !l.out && l.name === p.taken_by)) {
+                pLogs.push({ name: p.taken_by, in: p.taken_at, out: null });
+            }
+        }
+        combinedData[p.id] = pLogs;
+    });
+
+    let maxCols = 1;
+    Object.values(combinedData).forEach(list => { if (list.length > maxCols) maxCols = list.length; });
+
+    // --- ЗМІНИ ТУТ: ФІКСОВАНА ШИРИНА В ЗАГОЛОВКУ ---
+    tHead.innerHTML = `
+        <tr>
+            <th rowspan="2" style="width: 40px; min-width: 40px; border:1px solid #444;">№</th>
+            <th rowspan="2" class="help-tooltip" style="width: 110px; min-width: 110px; border:1px solid #444; cursor: help; position: relative;">
+                Остання дата опрацювання<span style="color:red;">*</span>
+                <span class="tooltiptext">Заповнюючи новий бланк, познач у цій колонці останню дату опрацювання кожної території</span>
+            </th>
+            ${`<th colspan="2" style="width: 220px; min-width: 220px; border:1px solid #444;">Вісник</th>`.repeat(maxCols)}
+        </tr>
+        <tr>
+            ${`<th style="background:#e2efda; width: 100px; min-width: 100px; border:1px solid #444;">Дата отримання</th>
+               <th style="background:#fce4d6; width: 100px; min-width: 100px; border:1px solid #444;">Дата працювання</th>`.repeat(maxCols)}
+        </tr>
+    `;
+
+    tBody.innerHTML = '';
+    parcels.forEach(p => {
+        const pSessions = combinedData[p.id] || [];
+        const lastReturn = p.last_returned ? new Date(p.last_returned) : null;
+        let lastDoneDate = (lastReturn && lastReturn < rangeStart) ? lastReturn.toLocaleDateString('uk-UA') : "-";
+
+        const tr1 = document.createElement('tr');
+        const tr2 = document.createElement('tr');
+
+        // --- ЗМІНИ ТУТ: ДОДАНО ІНЛАЙН СТИЛІ ДЛЯ TD ---
+        let tr1Html = `
+            <td rowspan="2" class="num-col" style="width: 50px; text-align: center; border:1px solid #444;">
+                <a href="parcel-details.html?id=${p.id}&from=all" style="text-decoration:none; color:#007bff; font-weight:bold;">
+                    №${p.name}
+                </a>
+            </td>
+            <td rowspan="2" class="last-done-col" style="width: 100px; text-align: center; border:1px solid #444;">${lastDoneDate}</td>
+        `;
+        
+        let tr2Html = '';
+
+        for (let i = 0; i < maxCols; i++) {
+            const s = pSessions[i];
+            const pName = s ? s.name : '';
+            const dIn = s ? new Date(s.in).toLocaleDateString('uk-UA') : '';
+            const dOut = (s && s.out) ? new Date(s.out).toLocaleDateString('uk-UA') : '';
+
+            // Фіксуємо ширину для імен та дат
+            tr1Html += `<td colspan="2" class="name-row" style="width: 200px; border:1px solid #444; padding: 4px; overflow: hidden; white-space: nowrap;">${pName}</td>`;
+            tr2Html += `
+                <td class="date-cell" style="width: 100px; background:#e8f5e9; border:1px solid #444; text-align: center;">${dIn}</td>
+                <td class="date-cell" style="width: 100px; background:#fff3e0; border:1px solid #444; text-align: center;">${dOut}</td>
+            `;
+        }
+        
+        tr1.innerHTML = tr1Html;
+        tr2.innerHTML = tr2Html;
+        tBody.appendChild(tr1);
+        tBody.appendChild(tr2);
+    });
+}
     window.loadAllTerritoriesGrid = loadAllTerritoriesGrid;
 
     async function loadMyParcels() {
@@ -547,8 +548,11 @@ async function showUserDetails(uId, uName) {
         // Показуємо кнопку, якщо це власна картка АБО якщо переглядає Адмін
         const showReturnBtn = isMyCard || isAdmin;
 
+        // ... ваш існуючий код renderParcelList ...
+
         return `
-            <div style="border:1px solid #eee; padding:15px; margin-bottom:10px; border-radius:8px; cursor:pointer;" onclick="window.location.href='parcel-details.html?id=${p.id}&from=${isMyCard ? 'my' : 'all'}'">
+            <div style="border:1px solid #eee; padding:15px; margin-bottom:10px; border-radius:8px; cursor:pointer;" 
+                 onclick="window.location.href='parcel-details.html?id=${p.id}&from=${isMyCard ? 'my' : 'all'}'">
                 <div style="display:flex; justify-content:space-between;">
                     <strong>Дільниця №${p.name}</strong>
                     <span class="badge">${days} дн.</span>
@@ -556,10 +560,11 @@ async function showUserDetails(uId, uName) {
                 <p style="font-size:0.9rem; color:#666; margin:10px 0;">${p.notes || '—'}</p>
                 ${showReturnBtn ? `
                     <button onclick="event.stopPropagation(); window.returnParcel('${p.id}', '${p.name}')" 
-                        style="background:#ff4757; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">
+                        style="background:#ff4757; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-weight:bold;">
                         Здати
                     </button>` : ''}
             </div>`;
+            // ... решта коду ...
     }).join('');
 }
 

@@ -53,7 +53,35 @@
         .color-4 { background: #E1BEE7; border-left: 5px solid #8E24AA; }
         .color-5 { background: #B3E5FC; border-left: 5px solid #039BE5; }
         .color-6 { background: #CFD8DC; border-left: 5px solid #546E7A; }
+
+        /* Стиль для плаваючого сповіщення */
+.toast-notification {
+    position: fixed;
+    bottom: 50px;
+    /* right: 20px; */
+    /* top: 10px; */
+    left: 55px;
+    background: #28a746;
+    border: 1px solid #218838;
+    color: #333;
+    padding: 12px 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 9999;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.toast-notification.error { background: #dc3545; }
     </style>
+
 </head>
 <body>
 
@@ -162,335 +190,464 @@
 </div>
 
 <script type="module">
-   import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-    const supabase = createClient("https://modsgjjtwxbdnlycvifp.supabase.co", "sb_publishable_dbMty7e93fQwcZWdu_xeqw_3PUPc_3D");
+  import { supabase } from "./js/config.js";
+  import { isAdmin, currentUserId } from "./js/main.js";
+  import { formatStatusHTML, getDurationText } from "./js/status-helper.js";
+    import { returnParcel } from './js/parcel-logic.js';
+  const urlParams = new URLSearchParams(window.location.search);
+  const parcelId = urlParams.get('id');
 
-    import { isAdmin, currentUserId } from "./js/main.js";
-    import { formatStatusHTML, getDurationText } from "./js/status-helper.js";
-    // Отримуємо ID з URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const parcelId = urlParams.get('id');
+  let map = null; 
+  let editingCommentId = null; 
+  let allComments = [];
 
-    // Глобальні змінні сторінки
-    let map = null; 
-    let editingCommentId = null; 
-    let allComments = [];
-
-    async function init() {
-        if (!parcelId) return (window.location.href = 'index.html');
-        
-        // Відображення адмін-панелі
-        if (isAdmin) {
-            const adminCard = document.getElementById('adminCard');
-            if (adminCard) adminCard.style.display = 'block';
-        }
-
-        // Приховуємо кнопку для звичайних вісників
-        const addManualBtn = document.querySelector('button[onclick="showManualLogModal()"]');
-        if (addManualBtn && !isAdmin) {
-            addManualBtn.style.display = 'none';
-        }
-
-        await loadParcelInfo();
-        await loadHistory();
-        await loadComments();
-
-        // Керування доступністю полів через чекбокси
-        document.addEventListener('change', (e) => {
-            if (e.target.id === 'editSectorCheck') {
-                document.getElementById('sectorTypeSelect').disabled = !e.target.checked;
-            }
-            if (e.target.id === 'editDateCheck') {
-                document.getElementById('lastProcessedDate').disabled = !e.target.checked;
-            }
-        });
+  async function init() {
+    if (!parcelId) return (window.location.href = 'index.html');
+    
+    if (isAdmin) {
+      const adminCard = document.getElementById('adminCard');
+      if (adminCard) adminCard.style.display = 'block';
     }
 
-    window.saveGeneralChanges = async () => {
-    const isDateEdit = document.getElementById('editDateCheck').checked;
-    const isSectorEdit = document.getElementById('editSectorCheck').checked;
+    const addManualBtn = document.querySelector('button[onclick="showManualLogModal()"]');
+    if (addManualBtn && !isAdmin) {
+      addManualBtn.style.display = 'none';
+    }
 
-    if (!isDateEdit && !isSectorEdit) {
-        alert("Виберіть, що саме ви хочете змінити (поставте галочку)");
+    await loadParcelInfo();
+    await loadHistory();
+    await loadComments();
+
+    document.addEventListener('change', (e) => {
+      if (e.target.id === 'editSectorCheck') {
+        document.getElementById('sectorTypeSelect').disabled = !e.target.checked;
+      }
+      if (e.target.id === 'editDateCheck') {
+        document.getElementById('lastProcessedDate').disabled = !e.target.checked;
+      }
+    });
+  }
+
+    window.saveGeneralChanges = async () => {
+        const isDateEdit = document.getElementById('editDateCheck').checked;
+        const isSectorEdit = document.getElementById('editSectorCheck').checked;
+
+        console.log("%c--- СТАРТ ПРОЦЕСУ ОНОВЛЕННЯ ---", "color: #007bff; font-weight: bold;");
+
+        if (!isDateEdit && !isSectorEdit) {
+            showToast("Виберіть, що саме ви хочете змінити", true);
+            return;
+        }
+
+        let updateData = {};
+        
+        if (isSectorEdit) {
+            updateData.category = document.getElementById('sectorTypeSelect').value;
+        }
+        
+        if (isDateEdit) {
+            let rawDate = document.getElementById('lastProcessedDate').value.trim();
+            
+            const processDateInput = (dateStr) => {
+                if (!dateStr) return { iso: null };
+                let day, month, year;
+                if (dateStr.includes('-')) {
+                    [year, month, day] = dateStr.split('-');
+                } else if (dateStr.includes('.')) {
+                    [day, month, year] = dateStr.split('.');
+                } else {
+                    return { iso: dateStr };
+                }
+
+                let yearNum = parseInt(year);
+                if (yearNum < 100) year = (2000 + yearNum).toString();
+                else if (yearNum < 1000) year = "20" + year.slice(-2);
+
+                // ПОВЕРТАЄМО ТІЛЬКИ ISO ФОРМАТ (РРРР-ММ-ДД)
+                return {
+                    iso: `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+                };
+            };
+
+            const processed = processDateInput(rawDate);
+            
+            // ВАЖЛИВО: Обидві колонки отримують формат YYYY-MM-DD
+            updateData.last_processed = processed.iso;
+
+            const { data: currentParcel } = await supabase.from('parcels').select('last_returned').eq('id', parcelId).single();
+            const dbReturnStr = currentParcel?.last_returned;
+            const inputDateObj = new Date(processed.iso);
+            const toIsoFromDB = (s) => s ? (s.startsWith('00') ? "20" + s.slice(2, 10) : s.split('T')[0]) : null;
+
+            if (!dbReturnStr) {
+                updateData.last_returned = processed.iso;
+            } else {
+                const dbIso = toIsoFromDB(dbReturnStr);
+                const dbDateObj = new Date(dbIso);
+                if (inputDateObj >= dbDateObj) {
+                    updateData.last_returned = processed.iso;
+                } else {
+                    const { count } = await supabase.from('territory_logs').select('*', { count: 'exact', head: true }).eq('parcel_id', parcelId).eq('returned_at', dbReturnStr);
+                    if (count === 0) updateData.last_returned = processed.iso;
+                }
+            }
+        }
+
+        console.log("🚀 ВІДПРАВКА (ISO формат):", updateData);
+
+        const { error } = await supabase.from('parcels').update(updateData).eq('id', parcelId);
+
+        if (!error) {
+            console.log("%c✅ ЗБЕРЕЖЕНО В БАЗІ", "color: green; font-weight: bold;");
+            
+            showToast("Дані успішно оновлено!");
+
+            // Очищуємо форму
+            document.getElementById('editDateCheck').checked = false;
+            document.getElementById('editSectorCheck').checked = false;
+            document.getElementById('lastProcessedDate').disabled = true;
+            document.getElementById('sectorTypeSelect').disabled = true;
+
+            // Оновлюємо інтерфейс без перезавантаження
+            await loadParcelInfo(); 
+            if (typeof loadHistory === "function") await loadHistory();
+            
+        } else {
+            console.error("❌ ПОМИЛКА SUPABASE:", error.message);
+            showToast(`Помилка: ${error.message}`, true);
+        }
+    };
+
+    function showToast(message, isError = false) {
+        const toast = document.createElement('div');
+        toast.className = `toast-notification ${isError ? 'error' : ''}`;
+        toast.innerHTML = `<span>${isError ? '❌' : '✅'}</span> ${message}`;
+        document.body.appendChild(toast);
+
+        // Видаляємо через 3 секунди
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transition = '0.5s';
+            setTimeout(() => toast.remove(), 500);
+        }, 3000);
+    }
+
+  // --- Решта функцій залишається без змін (loadParcelInfo, initMiniMap і т.д.) ---
+  async function loadParcelInfo() {
+    const { data: p } = await supabase.from('parcels').select('*').eq('id', parcelId).single();
+    if (!p) return;
+
+    document.getElementById('parcelTitle').innerText = `Дільниця №${p.name}`;
+    if (p.geom) initMiniMap(p.geom);
+
+    const statusElement = document.getElementById('currentStatus');
+    statusElement.innerHTML = formatStatusHTML(p);
+
+    const returnBtn = document.getElementById('adminReturnBtn');
+    if (p.status === 'taken' && returnBtn && isAdmin) {
+      returnBtn.style.display = 'inline-block';
+      returnBtn.onclick = () => window.returnParcel(p.id, p.name);
+    } else if (returnBtn) {
+      returnBtn.style.display = 'none';
+    }
+
+    if (isAdmin) {
+      const lastProcInput = document.getElementById('lastProcessedDate');
+      const sectorSelect = document.getElementById('sectorTypeSelect');
+      if (lastProcInput) lastProcInput.value = p.last_processed || '';
+      if (sectorSelect) sectorSelect.value = p.category || 'Приватний сектор';
+    }
+  }
+
+  function initMiniMap(geom) {
+    if (map) map.remove();
+    map = L.map('miniMap', { 
+      zoomControl: false, 
+      attributionControl: false,
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false
+    });
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
+    const parcelLayer = L.geoJSON(geom, {
+      style: { color: "#ff9f43", weight: 4, opacity: 1, fillColor: "#ff9f43", fillOpacity: 0.15 }
+    }).addTo(map);
+    map.fitBounds(parcelLayer.getBounds(), { padding: [20, 20] });
+  }
+
+  async function loadHistory() {
+    const { data: logs } = await supabase.from('territory_logs').select('*').eq('parcel_id', parcelId).order('returned_at', { ascending: false });
+    const body = document.getElementById('historyBody');
+    const userFullName = localStorage.getItem('userFullName');
+
+    if (!logs?.length) {
+      body.innerHTML = '<tr><td colspan="5" style="text-align:center; color:gray; padding:15px;">Історія порожня</td></tr>';
+      return;
+    }
+
+    const filteredLogs = isAdmin ? logs : logs.filter(log => log.publisher_name === userFullName);
+    if (filteredLogs.length === 0) {
+      body.innerHTML = '<tr><td colspan="5" style="text-align:center; color:gray; padding:15px;">Записів не знайдено</td></tr>';
+      return;
+    }
+
+    body.innerHTML = filteredLogs.map(log => `
+      <tr>
+        <td><b>${log.publisher_name}</b></td>
+        <td>${new Date(log.taken_at).toLocaleDateString('uk-UA')}</td>
+        <td>${new Date(log.returned_at).toLocaleDateString('uk-UA')}</td>
+        <td><span class="badge">${log.duration_text || '-'}</span></td>
+        <td>${isAdmin ? `<button onclick="deleteLogRecord(${log.id})" style="background:none; color:red; width:auto; padding:0;">🗑️</button>` : '—'}</td>
+      </tr>`).join('');
+  }
+
+  window.showManualLogModal = async () => {
+    // Показуємо модалку
+    document.getElementById('manualLogModal').classList.remove('hidden');
+    
+    const select = document.getElementById('manualPublisherSelect');
+    select.innerHTML = '<option value="">Завантаження...</option>';
+
+    // 1. Додаємо 'id' у запит
+    const { data: users, error } = await supabase
+        .from('publishers')
+        .select('id, name, last_name') // Обов'язково беремо ID
+        .order('last_name', { ascending: true });
+
+    if (error) {
+        console.error("Помилка завантаження вісників:", error.message);
+        select.innerHTML = '<option value="">Помилка завантаження</option>';
         return;
     }
 
-    let updateData = {};
-    
-    if (isSectorEdit) {
-        updateData.category = document.getElementById('sectorTypeSelect').value;
-    }
-    
-    if (isDateEdit) {
-        const dateVal = document.getElementById('lastProcessedDate').value;
-        updateData.last_processed = dateVal || null;
-        updateData.last_returned = dateVal || null; // Синхронізуємо, якщо потрібно
-    }
-
-    const { error } = await supabase.from('parcels').update(updateData).eq('id', parcelId);
-
-    if (!error) {
-        alert("Дані успішно оновлено");
-        // Скидаємо чекбокси та блокуємо поля назад
-        document.getElementById('editDateCheck').checked = false;
-        document.getElementById('editSectorCheck').checked = false;
-        document.getElementById('lastProcessedDate').disabled = true;
-        document.getElementById('sectorTypeSelect').disabled = true;
-        loadParcelInfo(); 
-    } else {
-        alert("Помилка: " + error.message);
+    if (users) {
+        select.innerHTML = '<option value="">Оберіть вісника</option>';
+        users.forEach(u => {
+            const opt = document.createElement('option');
+            
+            // 2. В value тепер записуємо ID (для бази даних)
+            opt.value = u.id; 
+            
+            // 3. В текст записуємо повне ім'я (для відображення в списку)
+            opt.text = `${u.last_name || ''} ${u.name}`.trim();
+            
+            select.appendChild(opt);
+        });
+        console.log(`✅ Завантажено ${users.length} вісників`);
     }
 };
-    async function loadParcelInfo() {
-        const { data: p } = await supabase.from('parcels').select('*').eq('id', parcelId).single();
-        if (!p) return;
 
-        document.getElementById('parcelTitle').innerText = `Дільниця №${p.name}`;
-        if (p.geom) initMiniMap(p.geom);
+  window.saveManualLog = async () => {
+    const pubSelect = document.getElementById('manualPublisherSelect');
+    const publisherId = pubSelect.value;
+    const publisherName = pubSelect.options[pubSelect.selectedIndex].text;
+    
+    let dIn = document.getElementById('manualDateIn').value;
+    let dOut = document.getElementById('manualDateOut').value;
+    
+    console.log("%c--- ВНЕСЕННЯ В АРХІВ (БЕЗ ЧІПАННЯ LAST_PROCESSED) ---", "color: #007bff; font-weight: bold;");
 
-        // Використовуємо імпортовану функцію для гарного статусу
-        const statusElement = document.getElementById('currentStatus');
-        statusElement.innerHTML = formatStatusHTML(p);
-
-        const returnBtn = document.getElementById('adminReturnBtn');
-        if (p.status === 'taken' && returnBtn && isAdmin) {
-            returnBtn.style.display = 'inline-block';
-            returnBtn.onclick = () => window.returnParcel(p.id, p.name);
-        } else if (returnBtn) {
-            returnBtn.style.display = 'none';
-        }
-
-        if (isAdmin) {
-            const lastProcInput = document.getElementById('lastProcessedDate');
-            const sectorSelect = document.getElementById('sectorTypeSelect');
-            if (lastProcInput) lastProcInput.value = p.last_processed || '';
-            if (sectorSelect) sectorSelect.value = p.category || 'Приватний сектор';
-        }
+    if (!publisherId || !dIn || !dOut) {
+        showToast("Заповніть усі поля", true);
+        return;
     }
 
-    // --- Карта (залишаємо без змін) ---
-    function initMiniMap(geom) {
-        if (map) map.remove();
-        map = L.map('miniMap', { 
-            zoomControl: false, 
-            attributionControl: false,
-            dragging: false,
-            scrollWheelZoom: false,
-            doubleClickZoom: false
-        });
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
-        const parcelLayer = L.geoJSON(geom, {
-            style: { color: "#ff9f43", weight: 4, opacity: 1, fillColor: "#ff9f43", fillOpacity: 0.15 }
-        }).addTo(map);
-        map.fitBounds(parcelLayer.getBounds(), { padding: [20, 20] });
-    }
-
-    // --- Історія ---
-    async function loadHistory() {
-        const { data: logs } = await supabase.from('territory_logs').select('*').eq('parcel_id', parcelId).order('returned_at', { ascending: false });
-        const body = document.getElementById('historyBody');
-        const userFullName = localStorage.getItem('userFullName');
-
-        if (!logs?.length) {
-            body.innerHTML = '<tr><td colspan="5" style="text-align:center; color:gray; padding:15px;">Історія порожня</td></tr>';
-            return;
-        }
-
-        const filteredLogs = isAdmin ? logs : logs.filter(log => log.publisher_name === userFullName);
-        if (filteredLogs.length === 0) {
-            body.innerHTML = '<tr><td colspan="5" style="text-align:center; color:gray; padding:15px;">Записів не знайдено</td></tr>';
-            return;
-        }
-
-        body.innerHTML = filteredLogs.map(log => `
-            <tr>
-                <td><b>${log.publisher_name}</b></td>
-                <td>${new Date(log.taken_at).toLocaleDateString('uk-UA')}</td>
-                <td>${new Date(log.returned_at).toLocaleDateString('uk-UA')}</td>
-                <td><span class="badge">${log.duration_text || '-'}</span></td>
-                <td>${isAdmin ? `<button onclick="deleteLogRecord(${log.id})" style="background:none; color:red; width:auto; padding:0;">🗑️</button>` : '—'}</td>
-            </tr>`).join('');
-    }
-
-    // Прив'язка вікон до об'єкта window, щоб onclick у HTML їх бачив
-    window.showManualLogModal = async () => {
-        document.getElementById('manualLogModal').classList.remove('hidden');
-        const select = document.getElementById('manualPublisherSelect');
-        const { data: users } = await supabase.from('publishers').select('name, last_name').order('last_name', { ascending: true });
-        if (users) {
-            select.innerHTML = '<option value="">Оберіть вісника</option>';
-            users.forEach(u => {
-                const opt = document.createElement('option');
-                const shortName = `${u.name} ${u.last_name ? u.last_name[0] + '.' : ''}`;
-                opt.value = shortName;
-                opt.text = `${u.last_name || ''} ${u.name}`.trim();
-                select.appendChild(opt);
-            });
-        }
+    // Захист від 0025 року
+    const fixYear = (s) => {
+        let [y, m, d] = s.split('-');
+        return parseInt(y) < 1000 ? `20${y.slice(-2)}-${m}-${d}` : s;
     };
+    dIn = fixYear(dIn);
+    dOut = fixYear(dOut);
 
-    window.saveManualLog = async () => {
-        const shortName = document.getElementById('manualPublisherSelect').value;
-        const dIn = document.getElementById('manualDateIn').value;
-        const dOut = document.getElementById('manualDateOut').value;
-        
-        if (!shortName || !dIn || !dOut) return alert("Заповніть усі поля");
-        
-        // 1. Розраховуємо тривалість за допомогою нашої функції
-        const durationText = getDurationText(dIn, dOut); 
+    // РОЗРАХУНОК ТРИВАЛОСТІ (кількість днів/місяців для стовпчика "Час")
+    const durationText = getDurationText(dIn, dOut); 
 
-        // 2. Додаємо запис в архів (territory_logs)
-        const { error: logError } = await supabase.from('territory_logs').insert([{
-            parcel_id: parcelId, 
-            publisher_name: shortName, 
-            taken_at: dIn, 
-            returned_at: dOut,
-            duration_text: durationText 
-        }]);
+    // КРОК 1: Додаємо запис в архів (territory_logs)
+    const { error: logError } = await supabase.from('territory_logs').insert([{
+        parcel_id: parcelId,
+        publisher_id: publisherId,
+        publisher_name: publisherName,
+        taken_at: dIn,
+        returned_at: dOut,
+        duration_text: durationText // Сюди піде напр. "1 міс. 2 дн."
+    }]);
 
-        if (logError) return alert("Помилка збереження в архів: " + logError.message);
+    if (logError) {
+        console.error("Помилка логів:", logError.message);
+        showToast("Помилка збереження логів", true);
+        return;
+    }
 
-        // 3. ОНОВЛЮЄМО ОСНОВНУ КАРТКУ (щоб дані з'явилися в загальному списку)
-        const { error: parcelError } = await supabase.from('parcels').update({ 
-            last_returned: dOut,   // ЦЕ ПОЛЕ ЧИТАЄ ТАБЛИЦЯ АДМІНІСТРАТОРА
-            last_processed: dOut,  // Це для списку на головній
+    // КРОК 2: Перевірка тільки для last_returned
+    const { data: currentParcel } = await supabase
+        .from('parcels')
+        .select('last_returned')
+        .eq('id', parcelId)
+        .single();
+
+    const dbReturnDate = currentParcel?.last_returned ? new Date(currentParcel.last_returned.split('T')[0]) : null;
+    const inputReturnDate = new Date(dOut);
+
+    let needsReturnUpdate = false;
+
+    // Оновлюємо last_returned тільки якщо:
+    // 1. В базі порожньо
+    // 2. Введена дата новіша за ту, що в базі
+    if (!dbReturnDate || inputReturnDate >= dbReturnDate) {
+        needsReturnUpdate = true;
+    } else {
+        // 3. Або якщо дата в базі "фантомна" (немає підтвердження в архівах)
+        const { count } = await supabase
+            .from('territory_logs')
+            .select('*', { count: 'exact', head: true })
+            .eq('parcel_id', parcelId)
+            .eq('returned_at', currentParcel.last_returned);
+
+        if (count === 0) {
+            needsReturnUpdate = true;
+        }
+    }
+
+    if (needsReturnUpdate) {
+        console.log("🔼 Оновлюємо last_returned на актуальну дату:", dOut);
+        await supabase.from('parcels').update({ 
+            last_returned: dOut,
             status: 'free' 
         }).eq('id', parcelId);
-
-        if (!parcelError) { 
-            hideManualLogModal(); 
-            // Повністю перезавантажуємо сторінку, щоб усі дані на Pixel 7 оновилися
-            location.reload(); 
-        } else {
-            alert("Запис в архіві створено, але основна дата не оновилася: " + parcelError.message);
-        }
-    };
-
-    window.hideManualLogModal = () => document.getElementById('manualLogModal').classList.add('hidden');
-    window.deleteLogRecord = async (id) => { if (confirm("Видалити?")) { await supabase.from('territory_logs').delete().eq('id', id); loadHistory(); } };
-    window.returnParcel = async (id, name) => {
-        if (!confirm(`Здати дільницю №${name}?`)) return;
-        const { error } = await supabase.from('parcels').update({ 
-            status: 'free', taken_by_id: null, taken_by: null, taken_at: null, last_returned: new Date().toISOString()
-        }).eq('id', id);
-        if (!error) location.reload();
-    };
-
-    // --- Коментарі ---
-    async function loadComments() {
-        const { data: comments } = await supabase.from('parcel_comments').select('*').eq('parcel_id', parcelId).order('created_at', { ascending: true });
-        allComments = comments || [];
-        const list = document.getElementById('commentsList');
-        if (allComments.length === 0) {
-            list.innerHTML = '<p style="color:gray; font-style:italic; text-align:center; padding:10px;">Коментарів немає</p>';
-        } else {
-            list.innerHTML = allComments.map((c, i) => {
-                const canManage = isAdmin || (c.user_id === currentUserId);
-                return `
-                    <div class="comment-item color-${(i % 6) + 1}">
-                        ${canManage ? `<div style="position:absolute; top:5px; right:5px;">
-                            <button onclick="prepareEditComment(${i})" style="background:none; font-size:12px; opacity:0.5; width:auto; padding:0;">✏️</button>
-                            <button onclick="deleteComment(${c.id})" style="background:none; font-size:12px; opacity:0.5; width:auto; padding:0;">❌</button>
-                        </div>` : ''}
-                        <p>${c.content.replace(/\n/g, '<br>')}</p>
-                        <div class="author-line">
-                            <b>${c.is_anonymous && !isAdmin ? '👤 Анонімно' : '👤 '+c.author_name}</b>
-                            <span>${new Date(c.created_at).toLocaleString('uk-UA')}</span>
-                        </div>
-                        ${c.last_edited_info ? `<div style="font-size: 12px; color: gray; font-style: italic; margin-top: 4px; text-align: end;">${c.last_edited_info}</div>` : ''}
-                    </div>`;
-            }).join('');
-        }
-        document.getElementById('addCommentContainer').innerHTML = `<button onclick="openCommentModal()" style="border:1px dashed #28a745; color:#28a745; width:100%; padding:8px; border-radius:8px; background:none;">+ Додати коментар</button>`;
+    } else {
+        console.log("🔒 Старий запис внесено в архів. Основні дати не змінено.");
     }
 
-    window.saveComment = async () => {
-        const textarea = document.getElementById('newCommentText');
-        const content = textarea.value;
-        if (!content.trim()) return;
-
-        const userName = localStorage.getItem('userFullName') || 'Вісник';
-        let payload = {
-            parcel_id: Number(parcelId),
-            user_id: currentUserId,
-            author_name: userName,
-            content: content,
-            is_anonymous: document.getElementById('hideAuthorCheckbox').checked
-        };
-
-        if (editingCommentId) {
-            payload.last_edited_info = `Редаговано: ${userName} (${new Date().toLocaleDateString('uk-UA')})`;
-            await supabase.from('parcel_comments').update(payload).eq('id', editingCommentId);
-        } else {
-            await supabase.from('parcel_comments').insert([payload]);
-        }
-        window.closeCommentModal();
-        loadComments();
-    };
-
-    window.prepareEditComment = (index) => {
-        const comment = allComments[index];
-        editingCommentId = comment.id;
-        const textarea = document.getElementById('newCommentText');
-        textarea.value = comment.content;
-        document.getElementById('hideAuthorCheckbox').checked = comment.is_anonymous;
-        document.getElementById('commentModal').classList.remove('hidden');
-        setTimeout(() => { textarea.focus(); textarea.setSelectionRange(textarea.value.length, textarea.value.length); }, 150);
-    };
-
-    window.openCommentModal = () => {
-        editingCommentId = null;
-        document.getElementById('newCommentText').value = "";
-        document.getElementById('commentModal').classList.remove('hidden');
-        setTimeout(() => document.getElementById('newCommentText').focus(), 150);
-    };
-
-    window.closeCommentModal = () => document.getElementById('commentModal').classList.add('hidden');
-    window.deleteComment = async (id) => { if (confirm("Видалити?")) { await supabase.from('parcel_comments').delete().eq('id', id); loadComments(); } };
+    showToast("Запис додано до архіву");
+    hideManualLogModal();
     
-    document.getElementById('backBtn').onclick = () => window.history.back();
-    
-    window.navParcel = async (direction) => {
-    // 1. Отримуємо всі дільниці, відсортовані за номером (як у реєстрі)
-        const { data: allParcels, error } = await supabase
-            .from('parcels')
-            .select('id, name')
-            .order('name', { ascending: true }); // Або за числовим значенням, якщо номер — це рядок
+    // Очищення полів
+    document.getElementById('manualDateIn').value = '';
+    document.getElementById('manualDateOut').value = '';
 
-        if (error || !allParcels) return;
+    // Миттєве оновлення інтерфейсу
+    await loadParcelInfo();
+    await loadHistory();
+};
 
-        // Сортуємо масив правильно (якщо номери типу "1", "10", "2", щоб 2 було перед 10)
-        allParcels.sort((a, b) => {
-            const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
-            const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
-            return numA - numB;
+  window.hideManualLogModal = () => document.getElementById('manualLogModal').classList.add('hidden');
+  window.deleteLogRecord = async (id) => { if (confirm("Видалити?")) { await supabase.from('territory_logs').delete().eq('id', id); loadHistory(); } };
+  
+  window.returnParcel = (id, name) => {
+        returnParcel(id, name, supabase, async () => {
+            // Здесь мы просто вызываем ваши функции загрузки данных
+            await loadParcelInfo(); 
+            if (typeof loadHistory === 'function') await loadHistory();
         });
-
-        // 2. Знаходимо індекс поточної дільниці
-        const currentIndex = allParcels.findIndex(p => p.id == parcelId);
-        let nextIndex = currentIndex + direction;
-
-        // 3. Перевіряємо межі (щоб не вийти за межі списку)
-        if (nextIndex >= 0 && nextIndex < allParcels.length) {
-            const nextId = allParcels[nextIndex].id;
-            
-            // Отримуємо поточне значення 'from' з URL, щоб не "злітати" з навігації
-            const urlParams = new URLSearchParams(window.location.search);
-            const from = urlParams.get('from') || 'all';
-
-            // Переходимо на нову сторінку
-            window.location.href = `parcel-details.html?id=${nextId}&from=${from}`;
-        } else {
-            alert(direction === 1 ? "Це остання дільниця" : "Це перша дільниця");
-        }
     };
 
-    async function updateNavButtons() {
-    // Тут можна зробити запит і зробити opacity: 0.5 для кнопок, 
-    // які не мають сусіда, щоб користувач бачив край списку.
+  async function loadComments() {
+    const { data: comments } = await supabase.from('parcel_comments').select('*').eq('parcel_id', parcelId).order('created_at', { ascending: true });
+    allComments = comments || [];
+    const list = document.getElementById('commentsList');
+    if (allComments.length === 0) {
+      list.innerHTML = '<p style="color:gray; font-style:italic; text-align:center; padding:10px;">Коментарів немає</p>';
+    } else {
+      list.innerHTML = allComments.map((c, i) => {
+        const canManage = isAdmin || (c.user_id === currentUserId);
+        return `
+          <div class="comment-item color-${(i % 6) + 1}">
+            ${canManage ? `<div style="position:absolute; top:5px; right:5px;">
+              <button onclick="prepareEditComment(${i})" style="background:none; font-size:12px; opacity:0.5; width:auto; padding:0;">✏️</button>
+              <button onclick="deleteComment(${c.id})" style="background:none; font-size:12px; opacity:0.5; width:auto; padding:0;">❌</button>
+            </div>` : ''}
+            <p>${c.content.replace(/\n/g, '<br>')}</p>
+            <div class="author-line">
+              <b>${c.is_anonymous && !isAdmin ? '👤 Анонімно' : '👤 '+c.author_name}</b>
+              <span>${new Date(c.created_at).toLocaleString('uk-UA')}</span>
+            </div>
+            ${c.last_edited_info ? `<div style="font-size: 12px; color: gray; font-style: italic; margin-top: 4px; text-align: end;">${c.last_edited_info}</div>` : ''}
+          </div>`;
+      }).join('');
     }
+    document.getElementById('addCommentContainer').innerHTML = `<button onclick="openCommentModal()" style="border:1px dashed #28a745; color:#28a745; width:100%; padding:8px; border-radius:8px; background:none;">+ Додати коментар</button>`;
+  }
 
-    init();
+  window.saveComment = async () => {
+    const textarea = document.getElementById('newCommentText');
+    const content = textarea.value;
+    if (!content.trim()) return;
+    const userName = localStorage.getItem('userFullName') || 'Вісник';
+    let payload = {
+      parcel_id: Number(parcelId),
+      user_id: currentUserId,
+      author_name: userName,
+      content: content,
+      is_anonymous: document.getElementById('hideAuthorCheckbox').checked
+    };
+    if (editingCommentId) {
+      payload.last_edited_info = `Редаговано: ${userName} (${new Date().toLocaleDateString('uk-UA')})`;
+      await supabase.from('parcel_comments').update(payload).eq('id', editingCommentId);
+    } else {
+      await supabase.from('parcel_comments').insert([payload]);
+    }
+    window.closeCommentModal();
+    loadComments();
+  };
+
+  window.prepareEditComment = (index) => {
+    const comment = allComments[index];
+    editingCommentId = comment.id;
+    const textarea = document.getElementById('newCommentText');
+    textarea.value = comment.content;
+    document.getElementById('hideAuthorCheckbox').checked = comment.is_anonymous;
+    document.getElementById('commentModal').classList.remove('hidden');
+    setTimeout(() => { textarea.focus(); textarea.setSelectionRange(textarea.value.length, textarea.value.length); }, 150);
+  };
+
+  window.openCommentModal = () => {
+    editingCommentId = null;
+    document.getElementById('newCommentText').value = "";
+    document.getElementById('commentModal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('newCommentText').focus(), 150);
+  };
+
+  window.closeCommentModal = () => document.getElementById('commentModal').classList.add('hidden');
+  window.deleteComment = async (id) => { if (confirm("Видалити?")) { await supabase.from('parcel_comments').delete().eq('id', id); loadComments(); } };
+  document.getElementById('backBtn').onclick = () => window.history.back();
+  
+  window.navParcel = async (direction) => {
+    const { data: allParcels, error } = await supabase.from('parcels').select('id, name').order('name', { ascending: true });
+    if (error || !allParcels) return;
+    allParcels.sort((a, b) => {
+      const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
+      const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
+      return numA - numB;
+    });
+    const currentIndex = allParcels.findIndex(p => p.id == parcelId);
+    let nextIndex = currentIndex + direction;
+    if (nextIndex >= 0 && nextIndex < allParcels.length) {
+      const nextId = allParcels[nextIndex].id;
+      const urlParams = new URLSearchParams(window.location.search);
+      const from = urlParams.get('from') || 'all';
+      window.location.href = `parcel-details.html?id=${nextId}&from=${from}`;
+    } else {
+      alert(direction === 1 ? "Це остання дільниця" : "Це перша дільниця");
+    }
+  };
+
+  // Навігація в модалці архіву
+    document.getElementById('manualDateIn').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('manualDateOut').focus();
+        }
+    });
+
+    document.getElementById('manualDateOut').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            window.saveManualLog();
+        }
+    });
+
+  init();
 </script>
 </body>
 </html>
