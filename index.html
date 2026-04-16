@@ -19,6 +19,19 @@
             font-family: 'Segoe UI', sans-serif;
         }
 
+        /* Клас, який ми будемо додавати до body через JS */
+        body.modal-open {
+            overflow: hidden;
+            touch-action: none;
+            /* Забороняє «тягнути» сторінку пальцем */
+        }
+
+        /* Сама модалка має ігнорувати прокрутку body */
+        .modal-container {
+            touch-action: auto;
+            /* Дозволяє прокрутку всередині самої модалки */
+        }
+
         #map {
             height: 100vh;
             width: 100%;
@@ -90,11 +103,11 @@
         /* Меню фильтров */
         #filterMenu {
             position: fixed;
-            top: 10px;
-            right: 10px;
+            top: 60px;
+            left: 53px;
             z-index: 1000;
-            background: white;
-            padding: 15px;
+            background: #ffffffd9;
+            padding: 10px;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             display: none;
@@ -219,81 +232,182 @@
         }
 
         /* --- СТИЛИ ПОПАПА (из index_1) --- */
-.popup-container { min-width: 200px; text-align: center; }
-.popup-title { font-size: 17px; font-weight: bold; margin-bottom: 5px; display: block; }
-.popup-status { 
-    font-size: 13px; display: block; margin-bottom: 10px; padding: 4px; 
-    border-radius: 6px; font-weight: 500; 
-}
-.popup-btn-row { display: flex; gap: 8px; margin-bottom: 8px; justify-content: center; }
-.popup-btn { 
-    flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #ddd; 
-    background: #f8f9fa; cursor: pointer; font-size: 13px; text-decoration: none; color: black;
-    display: flex; align-items: center; justify-content: center; transition: 0.2s;
-}
-.popup-btn:hover { background: #e2e6ea; }
-.popup-btn.primary { background: #007bff; color: white; border: none; font-weight: bold; width: 100%; }
+        .popup-container {
+            min-width: 200px;
+            text-align: center;
+        }
 
-/* --- СТИЛИ МОДАЛЬНОГО ОКНА --- */
-#modalOverlay { 
-    display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
-    background:rgba(0,0,0,0.5); z-index:2000; backdrop-filter: blur(2px); 
-}
-.modal { 
-    display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); 
-    background:white; padding:25px; border-radius:15px; box-shadow:0 10px 30px rgba(0,0,0,0.4); 
-    z-index:2001; width: 300px; 
-}
+        .popup-title {
+            font-size: 17px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+        }
 
-.user-control-panel {
-    display: flex;
-    gap: 8px;
-    margin: 10px;
-}
+        .popup-status {
+            font-size: 13px;
+            display: block;
+            margin-bottom: 10px;
+            padding: 4px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
 
-.auth-btn {
-    background: white;
-    padding: 8px 12px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    text-decoration: none;
-    color: #333;
-    font-weight: bold;
-    font-size: 19px;
-    display: flex;
-    align-items: center;
-    border: none;
-}
+        .popup-btn-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            justify-content: center;
+        }
 
-.edit-btn {
-    font-size: 21.4px;
-    padding: 6px 7.4px;
-}
-.legend {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    background: white;
-    padding: 4px;
-    z-index: 1000;
-    border-radius: 49%;
-    font-size: 12px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
+        .popup-btn {
+            flex: 1;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            background: #f8f9fa;
+            cursor: pointer;
+            font-size: 13px;
+            text-decoration: none;
+            color: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
 
-.info-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 38px;
-    height: 38px;
-    background: #1565C0;
-    color: white;
-    border-radius: 50%;
-    font-size: 32px;
-    cursor: pointer;
-    font-weight: bold;
-}
+        .popup-btn:hover {
+            background: #e2e6ea;
+        }
+
+        .popup-btn.primary {
+            background: #007bff;
+            color: white;
+            border: none;
+            font-weight: bold;
+            width: 100%;
+        }
+
+        /* --- СТИЛИ МОДАЛЬНОГО ОКНА --- */
+        #modalOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            backdrop-filter: blur(2px);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            z-index: 2001;
+            width: 300px;
+        }
+
+        .user-control-panel {
+            display: flex;
+            gap: 8px;
+            margin: 10px;
+        }
+
+        .auth-btn {
+            background: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            text-decoration: none;
+            color: #333;
+            font-weight: bold;
+            font-size: 19px;
+            display: flex;
+            align-items: center;
+            border: none;
+        }
+
+        .edit-btn {
+            font-size: 21.4px;
+            padding: 6px 7.4px;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 4px;
+            z-index: 1000;
+            border-radius: 49%;
+            font-size: 12px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            background: #1565C0;
+            color: white;
+            border-radius: 50%;
+            font-size: 32px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Стиль контейнера (збігається зі стандартним зумом) */
+        .leaflet-custom-btn {
+            background-color: #ffffff;
+            border: none;
+            border-bottom: 1px solid #ddd;
+            width: 34px;
+            height: 34px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: background-color 0.2s;
+            padding: 0;
+        }
+
+        .leaflet-custom-btn:last-child {
+            border-bottom: none;
+        }
+
+        .leaflet-custom-btn:hover {
+            background-color: #f0f0f0;
+        }
+
+        .leaflet-custom-btn:active {
+            background-color: #e0e0e0;
+        }
+
+        /* Для тач-пристроїв (Pixel 7) */
+        .leaflet-touch .leaflet-custom-btn {
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .leaflet-touch .leaflet-control-layers,
+        .leaflet-touch .leaflet-bar {
+            border: 0px solid rgba(0, 0, 0, 0.2);
+            background-clip: padding-box;
+        }
     </style>
 
 </head>
@@ -301,14 +415,17 @@
 <body>
     <div id="map"></div>
 
-    <div id="modalOverlay" onclick="window.closeAllModals()"></div>
+
     <div id="takeParcelModal" class="modal">
         <h3 id="modalTitle" style="margin:0 0 10px 0;">Дільниця</h3>
         <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Оберіть вісника для призначення:</p>
-        <select id="publisherSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; margin-bottom:20px;"></select>
+        <select id="publisherSelect"
+            style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; margin-bottom:20px;"></select>
         <div style="display:flex; gap:10px;">
-            <button onclick="window.closeAllModals()" style="flex:1; padding:10px; border-radius:8px; border:none; background:#f1f1f1; cursor:pointer;">Скасувати</button>
-            <button id="confirmTakeBtn" style="flex:1; padding:10px; border-radius:8px; border:none; background:#007bff; color:white; font-weight:bold; cursor:pointer;">Призначити</button>
+            <button onclick="window.closeAllModals()"
+                style="flex:1; padding:10px; border-radius:8px; border:none; background:#f1f1f1; cursor:pointer;">Скасувати</button>
+            <button id="confirmTakeBtn"
+                style="flex:1; padding:10px; border-radius:8px; border:none; background:#007bff; color:white; font-weight:bold; cursor:pointer;">Призначити</button>
         </div>
     </div>
 
@@ -316,108 +433,153 @@
         <span class="info-icon" onclick="UI.toggleModal('logicModal', true)">?</span>
     </div>
 
-    <div id="logicModal" class="modal-container" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10003; width: 500px; max-width: 90vw; padding: 20px; background: #ffffff; border-radius: 14px; border: 2px solid #2c3e50; box-shadow: 0 10px 40px rgba(0,0,0,0.3); font-family: 'Segoe UI', Tahoma, sans-serif; color: #2c3e50;">
-        <h3 style="margin: 0 0 15px 0; font-size: 20px; text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 10px;">🗺️ Пояснення мапи</h3>
+    <div id="logicModal" class="modal-container"
+        style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10003; width: 500px; max-width: 90vw; padding: 20px; background: #ffffff; border-radius: 14px; border: 2px solid #2c3e50; box-shadow: 0 10px 40px rgba(0,0,0,0.3); font-family: 'Segoe UI', Tahoma, sans-serif; color: #2c3e50;">
+        <h3
+            style="margin: 0 0 15px 0; font-size: 20px; text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
+            🗺️ Пояснення мапи</h3>
         <div style="max-height: 70vh; overflow-y: auto; padding-right: 5px;">
-    
-    <div style="margin-bottom: 20px;">
-        <strong style="display: block; margin-bottom: 10px; color: #7f8c8d; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">🏙️ ТИПИ ЗАБУДОВИ</strong>
-        
-        <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
-            <div style="min-width: 35px; height: 18px; background: #FFA500; border: 2px solid rgba(0,0,0,0.1); margin-right: 12px; margin-top: 2px; border-radius: 3px;"></div>
-            <span><b>Багатоповерхівки:</b> Райони з багатоквартирними будинками.</span>
-        </div>
-        
-        <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
-            <div style="min-width: 35px; height: 18px; background: #969600; border: 2px solid rgba(0,0,0,0.1); margin-right: 12px; margin-top: 2px; border-radius: 3px;"></div>
-            <span><b>Змішана забудова:</b> Поєднання приватних та багатоповерхових будинків.</span>
-        </div>
-        
-        <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
-            <div style="min-width: 35px; height: 18px; background: #0000FF; border: 2px solid rgba(0,0,0,0.1); margin-right: 12px; margin-top: 2px; border-radius: 3px;"></div>
-            <span><b>Ділова зона:</b> Офісні центри та комерційні об’єкти.</span>
-        </div>
-        
-        <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
-            <div style="min-width: 35px; height: 18px; background: #8B4513; border: 2px solid rgba(0,0,0,0.1); margin-right: 12px; margin-top: 2px; border-radius: 3px;"></div>
-            <span><b>Село:</b> Приватні будинки в приміській зоні.</span>
-        </div>
-    </div>
 
-    <div style="margin-bottom: 20px; padding: 12px; background: #f4f7f6; border-radius: 10px; border-left: 4px solid #2ecc71;">
-        <strong style="display: block; margin-bottom: 8px; color: #7f8c8d; font-size: 11px; text-transform: uppercase;">🏡 ПРИВАТНИЙ СЕКТОР</strong>
-        <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;">
-            <div style="width: 16px; height: 16px; background: #008000; border-radius: 2px;"></div>
-            <div style="width: 16px; height: 16px; background: #50C878; border-radius: 2px;"></div>
-            <div style="width: 16px; height: 16px; background: #A020F0; border-radius: 2px;"></div>
-            <div style="width: 16px; height: 16px; background: #0BDA51; border-radius: 2px;"></div>
-            <div style="width: 16px; height: 16px; background: #FC0FC0; border-radius: 2px;"></div>
-            <div style="width: 16px; height: 16px; background: #93C572; border-radius: 2px;"></div>
-            <div style="width: 16px; height: 16px; background: #710193; border-radius: 2px;"></div>
-            <div style="width: 16px; height: 16px; background: #85BB65; border-radius: 2px;"></div>
-            <div style="width: 16px; height: 16px; background: #FFF200; border-radius: 2px;"></div>
-            <div style="width: 16px; height: 16px; background: #98FF98; border-radius: 2px;"></div>
-            <div style="width: 16px; height: 16px; background: #DA70D6; border-radius: 2px;"></div>
-        </div>
-        <span style="font-size: 11px; color: #666; line-height: 1.3; display: block;">Автоматичне чергування кольорів для розділення сусідніх ділянок.</span>
-    </div>
+            <div style="margin-bottom: 20px;">
+                <strong
+                    style="display: block; margin-bottom: 10px; color: #7f8c8d; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">🏙️
+                    ТИПИ ЗАБУДОВИ</strong>
 
-    <div style="margin-bottom: 20px;">
-        <strong style="display: block; margin-bottom: 10px; color: #7f8c8d; font-size: 11px; text-transform: uppercase;">⚠️ СТАТУС ОПРАЦЮВАННЯ</strong>
-        
-        <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
-            <div style="min-width: 35px; height: 18px; background: #FF0000; border: 2px solid rgba(0,0,0,0.1); margin-right: 12px; margin-top: 2px; border-radius: 3px;"></div>
-            <span><b style="color: #e74c3c;">Червоний:</b> Не опрацьовувалася понад 6-7 місяців.</span>
-        </div>
-        
-        <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
-            <div style="min-width: 35px; height: 18px; background: #808080; border: 2px solid rgba(0,0,0,0.1); margin-right: 12px; margin-top: 2px; border-radius: 3px;"></div>
-            <span><b>Сірий (Карантин):</b> Здана менше 3 місяців тому.</span>
-        </div>
-        
-        <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
-            <div style="min-width: 35px; height: 18px; background: #163e25; border: 2px solid rgba(0,0,0,0.1); margin-right: 12px; margin-top: 2px; border-radius: 3px;"></div>
-            <span><b>Темно-зелений:</b> Зараз у роботі.</span>
-        </div>
-    </div>
+                <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+                    <div
+                        style="min-width: 35px; height: 18px; background: #FFA500; border: 2px solid rgba(0,0,0,0.1); margin-right: 12px; margin-top: 2px; border-radius: 3px;">
+                    </div>
+                    <span><b>Багатоповерхівки:</b> Райони з багатоквартирними будинками.</span>
+                </div>
 
-    <div style="margin-bottom: 10px;">
-        <strong style="display: block; margin-bottom: 10px; color: #7f8c8d; font-size: 11px; text-transform: uppercase;">📐 ОСОБЛИВОСТІ МЕЖ</strong>
-        <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
-            <div style="min-width: 35px; height: 18px; background: transparent; border: 2px dashed #333; margin-right: 12px; margin-top: 2px; border-radius: 3px;"></div>
-            <span><b>Пунктир:</b> Територія складається з кількох окремих ділянок.</span>
-        </div>
-    </div>
+                <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+                    <div
+                        style="min-width: 35px; height: 18px; background: #969600; border: 2px solid rgba(0,0,0,0.1); margin-right: 12px; margin-top: 2px; border-radius: 3px;">
+                    </div>
+                    <span><b>Змішана забудова:</b> Поєднання приватних та багатоповерхових будинків.</span>
+                </div>
 
-</div>
-        <button onclick="UI.toggleModal('logicModal', false)" style="width: 100%; margin-top: 20px; padding: 12px; background: #3498db; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; font-size: 15px;">
+                <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+                    <div
+                        style="min-width: 35px; height: 18px; background: #0000FF; border: 2px solid rgba(0,0,0,0.1); margin-right: 12px; margin-top: 2px; border-radius: 3px;">
+                    </div>
+                    <span><b>Ділова зона:</b> Офісні центри та комерційні об’єкти.</span>
+                </div>
+
+                <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+                    <div
+                        style="min-width: 35px; height: 18px; background: #8B4513; border: 2px solid rgba(0,0,0,0.1); margin-right: 12px; margin-top: 2px; border-radius: 3px;">
+                    </div>
+                    <span><b>Село:</b> Приватні будинки в приміській зоні.</span>
+                </div>
+            </div>
+
+            <div
+                style="margin-bottom: 20px; padding: 12px; background: #f4f7f6; border-radius: 10px; border-left: 4px solid #2ecc71;">
+                <strong
+                    style="display: block; margin-bottom: 8px; color: #7f8c8d; font-size: 11px; text-transform: uppercase;">🏡
+                    ПРИВАТНИЙ СЕКТОР</strong>
+                <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;">
+                    <div style="width: 16px; height: 16px; background: #008000; border-radius: 2px;"></div>
+                    <div style="width: 16px; height: 16px; background: #50C878; border-radius: 2px;"></div>
+                    <div style="width: 16px; height: 16px; background: #A020F0; border-radius: 2px;"></div>
+                    <div style="width: 16px; height: 16px; background: #0BDA51; border-radius: 2px;"></div>
+                    <div style="width: 16px; height: 16px; background: #FC0FC0; border-radius: 2px;"></div>
+                    <div style="width: 16px; height: 16px; background: #93C572; border-radius: 2px;"></div>
+                    <div style="width: 16px; height: 16px; background: #710193; border-radius: 2px;"></div>
+                    <div style="width: 16px; height: 16px; background: #85BB65; border-radius: 2px;"></div>
+                    <div style="width: 16px; height: 16px; background: #FFF200; border-radius: 2px;"></div>
+                    <div style="width: 16px; height: 16px; background: #98FF98; border-radius: 2px;"></div>
+                    <div style="width: 16px; height: 16px; background: #DA70D6; border-radius: 2px;"></div>
+                </div>
+                <span style="font-size: 11px; color: #666; line-height: 1.3; display: block;">Автоматичне чергування
+                    кольорів для розділення сусідніх ділянок.</span>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <strong
+                    style="display: block; margin-bottom: 10px; color: #7f8c8d; font-size: 11px; text-transform: uppercase;">⚠️
+                    СТАТУС ОПРАЦЮВАННЯ</strong>
+
+                <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+                    <div
+                        style="min-width: 35px; height: 18px; background: #FF0000; border: 2px solid rgba(0,0,0,0.1); margin-right: 12px; margin-top: 2px; border-radius: 3px;">
+                    </div>
+                    <span><b style="color: #e74c3c;">Червоний:</b> Не опрацьовувалася понад 6-7 місяців.</span>
+                </div>
+
+                <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+                    <div
+                        style="min-width: 35px; height: 18px; background: #808080; border: 2px solid rgba(0,0,0,0.1); margin-right: 12px; margin-top: 2px; border-radius: 3px;">
+                    </div>
+                    <span><b>Сірий (Карантин):</b> Здана менше 3 місяців тому.</span>
+                </div>
+
+                <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+                    <div
+                        style="min-width: 35px; height: 18px; background: #163e25; border: 2px solid rgba(0,0,0,0.1); margin-right: 12px; margin-top: 2px; border-radius: 3px;">
+                    </div>
+                    <span><b>Темно-зелений:</b> Зараз у роботі.</span>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 10px;">
+                <strong
+                    style="display: block; margin-bottom: 10px; color: #7f8c8d; font-size: 11px; text-transform: uppercase;">📐
+                    ОСОБЛИВОСТІ МЕЖ</strong>
+                <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+                    <div
+                        style="min-width: 35px; height: 18px; background: transparent; border: 2px dashed #333; margin-right: 12px; margin-top: 2px; border-radius: 3px;">
+                    </div>
+                    <span><b>Пунктир:</b> Територія складається з кількох окремих ділянок.</span>
+                </div>
+            </div>
+
+        </div>
+        <button onclick="UI.toggleModal('logicModal', false)"
+            style="width: 100%; margin-top: 20px; padding: 12px; background: #3498db; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; font-size: 15px;">
             Зрозуміло
         </button>
     </div>
 
-    <div id="modalOverlay" class="modal-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10002;" onclick="UI.closeAllModals()"></div>
+
 
     <div id="filterMenu">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <span style="font-weight:bold;">Фільтри</span>
-            <button id="closeFilter"
-                style="background:none; border:none; cursor:pointer; font-size:20px;">&times;</button>
+        <span id="closeFilter" style="
+            position: absolute; 
+            top: 5px; 
+            right: 10px; 
+            cursor: pointer; 
+            font-size: 22px; 
+            font-weight: bold; 
+            color: #888;
+        ">&times;</span>
+
+        <h4 style="margin:0 0 10px 0;">🔍 Фільтр дільниць</h4>
+
+        <div style="margin-bottom: 10px;">
+            <input type="text" id="searchNumber" placeholder="Номер дільниці..."
+                style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; box-sizing: border-box;">
         </div>
 
-        <div class="filter-group">
-            <label for="searchNumber">Пошук дільниці:</label>
-            <input type="number" id="searchNumber" class="search-input" placeholder="Введіть номер...">
-        </div>
-
-        <div class="filter-group">
-            <label>Статус:</label>
-            <div class="radio-group">
-                <label class="radio-item"><input type="radio" name="statusFilter" value="all" checked> Всі
-                    дільниці</label>
-                <label class="radio-item"><input type="radio" name="statusFilter" value="free"> Тільки вільні</label>
-                <label class="radio-item"><input type="radio" name="statusFilter" value="taken"> Тільки зайняті</label>
-                <label class="radio-item"><input type="radio" name="statusFilter" value="mine"> Мої дільниці</label>
-            </div>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px;">
+            <label>
+                <input type="radio" name="statusFilter" value="all" checked>
+                Показати всі <span id="cnt-all" style="color: #888; font-size: 12px;">(0)</span>
+            </label>
+            <label>
+                <input type="radio" name="statusFilter" value="free">
+                ✅ Вільні <span id="cnt-free" style="color: #28a745; font-weight: bold; font-size: 12px;">(0)</span>
+            </label>
+            <label>
+                <input type="radio" name="statusFilter" value="taken">
+                🚩 На руках <span id="cnt-taken" style="color: #e74c3c; font-weight: bold; font-size: 12px;">(0)</span>
+            </label>
+            <label id="myParcelsLabel" style="display:none;">
+                <input type="radio" name="statusFilter" value="mine">
+                👤 Мої дільниці <span id="cnt-mine"
+                    style="color: #1565C0; font-weight: bold; font-size: 12px;">(0)</span>
+            </label>
         </div>
     </div>
 
@@ -434,27 +596,27 @@
         console.log("Supabase ініціалізовано як модуль і додано у window");
     </script>
     <script type="module">
-    import { isAdmin, currentUserId } from './js/main.js';
-    
-    // Ініціалізація глобальних змінних
-    window.userRole = localStorage.getItem('userRole');
-    window.currentUserId = localStorage.getItem('userId');
-    window.userFullName = localStorage.getItem('userFullName');
-    window.isAdmin = (window.userRole === 'admin' || window.userRole === 'super_admin');
-    window.isAuth = !!localStorage.getItem('userKey');
-    window.allParcelLayers = [];
+        import { isAdmin, currentUserId } from './js/main.js';
 
-    // --- 1. КЛАСИ КОНТРОЛІВ (Тільки опис) ---
-    const AuthControl = L.Control.extend({
-        options: { position: 'topright' },
-        onAdd: function () {
-            const container = L.DomUtil.create('div', 'user-control-panel');
-            const name = localStorage.getItem('userName');
-            const role = localStorage.getItem('userRole');
-            const showLogout = localStorage.getItem('showQuickLogout') === 'true';
-            const isSuperAdmin = (role === 'super_admin');
+        // Ініціалізація глобальних змінних
+        window.userRole = localStorage.getItem('userRole');
+        window.currentUserId = localStorage.getItem('userId');
+        window.userFullName = localStorage.getItem('userFullName');
+        window.isAdmin = (window.userRole === 'admin' || window.userRole === 'super_admin');
+        window.isAuth = !!localStorage.getItem('userKey');
+        window.allParcelLayers = [];
 
-            container.innerHTML = `
+        // --- 1. КЛАСИ КОНТРОЛІВ (Тільки опис) ---
+        const AuthControl = L.Control.extend({
+            options: { position: 'topright' },
+            onAdd: function () {
+                const container = L.DomUtil.create('div', 'user-control-panel');
+                const name = localStorage.getItem('userName');
+                const role = localStorage.getItem('userRole');
+                const showLogout = localStorage.getItem('showQuickLogout') === 'true';
+                const isSuperAdmin = (role === 'super_admin');
+
+                container.innerHTML = `
                 <a href="${name ? 'profile.html' : 'login.html'}" class="auth-btn">
                     ${name ? '👤 ' + name : '🔐 Увійти'}
                 </a>
@@ -467,57 +629,42 @@
                 ${isSuperAdmin ? '<a href="map-editor.html" class="auth-btn edit-btn">✏️</a>' : ''}
             `;
 
-            L.DomEvent.disableClickPropagation(container);
-            L.DomEvent.disableScrollPropagation(container);
-            return container;
-        }
-    });
-
-    const FilterControl = L.Control.extend({
-        options: { position: 'topleft' },
-        onAdd: function () {
-            const btn = L.DomUtil.create('button', 'leaflet-bar leaflet-custom-btn');
-            btn.innerHTML = '🔍';
-            btn.style.width = '34px';
-            btn.style.height = '34px';
-            btn.style.backgroundColor = 'white';
-            btn.style.cursor = 'pointer';
-            btn.onclick = () => {
-                const menu = document.getElementById('filterMenu');
-                menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
-            };
-            return btn;
-        }
-    });
-
-    // --- 2. ІНІЦІАЛІЗАЦІЯ КАРТИ ---
-    function initMainMap() {
-        const satelliteOnly = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-        const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { pane: 'shadowPane' });
-        const satelliteHybrid = L.layerGroup([satelliteOnly, labels]);
-
-        const isMobile = window.innerWidth <= 768;
-
-        window.map = L.map('map', {
-            preferCanvas: true,
-            center: [49.2321, 29.0577],
-            zoom: 15,
-            layers: [satelliteHybrid],
-            zoomControl: !isMobile
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.disableScrollPropagation(container);
+                return container;
+            }
         });
 
-        // ДОДАЄМО КОНТРОЛІ ТУТ (Коли window.map вже існує)
-        window.map.addControl(new FilterControl());
-        new AuthControl().addTo(window.map);
-    }
 
-    // --- 3. ЛОГІКА ПОПАПІВ ---
-    window.createPopupContent = (p) => {
-        const isTaken = (p.status === 'taken');
-        const isAuth = !!localStorage.getItem('userKey');
-        const googleMapsUrl = `https://www.google.com/maps?q=${p.center_lat},${p.center_lng}`;
-        
-        return `
+
+        // --- 2. ІНІЦІАЛІЗАЦІЯ КАРТИ ---
+        function initMainMap() {
+            const satelliteOnly = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+            const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { pane: 'shadowPane' });
+            const satelliteHybrid = L.layerGroup([satelliteOnly, labels]);
+
+            const isMobile = window.innerWidth <= 768;
+
+            window.map = L.map('map', {
+                preferCanvas: true,
+                center: [49.2321, 29.0577],
+                zoom: 15,
+                layers: [satelliteHybrid],
+                zoomControl: false,
+            });
+
+            // ДОДАЄМО КОНТРОЛІ ТУТ (Коли window.map вже існує)
+
+            new AuthControl().addTo(window.map);
+        }
+
+        // --- 3. ЛОГІКА ПОПАПІВ ---
+        window.createPopupContent = (p) => {
+            const isTaken = (p.status === 'taken');
+            const isAuth = !!localStorage.getItem('userKey');
+            const googleMapsUrl = `https://www.google.com/maps?q=${p.center_lat},${p.center_lng}`;
+
+            return `
             <div class="popup-container">
                 <span class="popup-title">Дільниця №${p.name}</span>
                 <span class="popup-status" style="background:${isTaken ? '#f8d7da' : '#d4edda'}; color:${isTaken ? '#721c24' : '#155724'};">
@@ -529,77 +676,77 @@
                     <a href="parcel-details.html?id=${p.id}" class="popup-btn">📄 Деталі</a>
                 </div>
 
-                ${!isTaken && isAuth ? 
-                    `<button class="popup-btn primary" onclick="window.showTakeModal('${p.id}', '${p.name}')">✋ Взяти дільницю</button>` : 
+                ${!isTaken && isAuth ?
+                    `<button class="popup-btn primary" onclick="window.showTakeModal('${p.id}', '${p.name}')">✋ Взяти дільницю</button>` :
                     (!isAuth && !isTaken ? '<p style="font-size:11px; color:#999; text-align:center;">Увійдіть, щоб взяти</p>' : '')
                 }
             </div>
         `;
-    };
-
-    // --- 4. ЗАВАНТАЖЕННЯ ДІЛЬНИЦЬ ---
-    async function loadParcels() {
-        const { data: parcels, error } = await window.supabase.from('parcels').select('*');
-        if (error) return console.error(error);
-
-        parcels.forEach(p => {
-            if (!p.geom) return;
-
-            const geoData = (typeof p.geom === 'string') ? JSON.parse(p.geom) : p.geom;
-            
-            const layer = L.geoJSON(geoData, {
-                style: () => getParcelStyle(p),
-            }).addTo(window.map);
-
-            const center = layer.getBounds().getCenter();
-            const label = L.marker(center, {
-                icon: L.divIcon({
-                    className: 'parcel-label',
-                    html: `<b style="color:white; text-shadow: 1px 1px 2px black;">${p.name}</b>`,
-                    iconSize: [40, 20]
-                }),
-                interactive: false
-            }).addTo(window.map);
-
-            // Використовуємо нашу функцію для контенту попапа
-            layer.bindPopup(() => window.createPopupContent(p));
-
-            window.allParcelLayers.push({
-                id: p.id,
-                name: p.name.toString().toLowerCase(),
-                data: p,
-                layer: layer,
-                label: label
-            });
-        });
-    }
-
-    // --- 5. ФУНКЦІЇ МОДАЛОК ТА СТИЛІВ ---
-    function getParcelStyle(pData) {
-        let baseColor = '#008000';
-        if (pData.status === 'taken') baseColor = '#163e25';
-        if (pData.category === 'highrise') baseColor = '#FFA500';
-
-        return {
-            fillColor: baseColor,
-            fillOpacity: 0.5,
-            color: '#ffffff',
-            weight: 2,
-            opacity: 1
         };
-    }
 
-    // (Інші функції: window.showTakeModal, confirmTakeBtn.onclick залишайте як були)
+        // --- 4. ЗАВАНТАЖЕННЯ ДІЛЬНИЦЬ ---
+        async function loadParcels() {
+            const { data: parcels, error } = await window.supabase.from('parcels').select('*');
+            if (error) return console.error(error);
 
-    // --- 6. ЗАПУСК ПРИ ЗАВАНТАЖЕННІ ---
-    document.addEventListener('DOMContentLoaded', async () => {
-        initMainMap();
-        await loadParcels();
-        
-        // Тут ваші обробники подій фільтрів...
-    });
-</script>
-<script src="js/dev-tools.js"></script>
+            parcels.forEach(p => {
+                if (!p.geom) return;
+
+                const geoData = (typeof p.geom === 'string') ? JSON.parse(p.geom) : p.geom;
+
+                const layer = L.geoJSON(geoData, {
+                    style: () => getParcelStyle(p),
+                }).addTo(window.map);
+
+                const center = layer.getBounds().getCenter();
+                const label = L.marker(center, {
+                    icon: L.divIcon({
+                        className: 'parcel-label',
+                        html: `<b style="color:white; text-shadow: 1px 1px 2px black;">${p.name}</b>`,
+                        iconSize: [40, 20]
+                    }),
+                    interactive: false
+                }).addTo(window.map);
+
+                // Використовуємо нашу функцію для контенту попапа
+                layer.bindPopup(() => window.createPopupContent(p));
+
+                window.allParcelLayers.push({
+                    id: p.id,
+                    name: p.name.toString().toLowerCase(),
+                    data: p,
+                    layer: layer,
+                    label: label
+                });
+            });
+        }
+
+        // --- 5. ФУНКЦІЇ МОДАЛОК ТА СТИЛІВ ---
+        function getParcelStyle(pData) {
+            let baseColor = '#008000';
+            if (pData.status === 'taken') baseColor = '#163e25';
+            if (pData.category === 'highrise') baseColor = '#FFA500';
+
+            return {
+                fillColor: baseColor,
+                fillOpacity: 0.5,
+                color: '#ffffff',
+                weight: 2,
+                opacity: 1
+            };
+        }
+
+        // (Інші функції: window.showTakeModal, confirmTakeBtn.onclick залишайте як були)
+
+        // --- 6. ЗАПУСК ПРИ ЗАВАНТАЖЕННІ ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            initMainMap();
+            await loadParcels();
+
+            // Тут ваші обробники подій фільтрів...
+        });
+    </script>
+    <script src="js/dev-tools.js"></script>
 </body>
 
 </html>

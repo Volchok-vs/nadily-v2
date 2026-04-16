@@ -8,8 +8,16 @@ window.UI = {
     toggleModal(modalId, show = true) {
         const modal = document.getElementById(modalId);
         const overlay = document.getElementById('modalOverlay');
+        
         if (modal) modal.style.display = show ? 'block' : 'none';
         if (overlay) overlay.style.display = show ? 'block' : 'none';
+
+        // Блокуємо або розблоковуємо прокрутку сторінки
+        if (show) {
+            document.body.classList.add('modal-open');
+        } else {
+            document.body.classList.remove('modal-open');
+        }
     },
 
     closeAllModals() {
@@ -19,6 +27,8 @@ window.UI = {
                 el.style.display = 'none';
             });
         });
+        document.body.classList.remove('modal-open'); // Обов'язково повертаємо прокрутку
+    
     }
 };
 // Рядок 29 тепер має бути порожнім або закривати дужку, але НЕ містити "export default UI"
@@ -51,18 +61,22 @@ window.quickLogout = () => {
     }
 };
 
-// Закриття фільтра по кліку на хрестик
-document.getElementById('closeFilter')?.addEventListener('click', () => {
-    document.getElementById('filterMenu').style.display = 'none';
-});
+// Ініціалізація подій для фільтра
+document.addEventListener('DOMContentLoaded', () => {
+    
+    // Закриття фільтра через хрестик (використовуємо універсальну функцію)
+    document.getElementById('closeFilter')?.addEventListener('click', () => {
+        UI.toggleModal('filterMenu', false);
+    });
 
-// Закриття меню при кліку повз нього
-document.addEventListener('click', (e) => {
-    const filterMenu = document.getElementById('filterMenu');
-    if (filterMenu && filterMenu.style.display === 'block') {
-        // Якщо клік не по меню і не по кнопці виклику (🔍)
-        if (!filterMenu.contains(e.target) && !e.target.closest('.leaflet-custom-btn')) {
-            filterMenu.style.display = 'none';
+    // Закриття при кліку повз меню
+    document.addEventListener('click', (e) => {
+        const filterMenu = document.getElementById('filterMenu');
+        if (filterMenu && filterMenu.style.display === 'block') {
+            // Якщо клік не по меню і не по кнопці виклику (🔍)
+            if (!filterMenu.contains(e.target) && !e.target.closest('.leaflet-custom-btn')) {
+                UI.toggleModal('filterMenu', false);
+            }
         }
-    }
+    });
 });
