@@ -5,16 +5,24 @@
     <meta charset="utf-8" />
     <title>Карта дільниць</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    
+
+
 
 
     <style>
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        #map { height: 100vh; width: 100%; }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
 
         /* Стилизация попапов */
         .leaflet-popup-content-wrapper {
@@ -22,43 +30,269 @@
             border-radius: 12px !important;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
         }
-        .popup-container { min-width: 200px; }
-        .popup-title { font-size: 17px; font-weight: bold; margin-bottom: 5px; display: block; text-align: center; }
-        .popup-status { font-size: 13px; display: block; text-align: center; margin-bottom: 10px; padding: 4px; border-radius: 4px; }
-        .status-free { background: #e6f4ea; color: #1e7e34; }
-        .status-taken { background: #feeeee; color: #d93025; }
-        .popup-btn-row { display: flex; gap: 8px; margin-top: 10px; }
-        .popup-btn {
-            flex: 1; padding: 8px; border: 1px solid #ddd; background: white;
-            border-radius: 6px; cursor: pointer; font-size: 12px; text-align: center; text-decoration: none; color: #333;
+
+        .popup-container {
+            min-width: 200px;
         }
-        .popup-btn.primary { background: #007bff; color: white; border-color: #0056b3; }
-        
+
+        .popup-title {
+            font-size: 17px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+            text-align: center;
+        }
+
+        .popup-status {
+            font-size: 13px;
+            display: block;
+            text-align: center;
+            margin-bottom: 10px;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .status-free {
+            background: #e6f4ea;
+            color: #1e7e34;
+        }
+
+        .status-taken {
+            background: #feeeee;
+            color: #d93025;
+        }
+
+        .popup-btn-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .popup-btn {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            text-align: center;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .popup-btn.primary {
+            background: #007bff;
+            color: white;
+            border-color: #0056b3;
+        }
+
         /* Меню фильтров */
         #filterMenu {
-            position: fixed; top: 10px; right: 10px; z-index: 1000;
-            background: white; padding: 15px; border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: none; width: 250px;
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: none;
+            width: 250px;
         }
-        .filter-group { margin-bottom: 15px; }
-        .filter-group label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; }
-        .search-input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        
-        .radio-group { display: flex; flex-direction: column; gap: 8px; }
-        .radio-item { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+
+        .filter-group {
+            margin-bottom: 15px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .radio-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* --- СТИЛИ ПОПАПА (из index_1) --- */
+        .popup-container {
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .popup-title {
+            font-size: 17px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .popup-status {
+            font-size: 13px;
+            display: block;
+            margin-bottom: 10px;
+            padding: 4px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .popup-btn-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            justify-content: center;
+        }
+
+        .popup-btn {
+            flex: 1;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            background: #f8f9fa;
+            cursor: pointer;
+            font-size: 13px;
+            text-decoration: none;
+            color: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+
+        .popup-btn:hover {
+            background: #e2e6ea;
+        }
+
+        .popup-btn.primary {
+            background: #007bff;
+            color: white;
+            border: none;
+            font-weight: bold;
+            width: 100%;
+        }
+
+        /* --- СТИЛИ МОДАЛЬНОГО ОКНА --- */
+        #modalOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            backdrop-filter: blur(2px);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            z-index: 2001;
+            width: 300px;
+        }
+
+        /* --- СТИЛИ ПОПАПА (из index_1) --- */
+.popup-container { min-width: 200px; text-align: center; }
+.popup-title { font-size: 17px; font-weight: bold; margin-bottom: 5px; display: block; }
+.popup-status { 
+    font-size: 13px; display: block; margin-bottom: 10px; padding: 4px; 
+    border-radius: 6px; font-weight: 500; 
+}
+.popup-btn-row { display: flex; gap: 8px; margin-bottom: 8px; justify-content: center; }
+.popup-btn { 
+    flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #ddd; 
+    background: #f8f9fa; cursor: pointer; font-size: 13px; text-decoration: none; color: black;
+    display: flex; align-items: center; justify-content: center; transition: 0.2s;
+}
+.popup-btn:hover { background: #e2e6ea; }
+.popup-btn.primary { background: #007bff; color: white; border: none; font-weight: bold; width: 100%; }
+
+/* --- СТИЛИ МОДАЛЬНОГО ОКНА --- */
+#modalOverlay { 
+    display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
+    background:rgba(0,0,0,0.5); z-index:2000; backdrop-filter: blur(2px); 
+}
+.modal { 
+    display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); 
+    background:white; padding:25px; border-radius:15px; box-shadow:0 10px 30px rgba(0,0,0,0.4); 
+    z-index:2001; width: 300px; 
+}
+
+.user-control-panel {
+    display: flex;
+    gap: 8px;
+    margin: 10px;
+}
+
+.auth-btn {
+    background: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    text-decoration: none;
+    color: #333;
+    font-weight: bold;
+    font-size: 19px;
+    display: flex;
+    align-items: center;
+    border: none;
+}
+
+.edit-btn {
+    font-size: 21.4px;
+    padding: 6px 7.4px;
+}
     </style>
-    
+
 </head>
 
 <body>
     <div id="map"></div>
 
+    <div id="modalOverlay" onclick="window.closeAllModals()"></div>
+    <div id="takeParcelModal" class="modal">
+        <h3 id="modalTitle" style="margin:0 0 10px 0;">Дільниця</h3>
+        <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Оберіть вісника для призначення:</p>
+        <select id="publisherSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; margin-bottom:20px;"></select>
+        <div style="display:flex; gap:10px;">
+            <button onclick="window.closeAllModals()" style="flex:1; padding:10px; border-radius:8px; border:none; background:#f1f1f1; cursor:pointer;">Скасувати</button>
+            <button id="confirmTakeBtn" style="flex:1; padding:10px; border-radius:8px; border:none; background:#007bff; color:white; font-weight:bold; cursor:pointer;">Призначити</button>
+        </div>
+    </div>
     <div id="filterMenu">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <span style="font-weight:bold;">Фільтри</span>
-            <button id="closeFilter" style="background:none; border:none; cursor:pointer; font-size:20px;">&times;</button>
+            <button id="closeFilter"
+                style="background:none; border:none; cursor:pointer; font-size:20px;">&times;</button>
         </div>
-        
+
         <div class="filter-group">
             <label for="searchNumber">Пошук дільниці:</label>
             <input type="number" id="searchNumber" class="search-input" placeholder="Введіть номер...">
@@ -67,223 +301,193 @@
         <div class="filter-group">
             <label>Статус:</label>
             <div class="radio-group">
-                <label class="radio-item"><input type="radio" name="statusFilter" value="all" checked> Всі дільниці</label>
+                <label class="radio-item"><input type="radio" name="statusFilter" value="all" checked> Всі
+                    дільниці</label>
                 <label class="radio-item"><input type="radio" name="statusFilter" value="free"> Тільки вільні</label>
                 <label class="radio-item"><input type="radio" name="statusFilter" value="taken"> Тільки зайняті</label>
                 <label class="radio-item"><input type="radio" name="statusFilter" value="mine"> Мої дільниці</label>
             </div>
         </div>
     </div>
-  
+
     <script type="module">
-  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-  
-  const supabaseUrl = "https://modsgjjtwxbdnlycvifp.supabase.co";
-  const supabaseKey = "sb_publishable_dbMty7e93fQwcZWdu_xeqw_3PUPc_3D";
-  
-  // ВОТ ЭТА СТРОКА: Привязываем клиент к объекту window
-  window.supabase = createClient(supabaseUrl, supabaseKey);
-  
-  console.log("Supabase ініціалізовано як модуль і додано у window");
-</script>
+        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+        const supabaseUrl = "https://modsgjjtwxbdnlycvifp.supabase.co";
+        const supabaseKey = "sb_publishable_dbMty7e93fQwcZWdu_xeqw_3PUPc_3D";
+
+        // ВОТ ЭТА СТРОКА: Привязываем клиент к объекту window
+        window.supabase = createClient(supabaseUrl, supabaseKey);
+
+        console.log("Supabase ініціалізовано як модуль і додано у window");
+    </script>
     <script type="module">
-        
-        window.userRole = localStorage.getItem('userRole');
-        window.currentUserId = localStorage.getItem('userId');
-        window.userFullName = localStorage.getItem('userFullName');
-        window.isAdmin = (window.userRole === 'admin' || window.userRole === 'super_admin');
-        window.isAuth = !!localStorage.getItem('userKey');
-        window.allParcelLayers = [];
+    import { isAdmin, currentUserId } from './js/main.js';
+    
+    // Ініціалізація глобальних змінних
+    window.userRole = localStorage.getItem('userRole');
+    window.currentUserId = localStorage.getItem('userId');
+    window.userFullName = localStorage.getItem('userFullName');
+    window.isAdmin = (window.userRole === 'admin' || window.userRole === 'super_admin');
+    window.isAuth = !!localStorage.getItem('userKey');
+    window.allParcelLayers = [];
 
-        /**
-         * 2. ИНИЦИАЛИЗАЦИЯ КАРТЫ
-         */
-        function initMainMap() {
-            const satelliteOnly = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-            const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { pane: 'shadowPane' });
-            const satelliteHybrid = L.layerGroup([satelliteOnly, labels]);
+    // --- 1. КЛАСИ КОНТРОЛІВ (Тільки опис) ---
+    const AuthControl = L.Control.extend({
+        options: { position: 'topright' },
+        onAdd: function () {
+            const container = L.DomUtil.create('div', 'user-control-panel');
+            const name = localStorage.getItem('userName');
+            const role = localStorage.getItem('userRole');
+            const showLogout = localStorage.getItem('showQuickLogout') === 'true';
+            const isSuperAdmin = (role === 'super_admin');
 
-            const isMobile = window.innerWidth <= 768;
+            container.innerHTML = `
+                <a href="${name ? 'profile.html' : 'login.html'}" class="auth-btn">
+                    ${name ? '👤 ' + name : '🔐 Увійти'}
+                </a>
+                ${(showLogout && name) ? `
+                    <div onclick="window.quickLogout()" class="auth-btn" 
+                        style="background: #ff4757; color: white; cursor: pointer;">
+                        👈
+                    </div>
+                ` : ''}
+                ${isSuperAdmin ? '<a href="map-editor.html" class="auth-btn edit-btn">✏️</a>' : ''}
+            `;
 
-            window.map = L.map('map', {
-                preferCanvas: true, // Исправление для Chrome iOS
-                center: [49.2321, 29.0577],
-                zoom: 15,
-                layers: [satelliteHybrid],
-                zoomControl: !isMobile
-            });
-
-            // Добавляем кнопку фильтров на карту
-            const FilterControl = L.Control.extend({
-                options: { position: 'topleft' },
-                onAdd: function() {
-                    const btn = L.DomUtil.create('button', 'leaflet-bar leaflet-custom-btn');
-                    btn.innerHTML = '🔍';
-                    btn.style.width = '34px';
-                    btn.style.height = '34px';
-                    btn.style.backgroundColor = 'white';
-                    btn.style.cursor = 'pointer';
-                    btn.onclick = () => {
-                        const menu = document.getElementById('filterMenu');
-                        menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
-                    };
-                    return btn;
-                }
-            });
-            window.map.addControl(new FilterControl());
+            L.DomEvent.disableClickPropagation(container);
+            L.DomEvent.disableScrollPropagation(container);
+            return container;
         }
+    });
 
-        /**
-         * 3. ЛОГИКА СТИЛЕЙ (из map-styles.js)
-         */
-        function getParcelStyle(pData) {
-            let baseColor = '#008000'; // По умолчанию зеленый
-            if (pData.status === 'taken') baseColor = '#163e25';
-            if (pData.category === 'highrise') baseColor = '#FFA500';
-
-            return {
-                fillColor: baseColor,
-                fillOpacity: 0.5,
-                color: '#ffffff',
-                weight: 2,
-                opacity: 1
+    const FilterControl = L.Control.extend({
+        options: { position: 'topleft' },
+        onAdd: function () {
+            const btn = L.DomUtil.create('button', 'leaflet-bar leaflet-custom-btn');
+            btn.innerHTML = '🔍';
+            btn.style.width = '34px';
+            btn.style.height = '34px';
+            btn.style.backgroundColor = 'white';
+            btn.style.cursor = 'pointer';
+            btn.onclick = () => {
+                const menu = document.getElementById('filterMenu');
+                menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
             };
+            return btn;
         }
+    });
 
-        /**
-         * 4. ЗАГРУЗКА ДАННЫХ
-         */
-        async function loadParcels() {
-            // 1. Запит до бази (використовуємо window.supabase)
-            const { data: parcels, error } = await window.supabase.from('parcels').select('*');
-            
-            if (error) {
-                console.error("Помилка завантаження:", error);
-                return;
-            }
+    // --- 2. ІНІЦІАЛІЗАЦІЯ КАРТИ ---
+    function initMainMap() {
+        const satelliteOnly = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+        const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { pane: 'shadowPane' });
+        const satelliteHybrid = L.layerGroup([satelliteOnly, labels]);
 
-            parcels.forEach(p => {
-                // 2. Використовуємо p.geom замість p.geojson
-                const geometryData = p.geom; 
+        const isMobile = window.innerWidth <= 768;
 
-                if (!geometryData) {
-                    console.warn(`Дільниця №${p.name} не має геометрії в колонці 'geom'.`);
-                    return;
-                }
-
-                try {
-                    // Якщо дані прийшли як рядок, парсимо їх. Якщо вже об'єкт — використовуємо так.
-                    const geoData = (typeof geometryData === 'string') 
-                        ? JSON.parse(geometryData) 
-                        : geometryData;
-
-                    // 3. Створюємо шар на карті
-                    const layer = L.geoJSON(geoData, {
-                        style: getParcelStyle(p) // Функція стилів вже має працювати
-                    }).addTo(window.map);
-
-                    // 4. Логіка міток та попапів
-                    const center = layer.getBounds().getCenter();
-                    const label = L.marker(center, {
-                        icon: L.divIcon({
-                            className: 'parcel-label',
-                            html: `<b style="color:white; text-shadow: 1px 1px 2px black;">${p.name}</b>`,
-                            iconSize: [40, 20]
-                        })
-                    }).addTo(window.map);
-
-                    layer.bindPopup(`
-                        <div class="popup-container">
-                            <span class="popup-title">Дільниця №${p.name}</span>
-                            <span class="popup-status ${p.status === 'taken' ? 'status-taken' : 'status-free'}">
-                                ${p.status === 'taken' ? 'Зайнята' : 'Вільна'}
-                            </span>
-                            <div class="popup-btn-row">
-                                <a href="parcel-details.html?id=${p.id}" class="popup-btn">Деталі</a>
-                            </div>
-                        </div>
-                    `);
-
-                    // Зберігаємо для фільтрації
-                    window.allParcelLayers.push({
-                        id: p.id,
-                        name: p.name.toString().toLowerCase(),
-                        data: p,
-                        layer: layer,
-                        label: label
-                    });
-
-                } catch (e) {
-                    console.error(`Помилка обробки геометрії для дільниці №${p.name}:`, e);
-                }
-            });
-        }
-
-        /**
-         * 5. ФИЛЬТРАЦИЯ (из main.js)
-         */
-        window.applyFilters = () => {
-            const searchInput = document.getElementById('searchNumber');
-            const selectedRadio = document.querySelector('input[name="statusFilter"]:checked');
-            
-            if (!window.allParcelLayers || !window.map || !searchInput || !selectedRadio) return;
-
-            const searchValue = searchInput.value.trim().toLowerCase();
-            const filterType = selectedRadio.value;
-
-            window.allParcelLayers.forEach(item => {
-                let shouldShow = false;
-
-                if (searchValue !== "") {
-                    shouldShow = (item.name === searchValue);
-                } else {
-                    if (filterType === 'all') shouldShow = true;
-                    else if (filterType === 'free') shouldShow = (item.data.status !== 'taken');
-                    else if (filterType === 'taken') shouldShow = (item.data.status === 'taken');
-                    else if (filterType === 'mine') shouldShow = (String(item.data.taken_by_id) === String(window.currentUserId));
-                }
-
-                if (shouldShow) {
-                    item.layer.addTo(window.map);
-                    if (item.label) item.label.addTo(window.map);
-                } else {
-                    window.map.removeLayer(item.layer);
-                    if (item.label) window.map.removeLayer(item.label);
-                }
-            });
-        };
-
-        /**
-         * 6. СОБЫТИЯ И ЗАПУСК
-         */
-        document.addEventListener('DOMContentLoaded', async () => {
-            initMainMap();
-            await loadParcels();
-
-            // Обработчики фильтров
-            document.getElementById('searchNumber').addEventListener('input', (e) => {
-                if (e.target.value.trim() !== "") {
-                    document.querySelector('input[name="statusFilter"][value="all"]').checked = true;
-                }
-                window.applyFilters();
-            });
-
-            document.querySelectorAll('input[name="statusFilter"]').forEach(radio => {
-                radio.addEventListener('change', () => {
-                    document.getElementById('searchNumber').value = "";
-                    window.applyFilters();
-                });
-            });
-
-            document.getElementById('closeFilter').onclick = () => {
-                document.getElementById('filterMenu').style.display = 'none';
-            };
+        window.map = L.map('map', {
+            preferCanvas: true,
+            center: [49.2321, 29.0577],
+            zoom: 15,
+            layers: [satelliteHybrid],
+            zoomControl: !isMobile
         });
 
-        // Предотвращение кликов через меню на карту
-        const menuEl = document.getElementById('filterMenu');
-        L.DomEvent.disableClickPropagation(menuEl);
-        L.DomEvent.disableScrollPropagation(menuEl);
-    </script>
+        // ДОДАЄМО КОНТРОЛІ ТУТ (Коли window.map вже існує)
+        window.map.addControl(new FilterControl());
+        new AuthControl().addTo(window.map);
+    }
+
+    // --- 3. ЛОГІКА ПОПАПІВ ---
+    window.createPopupContent = (p) => {
+        const isTaken = (p.status === 'taken');
+        const isAuth = !!localStorage.getItem('userKey');
+        const googleMapsUrl = `https://www.google.com/maps?q=${p.center_lat},${p.center_lng}`;
+        
+        return `
+            <div class="popup-container">
+                <span class="popup-title">Дільниця №${p.name}</span>
+                <span class="popup-status" style="background:${isTaken ? '#f8d7da' : '#d4edda'}; color:${isTaken ? '#721c24' : '#155724'};">
+                    ${isTaken ? `На руках: ${p.taken_by || 'Вісник'}` : 'Вільна'}
+                </span>
+                
+                <div class="popup-btn-row">
+                    <button class="popup-btn" onclick="window.open('${googleMapsUrl}', '_blank')">📍 Маршрут</button>
+                    <a href="parcel-details.html?id=${p.id}" class="popup-btn">📄 Деталі</a>
+                </div>
+
+                ${!isTaken && isAuth ? 
+                    `<button class="popup-btn primary" onclick="window.showTakeModal('${p.id}', '${p.name}')">✋ Взяти дільницю</button>` : 
+                    (!isAuth && !isTaken ? '<p style="font-size:11px; color:#999; text-align:center;">Увійдіть, щоб взяти</p>' : '')
+                }
+            </div>
+        `;
+    };
+
+    // --- 4. ЗАВАНТАЖЕННЯ ДІЛЬНИЦЬ ---
+    async function loadParcels() {
+        const { data: parcels, error } = await window.supabase.from('parcels').select('*');
+        if (error) return console.error(error);
+
+        parcels.forEach(p => {
+            if (!p.geom) return;
+
+            const geoData = (typeof p.geom === 'string') ? JSON.parse(p.geom) : p.geom;
+            
+            const layer = L.geoJSON(geoData, {
+                style: () => getParcelStyle(p),
+            }).addTo(window.map);
+
+            const center = layer.getBounds().getCenter();
+            const label = L.marker(center, {
+                icon: L.divIcon({
+                    className: 'parcel-label',
+                    html: `<b style="color:white; text-shadow: 1px 1px 2px black;">${p.name}</b>`,
+                    iconSize: [40, 20]
+                }),
+                interactive: false
+            }).addTo(window.map);
+
+            // Використовуємо нашу функцію для контенту попапа
+            layer.bindPopup(() => window.createPopupContent(p));
+
+            window.allParcelLayers.push({
+                id: p.id,
+                name: p.name.toString().toLowerCase(),
+                data: p,
+                layer: layer,
+                label: label
+            });
+        });
+    }
+
+    // --- 5. ФУНКЦІЇ МОДАЛОК ТА СТИЛІВ ---
+    function getParcelStyle(pData) {
+        let baseColor = '#008000';
+        if (pData.status === 'taken') baseColor = '#163e25';
+        if (pData.category === 'highrise') baseColor = '#FFA500';
+
+        return {
+            fillColor: baseColor,
+            fillOpacity: 0.5,
+            color: '#ffffff',
+            weight: 2,
+            opacity: 1
+        };
+    }
+
+    // (Інші функції: window.showTakeModal, confirmTakeBtn.onclick залишайте як були)
+
+    // --- 6. ЗАПУСК ПРИ ЗАВАНТАЖЕННІ ---
+    document.addEventListener('DOMContentLoaded', async () => {
+        initMainMap();
+        await loadParcels();
+        
+        // Тут ваші обробники подій фільтрів...
+    });
+</script>
+<script src="js/dev-tools.js"></script>
 </body>
+
 </html>
