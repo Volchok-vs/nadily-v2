@@ -35,44 +35,106 @@
     z-index: 1000;
 }
 
-/* Робимо розрахунок таблиці фіксованим */
-.territory-table {
+.card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin: 10px;
+    padding: 15px;
+    
+    /* КЛЮЧОВІ ПАРАМЕТРИ */
+    max-width: 100%;    /* Картка не ширша за екран */
+    overflow-x: auto;   /* З'явиться горизонтальна прокрутка, якщо таблиця широка */
+    overflow-y: visible; /* Щоб підказка (tooltip) не обрізалася зверху/знизу */
+    position: relative;
+}
+
+#territoryTable {
+    width: 100%;        /* Таблиця намагається вписатися */
+    min-width: 600px;   /* Але не стискається менше за цей поріг, щоб дані були читабельні */
+    border-collapse: collapse;
     table-layout: fixed;
-    width: 100%; /* Таблиця розтягується на всю ширину, але стовпчики мають задані розміри */
+}
+
+#territoryTable {
+    table-layout: fixed; /* Змушує таблицю суворо дотримуватися заданої ширини ширини */
+    width: max-content;  /* Таблиця розтягнеться залежно від кількості колонок */
     border-collapse: collapse;
 }
 
-/* Перший стовпчик (Номер дільниці) */
-.territory-table th:nth-child(1),
-.territory-table td:nth-child(1) {
-    width: 60px;
+#territoryTable td {
+    word-wrap: break-word; /* Якщо текст довгий, він не зламає таблицю */
+    font-size: 13px;       /* Трохи менший шрифт для кращої місткості */
+}
+
+#territoryTable td.name-row {
+    height: 15.5px;
+    min-height: 15.5px;
+}
+#territoryTable td.date-cell {
+    height: 18px;
+    max-height: 18px;
+}
+
+/* 1. Головний контейнер (th) */
+.help-tooltip {
+    position: relative;
+    cursor: help;
+    /* Дозволяємо підказці виходити за межі клітинки */
+    overflow: visible !important; 
+}
+
+/* 2. Текст підказки */
+.help-tooltip .tooltiptext {
+    visibility: hidden;
+    width: 240px;
+    background-color: #333;
+    color: #fff;
     text-align: center;
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    
+    /* ПРІОРИТЕТ НАКЛАДАННЯ */
+    z-index: 9999; 
+    
+    /* Позиціонування (знизу від заголовка, щоб не перекривати верх карти) */
+    top: 120%; 
+    left: 50%;
+    transform: translateX(-50%);
+    
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-weight: normal;
+    font-size: 13px;
+    line-height: 1.4;
+    box-shadow: 0px 8px 16px rgba(0,0,0,0.3);
+    pointer-events: none; /* Щоб віконце не заважало клікати під ним */
 }
 
-/* Другий стовпчик (Останнє опрацювання) */
-.territory-table th:nth-child(2),
-.territory-table td:nth-child(2) {
-    width: 103px;
-    text-align: center;
+/* 3. Стрілочка зверху (вказує на заголовок) */
+.help-tooltip .tooltiptext::after {
+    content: "";
+    position: absolute;
+    bottom: 100%; /* Стрілка тепер зверху віконця */
+    left: 50%;
+    margin-left: -5px;
+    border-width: 8px;
+    border-style: solid;
+    border-color: transparent transparent #333 transparent;
 }
 
-/* Третій стовпчик (Дільниця) */
-.territory-table th:nth-child(3),
-.territory-table td:nth-child(3) {
-    width: 207px;
+/* 4. Показ */
+.help-tooltip:hover .tooltiptext, 
+.help-tooltip:active .tooltiptext {
+    visibility: visible;
+    opacity: 1;
 }
 
-/* Для всіх наступних стовпчиків, якщо вони є (наприклад, Отримано, Здано) */
-.territory-table th:nth-child(n+4),
-.territory-table td:nth-child(n+4) {
-    width: auto; /* Або задайте конкретну ширину, якщо потрібно */
-}
-
-/* Додаємо обрізку тексту, якщо він не влізає в 207px */
-.territory-table td {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.card {
+    overflow-x: auto; /* Дозволяє горизонтальну прокрутку таблиці */
+    overflow-y: visible; /* Намагається зберегти видимість по вертикалі */
+    position: relative;
 }
 
 /* Адаптивність для телефонів */
