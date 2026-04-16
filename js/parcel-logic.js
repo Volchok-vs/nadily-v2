@@ -48,17 +48,38 @@ export async function shareParcel(name, link) {
 }
 
 // Функція здачі дільниці
-export async function returnParcel(id, supabase) {
-    if (!confirm("Ви впевнені, що хочете здати цю дільницю?")) return;
-    // Приклад того, як має виглядати фіксація здачі
-const { error } = await supabase.from('parcels').update({
-    status: 'free',
-    taken_by: null,
-    taken_by_id: null,
-    taken_at: null,
-    last_returned: new Date().toISOString() // ОБОВ'ЯЗКОВО ДЛЯ КАРАНТИНУ
-}).eq('id', id);
+/**
+ * Универсальная функция сдачи участка
+ * @param {number} id - ID участка
+ * @param {string} name - Номер/Название участка
+ * @param {object} supabase - Клиент Supabase
+ * @param {function} callback - Функция для обновления интерфейса (без перезагрузки)
+ */
+export async function returnParcel(id, name, supabase, callback) {
+    if (!confirm(`Здати дільницю №${name}?`)) return;
 
-    if (error) alert("Помилка: " + error.message);
-    else location.reload();
+    // Получаем текущую дату в чистом формате ISO (ГГГГ-ММ-ДД)
+    const nowISO = new Date().toISOString().split('T')[0];
+
+    // Обновляем статус и дату возврата. last_processed НЕ ТРОГАЕМ.
+    const { error } = await supabase.from('parcels').update({ 
+        status: 'free', 
+        taken_by_id: null, 
+        taken_by: null, 
+        taken_at: null, 
+        last_returned: nowISO 
+    }).eq('id', id);
+
+    if (!error) {
+        // Вызываем уведомление (Toast), если оно определено глобально
+        if (window.showToast) {
+            window.showToast(`Дільницю №${name} успішно здано!`);
+        }
+
+        // Вызываем функцию обновления интерфейса конкретной страницы
+        if (callback) await callback();
+    } else {
+        console.error("Помилка Supabase:", error.message);
+        if (window.showToast) window.showToast("Помилка при здачі", true);
+    }
 }
