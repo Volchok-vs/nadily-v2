@@ -699,83 +699,164 @@
             const { data: parcels, error } = await window.supabase.from('parcels').select('*');
             if (error) return console.error(error);
 
+            // Проходимо циклом по кожному об'єкту дільниці (p) з отриманого масиву parcels
             parcels.forEach(p => {
+                // Якщо у дільниці немає геометрії (координат), пропускаємо її, щоб уникнути помилок
                 if (!p.geom) return;
 
-                // 1. Декодуємо геометрію
+                // 1. ДЕКОДУВАННЯ ГЕОМЕТРІЇ
+                // Якщо геометрія прийшла у вигляді рядка JSON, перетворюємо її на об'єкт JS
                 const geoData = (typeof p.geom === 'string') ? JSON.parse(p.geom) : p.geom;
 
-                // 2. Підготовка даних (Properties) спеціально під логіку map-styles.js
-                // Функція getParcelStyle очікує об'єкт, де last_returned — це Date
+                // 2. ПІДГОТОВКА ДАНИХ (ПЕРЕМЕННА preparedData)
+                // Створюємо об'єкт з усіма властивостями дільниці для передачі в стилі та попапи
                 const preparedData = {
                     ...p,
+                    // Перетворюємо рядок дати на об'єкт Date для коректного порівняння в стилях
                     last_returned: p.last_returned ? new Date(p.last_returned) : null,
-                    status: p.status || 'free',
-                    category: p.category || 'Приватний сектор'
+                    status: p.status || 'free', // Статус за замовчуванням
+                    category: p.category || 'Приватний сектор', // Категорія за замовчуванням
+                    name: (p.name || '').toString() // Перетворюємо номер в рядок для безпечного виводу
                 };
 
-                const layer = L.geoJSON(geoData, {
-                    style: () => {
-                        // ВАЖЛИВО: map-styles.js приймає pData (тобто властивості), а не feature!
-                        // Тому передаємо preparedData напряму
-                        if (typeof window.getStyle === 'function') {
-                            return window.getStyle(preparedData);
+                // 3. СТВОРЕННЯ ОСНОВНОГО ШАРУ (ПОЛІГОНІВ)
+                const polygonLayer = L.geoJSON(geoData, {
+                    // Застосовуємо стилі (колір, товщина ліній), які прописані в зовнішньому файлі map-styles.js
+                    style: () => window.getStyle ? window.getStyle(preparedData) : { color: '#a1a1a1' }
+                });
+
+                // 4. СТВОРЕННЯ ГРУПИ-КОНТЕЙНЕРА (FEATURE GROUP)
+                // Ця група об'єднує полігони і пунктирні лінії в ОДИН об'єкт для карти.
+                // Це дозволяє нашому фільтру ховати або показувати все разом (полігон + зв'язки).
+                const parcelGroup = L.featureGroup();
+                polygonLayer.addTo(parcelGroup); // Додаємо полігон у групу
+
+                // 5. ВИЗНАЧЕННЯ ЯКОРЯ (МІСЦЕ ДЛЯ НОМЕРА)
+                // Якщо в базі вказана точна точка для тексту (label_pos), беремо її.
+                // Якщо ні — розраховуємо автоматичний центр всієї геометричної фігури.
+                const anchorPoint = (p.label_pos && p.label_pos.length === 2)
+                    ? L.latLng(p.label_pos[0], p.label_pos[1])
+                    : polygonLayer.getBounds().getCenter();
+
+                // 6. ЛОГІКА ПУНКТИРУ ДЛЯ MULTIPOLYGON (СИСТЕМА "ЗІРКА")
+                // Якщо дільниця складається з декількох роз'єднаних частин
+                if (geoData.type === 'MultiPolygon' || geoData.type === 'Multipolygon') {
+                    const style = window.getStyle ? window.getStyle(preparedData) : { fillColor: '#a1a1a1' };
+
+                    // Перебираємо кожну окрему частину мультиполігону
+                    geoData.coordinates.forEach((polyCoords) => {
+                        // Конвертуємо координати з формату GeoJSON [довгота, широта] у формат Leaflet [широта, довгота]
+                        const coords = polyCoords[0].map(coord => [coord[1], coord[0]]);
+                        const partPolygon = L.polygon(coords); // Створюємо тимчасовий полігон для цієї частини
+                        const partCenter = partPolygon.getBounds().getCenter(); // Знаходимо центр цього шматка
+
+                        // ПЕРЕВІРКА: Чи знаходиться якір (номер) всередині меж цього конкретного шматка?
+                        const isAnchorInside = partPolygon.getBounds().contains(anchorPoint);
+
+                        // Якщо якір зовні — малюємо пунктирну лінію від центру шматка до номера (якоря)
+                        if (!isAnchorInside) {
+                            const line = L.polyline([partCenter, anchorPoint], {
+                                color: style.fillColor || style.color || '#a1a1a1', // Колір лінії відповідає кольору дільниці
+                                weight: 3,           // Товщина лінії
+                                dashArray: '10, 15', // Малюнок пунктиру (10px лінія, 15px пропуск)
+                                opacity: 0.7,        // Прозорість
+                                interactive: false,  // Лінія не реагує на кліки (не заважає відкривати попап)
+                                pane: 'markerPane'   // Виводимо лінію на шар маркерів, щоб вона була ПОВЕРХ супутника і заливки
+                            });
+                            line.addTo(parcelGroup); // Додаємо лінію в групу дільниці
                         }
-                        // Дефолт, якщо функція стилів не завантажилась
-                        return { fillColor: 'gray', weight: 1, fillOpacity: 0.4 };
-                    }
-                }).addTo(window.map);
-
-                // 3. Додавання номера (label)
-                // Пріоритет: 1. Поле label_pos з бази | 2. Центр геометрії шару
-                let labelPos;
-
-                if (p.label_pos && Array.isArray(p.label_pos) && p.label_pos.length === 2) {
-                    // Якщо в базі є координати, використовуємо їх
-                    labelPos = p.label_pos;
-                } else {
-                    // Якщо немає - розраховуємо центр полігону автоматично
-                    labelPos = layer.getBounds().getCenter();
+                    });
+                    // console.log(`🎯 Пунктири для №${preparedData.name} додано до групи`);
                 }
 
-                const label = L.marker(labelPos, {
+                // 7. СТВОРЕННЯ ЯРЛИКА (LABEL) З НОМЕРОМ
+                const label = L.marker(anchorPoint, {
                     icon: L.divIcon({
                         className: 'parcel-label',
-                        // Додаємо стилі прямо тут для надійності
-                        html: `
-            <div style="
-                color: white; 
-                text-shadow: 2px 2px 3px black, -1px -1px 2px black; 
-                font-weight: bold; 
-                font-size: 14px;
-                text-align: center;
-                pointer-events: none;
-            ">
-                ${p.name}
-            </div>`,
+                        // Створюємо HTML-структуру номера з тінню для читабельності на карті
+                        html: `<b style="color:white; text-shadow: 2px 2px 3px black;">${preparedData.name}</b>`,
                         iconSize: [40, 20],
-                        iconAnchor: [20, 10] // Центруємо іконку відносно точки координат
+                        iconAnchor: [20, 10] // Центруємо ярлик точно посередині точки якоря
                     }),
-                    interactive: false, // Щоб мітка не перехоплювала кліки по дільниці
-                    pane: 'markerPane'  // Переконуємось, що мітки завжди зверху
+                    interactive: false, // Ярлик не перехоплює кліки
+                    pane: 'markerPane'  // Завжди зверху над полігонами
                 }).addTo(window.map);
 
-                // 4. Попап
-                layer.bindPopup(() => window.createPopupContent(p));
+                // 8. ВІДОБРАЖЕННЯ ТА РЕЄСТРАЦІЯ
+                parcelGroup.addTo(window.map); // Додаємо всю групу (полігон + лінії) на карту
 
-                // 5. Реєстрація в глобальному масиві для пошуку та фільтрації
-                // Реєстрація в глобальному масиві для нашого "комбайна"
+                // Прив'язуємо вікно з інформацією (попап), яке відкривається при кліку на будь-яку частину групи
+                parcelGroup.bindPopup(() => window.createPopupContent(preparedData));
+
+                // Реєструємо об'єкт у глобальному масиві для скрипта пошуку та фільтрації (search-filter.js)
                 window.allParcelLayers.push({
                     id: p.id,
-                    // Скрипт пошуку буде порівнювати введене число з цим ім'ям
-                    name: (p.name || '').toString().toLowerCase(),
-                    data: {
-                        ...p,
-                        status: p.status || 'free', // Має збігатися з value="free" у HTML
-                        messenger_id: p.messenger_id || null
-                    },
-                    layer: layer, // Полігон
-                    label: label  // Номер (ярлик)
+                    name: preparedData.name.toLowerCase(), // Назва в нижньому регістрі для зручного пошуку
+                    data: preparedData,                   // Всі дані дільниці
+                    layer: parcelGroup,                   // Шар групи (для ховання/показу фільтрами)
+                    label: label                          // Шар ярлика
+                });
+
+                // Обробник кліку
+                layer.on('click', (e) => {
+                    L.DomEvent.stopPropagation(e);
+                    const isTaken = p.status === 'taken';
+                    const now = new Date();
+                    const returnDate = p.last_returned ? new Date(p.last_returned) : new Date(0);
+                    const quarantineEndDate = new Date(returnDate);
+                    quarantineEndDate.setMonth(quarantineEndDate.getMonth() + 3);
+                    const isQuarantine = now < quarantineEndDate;
+                    const qDateStr = quarantineEndDate.toLocaleDateString('uk-UA');
+
+                    const shareLink = window.location.origin + window.location.pathname + '?parcel=' + p.name;
+                    const center = layer.getBounds().getCenter();
+
+                    // Виправлене посилання на Google Maps
+                    const googleMapsUrl = 'https://www.google.com/maps?q=' + center.lat + ',' + center.lng;
+
+                    let popupHtml = '<div class="popup-container">' +
+                        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">' +
+                        '<span class="popup-title">Дільниця ' + p.name + '</span>' +
+                        '<button onclick="window.shareParcel(\'' + p.name + '\', \'' + shareLink + '\')" style="border:none; background:none; cursor:pointer; font-size:18px;">📤</button>' +
+                        '</div>' +
+
+                        ((!isTaken && isQuarantine) ?
+                            '<div style="color: #d32f2f; background: #ffebee; padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 12px; border: 1px solid #d32f2f; text-align:center;">' +
+                            '⚠️ Карантин до <b>' + qDateStr + '</b></div>' : '') +
+
+                        '<div class="popup-status">Статус: ' +
+                        '<span style="color:' + (isTaken ? '#e74c3c' : (isQuarantine ? '#808080' : '#28a745')) + '">' +
+                        ' ● ' + (isTaken ? 'Зайнята' : (isQuarantine ? 'Карантин' : 'Вільна')) +
+                        '</span>' +
+                        '</div>' +
+
+                        '<div class="popup-btn-row">' +
+                        '<button class="popup-btn" onclick="window.open(\'' + googleMapsUrl + '\', \'_blank\')">📍 Маршрут</button>' +
+                        (isAdmin ? '<a href="parcel-details.html?id=' + p.id + '" class="popup-btn">⚙️ Картка</a>' : '') +
+                        '</div>' +
+
+                        (!isTaken ?
+                            (isQuarantine ?
+                                (isAdmin ?
+                                    '<div style="margin-bottom:8px;">' +
+                                    '<label style="font-size:11px; color:#1565C0; cursor:pointer;">' +
+                                    '<input type="checkbox" onchange="const btn=document.getElementById(\'btn-take-' + p.id + '\'); btn.disabled=!this.checked; btn.style.opacity=this.checked?\'1\':\'0.5\'">' +
+                                    ' Розблокувати (Адмін)</label></div>' +
+                                    '<button id="btn-take-' + p.id + '" class="popup-btn primary" disabled style="opacity:0.5;" onclick="window.showTakeModal(' + p.id + ', \'' + p.name + '\')">✋ Взяти (Карантин)</button>'
+                                    : '<p style="font-size:11px; color:#888; text-align:center;">На обробці до ' + qDateStr + '</p>')
+                                : (isAuth ?
+                                    '<button class="popup-btn primary" onclick="window.showTakeModal(' + p.id + ', \'' + p.name + '\')">✋ Взяти дільницю</button>'
+                                    : '<p style="font-size:11px; color:orange; text-align:center;">Увійдіть, щоб взяти</p>')
+                            ) :
+                            ((isAdmin || (isAuth && String(p.taken_by_id) === String(currentUserId))) ?
+                                '<button class="popup-btn" style="border:1px solid #dc3545; color:#dc3545;" onclick="window.returnParcel(' + p.id + ')">🔙 Здати дільницю</button>'
+                                : '')
+                        ) +
+
+                        (isAdmin && isTaken ? '<div style="text-align:center; font-size:11px; color:#666; margin-top:5px;">Взяв: ' + (p.taken_by || 'Невідомо') + '</div>' : '') +
+                        '</div>';
+
+                    layer.bindPopup(popupHtml, { minWidth: 200 });
                 });
             });
         }
