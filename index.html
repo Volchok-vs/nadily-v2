@@ -408,6 +408,11 @@
             border: 0px solid rgba(0, 0, 0, 0.2);
             background-clip: padding-box;
         }
+
+        .accuracy-info-box {
+            border: 1px solid #2762ef;
+            background-color: rgb(10 75 173 / 54%);
+        }
     </style>
 
 </head>
@@ -598,6 +603,9 @@
     <script type="module" src="js/map-styles.js"></script>
     <script type="module">
         import { isAdmin, currentUserId } from './js/main.js';
+        import { initGeolocation } from './js/geolocation.js'; // перевірте шлях до файлу
+        import { initSearchAndFilters, updateFilterCounts } from './js/search-filter.js';
+
 
         // Ініціалізація глобальних змінних
         window.userRole = localStorage.getItem('userRole');
@@ -653,7 +661,8 @@
                 layers: [satelliteHybrid],
                 zoomControl: false,
             });
-
+            // Активуємо модуль геолокації
+            initGeolocation(window.map);
             // ДОДАЄМО КОНТРОЛІ ТУТ (Коли window.map вже існує)
 
             new AuthControl().addTo(window.map);
@@ -718,44 +727,70 @@
                 }).addTo(window.map);
 
                 // 3. Додавання номера (label)
-                // Використовуємо позицію мітки з бази або центр геометрії
-                const labelPos = (p.label_pos && p.label_pos.length === 2)
-                    ? p.label_pos
-                    : layer.getBounds().getCenter();
+                // Пріоритет: 1. Поле label_pos з бази | 2. Центр геометрії шару
+                let labelPos;
+
+                if (p.label_pos && Array.isArray(p.label_pos) && p.label_pos.length === 2) {
+                    // Якщо в базі є координати, використовуємо їх
+                    labelPos = p.label_pos;
+                } else {
+                    // Якщо немає - розраховуємо центр полігону автоматично
+                    labelPos = layer.getBounds().getCenter();
+                }
 
                 const label = L.marker(labelPos, {
                     icon: L.divIcon({
                         className: 'parcel-label',
-                        html: `<b style="color:white; text-shadow: 1px 1px 2px black;">${p.name}</b>`,
-                        iconSize: [40, 20]
+                        // Додаємо стилі прямо тут для надійності
+                        html: `
+            <div style="
+                color: white; 
+                text-shadow: 2px 2px 3px black, -1px -1px 2px black; 
+                font-weight: bold; 
+                font-size: 14px;
+                text-align: center;
+                pointer-events: none;
+            ">
+                ${p.name}
+            </div>`,
+                        iconSize: [40, 20],
+                        iconAnchor: [20, 10] // Центруємо іконку відносно точки координат
                     }),
-                    interactive: false
+                    interactive: false, // Щоб мітка не перехоплювала кліки по дільниці
+                    pane: 'markerPane'  // Переконуємось, що мітки завжди зверху
                 }).addTo(window.map);
 
                 // 4. Попап
                 layer.bindPopup(() => window.createPopupContent(p));
 
                 // 5. Реєстрація в глобальному масиві для пошуку та фільтрації
+                // Реєстрація в глобальному масиві для нашого "комбайна"
                 window.allParcelLayers.push({
                     id: p.id,
+                    // Скрипт пошуку буде порівнювати введене число з цим ім'ям
                     name: (p.name || '').toString().toLowerCase(),
-                    data: preparedData,
-                    layer: layer,
-                    label: label
+                    data: {
+                        ...p,
+                        status: p.status || 'free', // Має збігатися з value="free" у HTML
+                        messenger_id: p.messenger_id || null
+                    },
+                    layer: layer, // Полігон
+                    label: label  // Номер (ярлик)
                 });
             });
         }
 
-
-
-        // (Інші функції: window.showTakeModal, confirmTakeBtn.onclick залишайте як були)
-
         // --- 6. ЗАПУСК ПРИ ЗАВАНТАЖЕННІ ---
         document.addEventListener('DOMContentLoaded', async () => {
-            initMainMap();
-            await loadParcels();
+            initMainMap(); // Твоя ініціалізація карти
+            await loadParcels(); // Завантаження даних із Supabase
 
-            // Тут ваші обробники подій фільтрів...
+            // ПРАВИЛЬНЕ ПІДКЛЮЧЕННЯ КОМБАЙНА
+            // Передаємо карту та масив дільниць у функцію ініціалізації
+            initSearchAndFilters(window.map, window.allParcelLayers);
+
+            // Оновлюємо лічильники
+            updateFilterCounts(window.allParcelLayers);
         });
     </script>
     <script src="js/dev-tools.js"></script>
