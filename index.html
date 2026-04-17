@@ -102,17 +102,17 @@
 
         /* Меню фильтров */
         #filterMenu {
-            position: fixed;
-            top: 60px;
-            left: 53px;
-            z-index: 1000;
-            background: #ffffffd9;
-            padding: 10px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            display: none;
-            width: 250px;
-        }
+    position: fixed;
+    top: 66px;
+    left: 57px;
+    z-index: 1001;
+    background: #ffffffd9;
+    padding: 10px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    display: none;
+    width: 250px;
+}
 
         .filter-group {
             margin-bottom: 15px;
@@ -414,7 +414,7 @@
             background-color: rgb(10 75 173 / 54%);
         }
     </style>
-
+    <link rel="stylesheet" href="css/style_mod.css">
 </head>
 
 <body>
@@ -648,31 +648,55 @@
 
         // --- 2. ІНІЦІАЛІЗАЦІЯ КАРТИ ---
         function initMainMap() {
-            const satelliteOnly = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-            const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { pane: 'shadowPane' });
-            const satelliteHybrid = L.layerGroup([satelliteOnly, labels]);
+    // 1. ОПИС БАЗОВИХ ШАРІВ
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    });
 
-            const isMobile = window.innerWidth <= 768;
+    // Твоя нова топографічна карта
+    const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenTopoMap (SRTM)'
+    });
 
-            window.map = L.map('map', {
-                preferCanvas: true,
-                center: [49.2321, 29.0577],
-                zoom: 15,
-                layers: [satelliteHybrid],
-                zoomControl: false,
-            });
-            // Активуємо модуль геолокації
-            initGeolocation(window.map);
-            // ДОДАЄМО КОНТРОЛІ ТУТ (Коли window.map вже існує)
+    // Гібрид (Супутник + Назви для зручності)
+    const satelliteOnly = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+    const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+        pane: 'shadowPane'
+    });
+    const satelliteHybrid = L.layerGroup([satelliteOnly, labels]);
 
-            new AuthControl().addTo(window.map);
-        }
+    // 2. ІНІЦІАЛІЗАЦІЯ КАРТИ
+    window.map = L.map('map', {
+        preferCanvas: true,
+        center: [49.2321, 29.0577],
+        zoom: 15,
+        layers: [satelliteHybrid], // Шар за замовчуванням
+        zoomControl: false,
+    });
+
+    // 3. НАЛАШТУВАННЯ ПЕРЕМИКАЧА (baseMaps)
+    const baseMaps = {
+        "🛰️ Гібрид": satelliteHybrid,
+        "🗺️ Схема (OSM)": osm,
+        "⛰️ Рельєф (Topo)": topo
+    };
+
+    // Додаємо перемикач (прибираємо супутник без назв)
+    L.control.layers(baseMaps, null, { 
+        position: 'bottomleft',
+        collapsed: true 
+    }).addTo(window.map);
+
+    // Активуємо геолокацію та панель користувача
+    if (typeof initGeolocation === 'function') initGeolocation(window.map);
+    new AuthControl().addTo(window.map);
+}
 
         // --- 3. ЛОГІКА ПОПАПІВ ---
         window.createPopupContent = (p) => {
             const isTaken = (p.status === 'taken');
             const isAuth = !!localStorage.getItem('userKey');
-            const googleMapsUrl = `https://www.google.com/maps?q=${p.center_lat},${p.center_lng}`;
+            const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${p.center_lat},${p.center_lng}`;
 
             return `
             <div class="popup-container">
@@ -721,15 +745,16 @@
 
                 // 3. СТВОРЕННЯ ОСНОВНОГО ШАРУ (ПОЛІГОНІВ)
                 const polygonLayer = L.geoJSON(geoData, {
-                    // Застосовуємо стилі (колір, товщина ліній), які прописані в зовнішньому файлі map-styles.js
-                    style: () => window.getStyle ? window.getStyle(preparedData) : { color: '#a1a1a1' }
+                    style: () => window.getStyle ? window.getStyle(preparedData) : { color: '#a1a1a1' },
+                    // ДОДАЄМО ЦЕ: обробка кожного елемента всередині GeoJSON
+                    onEachFeature: (feature, layer) => {
+                        layer.bindPopup(() => window.createPopupContent(preparedData));
+                    }
                 });
 
-                // 4. СТВОРЕННЯ ГРУПИ-КОНТЕЙНЕРА (FEATURE GROUP)
-                // Ця група об'єднує полігони і пунктирні лінії в ОДИН об'єкт для карти.
-                // Це дозволяє нашому фільтру ховати або показувати все разом (полігон + зв'язки).
+                // 4. СТВОРЕННЯ ГРУПИ-КОНТЕЙНЕРА
                 const parcelGroup = L.featureGroup();
-                polygonLayer.addTo(parcelGroup); // Додаємо полігон у групу
+                polygonLayer.addTo(parcelGroup);
 
                 // 5. ВИЗНАЧЕННЯ ЯКОРЯ (МІСЦЕ ДЛЯ НОМЕРА)
                 // Якщо в базі вказана точна точка для тексту (label_pos), беремо її.
@@ -769,24 +794,21 @@
                     // console.log(`🎯 Пунктири для №${preparedData.name} додано до групи`);
                 }
 
-                // 7. СТВОРЕННЯ ЯРЛИКА (LABEL) З НОМЕРОМ
+                // 7. СТВОРЕННЯ ЯРЛИКА (LABEL)
+                // ВАЖЛИВО: переконайтеся, що interactive: false, щоб він не перекривав клік по полігону
                 const label = L.marker(anchorPoint, {
                     icon: L.divIcon({
                         className: 'parcel-label',
-                        // Створюємо HTML-структуру номера з тінню для читабельності на карті
                         html: `<b style="color:white; text-shadow: 2px 2px 3px black;">${preparedData.name}</b>`,
                         iconSize: [40, 20],
-                        iconAnchor: [20, 10] // Центруємо ярлик точно посередині точки якоря
+                        iconAnchor: [20, 10]
                     }),
-                    interactive: false, // Ярлик не перехоплює кліки
-                    pane: 'markerPane'  // Завжди зверху над полігонами
+                    interactive: false
                 }).addTo(window.map);
 
-                // 8. ВІДОБРАЖЕННЯ ТА РЕЄСТРАЦІЯ
-                parcelGroup.addTo(window.map); // Додаємо всю групу (полігон + лінії) на карту
+                // 8. ВІДОБРАЖЕННЯ
+                parcelGroup.addTo(window.map);
 
-                // Прив'язуємо вікно з інформацією (попап), яке відкривається при кліку на будь-яку частину групи
-                parcelGroup.bindPopup(() => window.createPopupContent(preparedData));
 
                 // Реєструємо об'єкт у глобальному масиві для скрипта пошуку та фільтрації (search-filter.js)
                 window.allParcelLayers.push({
