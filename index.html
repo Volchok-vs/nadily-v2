@@ -796,68 +796,6 @@
                     layer: parcelGroup,                   // Шар групи (для ховання/показу фільтрами)
                     label: label                          // Шар ярлика
                 });
-
-                // Обробник кліку
-                layer.on('click', (e) => {
-                    L.DomEvent.stopPropagation(e);
-                    const isTaken = p.status === 'taken';
-                    const now = new Date();
-                    const returnDate = p.last_returned ? new Date(p.last_returned) : new Date(0);
-                    const quarantineEndDate = new Date(returnDate);
-                    quarantineEndDate.setMonth(quarantineEndDate.getMonth() + 3);
-                    const isQuarantine = now < quarantineEndDate;
-                    const qDateStr = quarantineEndDate.toLocaleDateString('uk-UA');
-
-                    const shareLink = window.location.origin + window.location.pathname + '?parcel=' + p.name;
-                    const center = layer.getBounds().getCenter();
-
-                    // Виправлене посилання на Google Maps
-                    const googleMapsUrl = 'https://www.google.com/maps?q=' + center.lat + ',' + center.lng;
-
-                    let popupHtml = '<div class="popup-container">' +
-                        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">' +
-                        '<span class="popup-title">Дільниця ' + p.name + '</span>' +
-                        '<button onclick="window.shareParcel(\'' + p.name + '\', \'' + shareLink + '\')" style="border:none; background:none; cursor:pointer; font-size:18px;">📤</button>' +
-                        '</div>' +
-
-                        ((!isTaken && isQuarantine) ?
-                            '<div style="color: #d32f2f; background: #ffebee; padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 12px; border: 1px solid #d32f2f; text-align:center;">' +
-                            '⚠️ Карантин до <b>' + qDateStr + '</b></div>' : '') +
-
-                        '<div class="popup-status">Статус: ' +
-                        '<span style="color:' + (isTaken ? '#e74c3c' : (isQuarantine ? '#808080' : '#28a745')) + '">' +
-                        ' ● ' + (isTaken ? 'Зайнята' : (isQuarantine ? 'Карантин' : 'Вільна')) +
-                        '</span>' +
-                        '</div>' +
-
-                        '<div class="popup-btn-row">' +
-                        '<button class="popup-btn" onclick="window.open(\'' + googleMapsUrl + '\', \'_blank\')">📍 Маршрут</button>' +
-                        (isAdmin ? '<a href="parcel-details.html?id=' + p.id + '" class="popup-btn">⚙️ Картка</a>' : '') +
-                        '</div>' +
-
-                        (!isTaken ?
-                            (isQuarantine ?
-                                (isAdmin ?
-                                    '<div style="margin-bottom:8px;">' +
-                                    '<label style="font-size:11px; color:#1565C0; cursor:pointer;">' +
-                                    '<input type="checkbox" onchange="const btn=document.getElementById(\'btn-take-' + p.id + '\'); btn.disabled=!this.checked; btn.style.opacity=this.checked?\'1\':\'0.5\'">' +
-                                    ' Розблокувати (Адмін)</label></div>' +
-                                    '<button id="btn-take-' + p.id + '" class="popup-btn primary" disabled style="opacity:0.5;" onclick="window.showTakeModal(' + p.id + ', \'' + p.name + '\')">✋ Взяти (Карантин)</button>'
-                                    : '<p style="font-size:11px; color:#888; text-align:center;">На обробці до ' + qDateStr + '</p>')
-                                : (isAuth ?
-                                    '<button class="popup-btn primary" onclick="window.showTakeModal(' + p.id + ', \'' + p.name + '\')">✋ Взяти дільницю</button>'
-                                    : '<p style="font-size:11px; color:orange; text-align:center;">Увійдіть, щоб взяти</p>')
-                            ) :
-                            ((isAdmin || (isAuth && String(p.taken_by_id) === String(currentUserId))) ?
-                                '<button class="popup-btn" style="border:1px solid #dc3545; color:#dc3545;" onclick="window.returnParcel(' + p.id + ')">🔙 Здати дільницю</button>'
-                                : '')
-                        ) +
-
-                        (isAdmin && isTaken ? '<div style="text-align:center; font-size:11px; color:#666; margin-top:5px;">Взяв: ' + (p.taken_by || 'Невідомо') + '</div>' : '') +
-                        '</div>';
-
-                    layer.bindPopup(popupHtml, { minWidth: 200 });
-                });
             });
         }
 
