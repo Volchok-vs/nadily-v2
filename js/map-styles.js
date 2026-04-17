@@ -125,3 +125,5 @@ function interpolateColor(color1, color2, factor) {
     
     return `#${hex(r)}${hex(g)}${hex(b)}`;
 }
+
+window.getStyle = getParcelStyle;

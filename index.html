@@ -595,6 +595,7 @@
 
         console.log("Supabase ініціалізовано як модуль і додано у window");
     </script>
+    <script type="module" src="js/map-styles.js"></script>
     <script type="module">
         import { isAdmin, currentUserId } from './js/main.js';
 
@@ -692,14 +693,37 @@
             parcels.forEach(p => {
                 if (!p.geom) return;
 
+                // 1. Декодуємо геометрію
                 const geoData = (typeof p.geom === 'string') ? JSON.parse(p.geom) : p.geom;
 
+                // 2. Підготовка даних (Properties) спеціально під логіку map-styles.js
+                // Функція getParcelStyle очікує об'єкт, де last_returned — це Date
+                const preparedData = {
+                    ...p,
+                    last_returned: p.last_returned ? new Date(p.last_returned) : null,
+                    status: p.status || 'free',
+                    category: p.category || 'Приватний сектор'
+                };
+
                 const layer = L.geoJSON(geoData, {
-                    style: () => getParcelStyle(p),
+                    style: () => {
+                        // ВАЖЛИВО: map-styles.js приймає pData (тобто властивості), а не feature!
+                        // Тому передаємо preparedData напряму
+                        if (typeof window.getStyle === 'function') {
+                            return window.getStyle(preparedData);
+                        }
+                        // Дефолт, якщо функція стилів не завантажилась
+                        return { fillColor: 'gray', weight: 1, fillOpacity: 0.4 };
+                    }
                 }).addTo(window.map);
 
-                const center = layer.getBounds().getCenter();
-                const label = L.marker(center, {
+                // 3. Додавання номера (label)
+                // Використовуємо позицію мітки з бази або центр геометрії
+                const labelPos = (p.label_pos && p.label_pos.length === 2)
+                    ? p.label_pos
+                    : layer.getBounds().getCenter();
+
+                const label = L.marker(labelPos, {
                     icon: L.divIcon({
                         className: 'parcel-label',
                         html: `<b style="color:white; text-shadow: 1px 1px 2px black;">${p.name}</b>`,
@@ -708,33 +732,21 @@
                     interactive: false
                 }).addTo(window.map);
 
-                // Використовуємо нашу функцію для контенту попапа
+                // 4. Попап
                 layer.bindPopup(() => window.createPopupContent(p));
 
+                // 5. Реєстрація в глобальному масиві для пошуку та фільтрації
                 window.allParcelLayers.push({
                     id: p.id,
-                    name: p.name.toString().toLowerCase(),
-                    data: p,
+                    name: (p.name || '').toString().toLowerCase(),
+                    data: preparedData,
                     layer: layer,
                     label: label
                 });
             });
         }
 
-        // --- 5. ФУНКЦІЇ МОДАЛОК ТА СТИЛІВ ---
-        function getParcelStyle(pData) {
-            let baseColor = '#008000';
-            if (pData.status === 'taken') baseColor = '#163e25';
-            if (pData.category === 'highrise') baseColor = '#FFA500';
 
-            return {
-                fillColor: baseColor,
-                fillOpacity: 0.5,
-                color: '#ffffff',
-                weight: 2,
-                opacity: 1
-            };
-        }
 
         // (Інші функції: window.showTakeModal, confirmTakeBtn.onclick залишайте як були)
 
