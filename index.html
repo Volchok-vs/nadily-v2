@@ -102,17 +102,17 @@
 
         /* Меню фильтров */
         #filterMenu {
-    position: fixed;
-    top: 66px;
-    left: 57px;
-    z-index: 1001;
-    background: #ffffffd9;
-    padding: 10px;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    display: none;
-    width: 250px;
-}
+            position: fixed;
+            top: 66px;
+            left: 57px;
+            z-index: 1001;
+            background: #ffffffd9;
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: none;
+            width: 250px;
+        }
 
         .filter-group {
             margin-bottom: 15px;
@@ -147,89 +147,6 @@
             cursor: pointer;
         }
 
-        /* --- СТИЛИ ПОПАПА (из index_1) --- */
-        .popup-container {
-            min-width: 200px;
-            text-align: center;
-        }
-
-        .popup-title {
-            font-size: 17px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            display: block;
-        }
-
-        .popup-status {
-            font-size: 13px;
-            display: block;
-            margin-bottom: 10px;
-            padding: 4px;
-            border-radius: 6px;
-            font-weight: 500;
-        }
-
-        .popup-btn-row {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 8px;
-            justify-content: center;
-        }
-
-        .popup-btn {
-            flex: 1;
-            padding: 8px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            background: #f8f9fa;
-            cursor: pointer;
-            font-size: 13px;
-            text-decoration: none;
-            color: black;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: 0.2s;
-        }
-
-        .popup-btn:hover {
-            background: #e2e6ea;
-        }
-
-        .popup-btn.primary {
-            background: #007bff;
-            color: white;
-            border: none;
-            font-weight: bold;
-            width: 100%;
-        }
-
-        /* --- СТИЛИ МОДАЛЬНОГО ОКНА --- */
-        #modalOverlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 2000;
-            backdrop-filter: blur(2px);
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-            z-index: 2001;
-            width: 300px;
-        }
 
         /* --- СТИЛИ ПОПАПА (из index_1) --- */
         .popup-container {
@@ -413,6 +330,24 @@
             border: 1px solid #2762ef;
             background-color: rgb(10 75 173 / 54%);
         }
+
+        .parcel-label {
+            background: transparent;
+            border: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        .parcel-label b {
+            display: block;
+            width: 40px;
+            /* Має збігатися з iconSize в JS */
+            text-align: center;
+            font-size: 13px;
+            font-family: sans-serif;
+        }
     </style>
     <link rel="stylesheet" href="css/style_mod.css">
 </head>
@@ -420,6 +355,9 @@
 <body>
     <div id="map"></div>
 
+    <div id="modalOverlay" onclick="window.closeAllModals()"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:300;">
+    </div>
 
     <div id="takeParcelModal" class="modal">
         <h3 id="modalTitle" style="margin:0 0 10px 0;">Дільниця</h3>
@@ -648,74 +586,129 @@
 
         // --- 2. ІНІЦІАЛІЗАЦІЯ КАРТИ ---
         function initMainMap() {
-    // 1. ОПИС БАЗОВИХ ШАРІВ
-    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    });
+            // 1. ОПИС БАЗОВИХ ШАРІВ
+            const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            });
 
-    // Твоя нова топографічна карта
-    const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenTopoMap (SRTM)'
-    });
+            // Твоя нова топографічна карта
+            const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenTopoMap (SRTM)'
+            });
 
-    // Гібрид (Супутник + Назви для зручності)
-    const satelliteOnly = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-    const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
-        pane: 'shadowPane'
-    });
-    const satelliteHybrid = L.layerGroup([satelliteOnly, labels]);
+            // Гібрид (Супутник + Назви для зручності)
+            const satelliteOnly = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+            const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+                pane: 'shadowPane'
+            });
+            const satelliteHybrid = L.layerGroup([satelliteOnly, labels]);
 
-    // 2. ІНІЦІАЛІЗАЦІЯ КАРТИ
-    window.map = L.map('map', {
-        preferCanvas: true,
-        center: [49.2321, 29.0577],
-        zoom: 15,
-        layers: [satelliteHybrid], // Шар за замовчуванням
-        zoomControl: false,
-    });
+            // 2. ІНІЦІАЛІЗАЦІЯ КАРТИ
+            window.map = L.map('map', {
+                preferCanvas: false,
+                center: [49.2321, 29.0577],
+                zoom: 15,
+                layers: [satelliteHybrid], // Шар за замовчуванням
+                zoomControl: false,
+            });
 
-    // 3. НАЛАШТУВАННЯ ПЕРЕМИКАЧА (baseMaps)
-    const baseMaps = {
-        "🛰️ Гібрид": satelliteHybrid,
-        "🗺️ Схема (OSM)": osm,
-        "⛰️ Рельєф (Topo)": topo
-    };
+            // 3. НАЛАШТУВАННЯ ПЕРЕМИКАЧА (baseMaps)
+            const baseMaps = {
+                "🛰️ Гібрид": satelliteHybrid,
+                "🗺️ Схема (OSM)": osm,
+                "⛰️ Рельєф (Topo)": topo
+            };
 
-    // Додаємо перемикач (прибираємо супутник без назв)
-    L.control.layers(baseMaps, null, { 
-        position: 'bottomleft',
-        collapsed: true 
-    }).addTo(window.map);
+            // Додаємо перемикач (прибираємо супутник без назв)
+            L.control.layers(baseMaps, null, {
+                position: 'bottomleft',
+                collapsed: true
+            }).addTo(window.map);
 
-    // Активуємо геолокацію та панель користувача
-    if (typeof initGeolocation === 'function') initGeolocation(window.map);
-    new AuthControl().addTo(window.map);
-}
+            // Активуємо геолокацію та панель користувача
+            if (typeof initGeolocation === 'function') initGeolocation(window.map);
+            new AuthControl().addTo(window.map);
+        }
 
         // --- 3. ЛОГІКА ПОПАПІВ ---
-        window.createPopupContent = (p) => {
-            const isTaken = (p.status === 'taken');
-            const isAuth = !!localStorage.getItem('userKey');
-            const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${p.center_lat},${p.center_lng}`;
+        // --- 3. ЛОГІКА ПОПАПІВ ---
+        window.createPopupContent = function (p) {
+            // 1. Розрахунок дат та статусів (як у вашому новому коді)
+            const now = new Date();
+            // Використовуємо last_returned для розрахунку карантину (3 місяці)
+            const returnDate = p.last_returned ? new Date(p.last_returned) : new Date(0);
+            const quarantineEndDate = new Date(returnDate);
+            quarantineEndDate.setMonth(quarantineEndDate.getMonth() + 3);
 
-            return `
-            <div class="popup-container">
-                <span class="popup-title">Дільниця №${p.name}</span>
-                <span class="popup-status" style="background:${isTaken ? '#f8d7da' : '#d4edda'}; color:${isTaken ? '#721c24' : '#155724'};">
-                    ${isTaken ? `На руках: ${p.taken_by || 'Вісник'}` : 'Вільна'}
-                </span>
-                
-                <div class="popup-btn-row">
-                    <button class="popup-btn" onclick="window.open('${googleMapsUrl}', '_blank')">📍 Маршрут</button>
-                    <a href="parcel-details.html?id=${p.id}" class="popup-btn">📄 Деталі</a>
+            const isQuarantine = now < quarantineEndDate;
+            const qDateStr = quarantineEndDate.toLocaleDateString('uk-UA');
+            const isTaken = p.status === 'taken';
+
+            // Отримуємо ID поточного користувача (з localStorage або window)
+            const currentUserId = localStorage.getItem('userId') || window.currentUserId;
+            const shareLink = `${window.location.origin}${window.location.pathname}?parcel=${encodeURIComponent(p.name || p.number)}`;
+
+            // Посилання на Google Maps (використовуємо координати центру, які ми передали в p)
+            // Якщо у вас в p немає lat/lng, Leaflet автоматично підставить їх при відкритті, 
+            // але для статичного посилання краще мати їх в об'єкті
+            const googleMapsUrl = `https://www.google.com/maps?q=${p.center_lat},${p.center_lng}`;
+
+            // 2. Формування HTML верстки
+            let popupHtml = `<div class="popup-container" style="min-width:200px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
+            <span class="popup-title" style="font-weight:bold; font-size:16px;">Дільниця ${p.name || p.number}</span>
+            <button onclick="window.shareParcel('${p.name || p.number}', '${shareLink}')" style="border:none; background:none; cursor:pointer; font-size:18px;">📤</button>
+        </div>
+
+        ${(!isTaken && isQuarantine) ? `
+            <div style="color: #d32f2f; background: #ffebee; padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 12px; border: 1px solid #d32f2f; text-align:center;">
+                ⚠️ Карантин до <b>${qDateStr}</b>
+            </div>` : ''}
+
+        <div class="popup-status" style="font-size:13px; margin-bottom:10px;">Статус: 
+            <span style="font-weight:bold; color:${isTaken ? '#e74c3c' : (isQuarantine ? '#808080' : '#28a745')}">
+                ● ${isTaken ? 'Зайнята' : (isQuarantine ? 'Карантин' : 'Вільна')}
+            </span>
+        </div>
+
+        <div class="popup-btn-row" style="display:flex; gap:5px; margin-top:10px; margin-bottom:10px;">
+            <button class="popup-btn" style="flex:1; padding:8px; cursor:pointer;" onclick="window.open('${googleMapsUrl}', '_blank')">📍 Маршрут</button>
+            ${window.isAdmin ? `<a href="parcel-details.html?id=${p.id}" class="popup-btn" style="flex:1; text-align:center; text-decoration:none; padding:8px; border:1px solid #ccc; border-radius:4px; color:black; font-size:12px;">⚙️ Картка</a>` : ''}
+        </div>`;
+
+            // 3. Логіка кнопок дії
+            if (!isTaken) {
+                if (isQuarantine) {
+                    if (window.isAdmin) {
+                        popupHtml += `
+                <div style="margin-bottom:8px;">
+                    <label style="font-size:11px; color:#1565C0; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                        <input type="checkbox" onchange="const btn=document.getElementById('btn-take-${p.id}'); btn.disabled=!this.checked; btn.style.opacity=this.checked?'1':'0.5'; btn.style.cursor=this.checked?'pointer':'not-allowed'"> 
+                        Розблокувати (Адмін)
+                    </label>
                 </div>
-
-                ${!isTaken && isAuth ?
-                    `<button class="popup-btn primary" onclick="window.showTakeModal('${p.id}', '${p.name}')">✋ Взяти дільницю</button>` :
-                    (!isAuth && !isTaken ? '<p style="font-size:11px; color:#999; text-align:center;">Увійдіть, щоб взяти</p>' : '')
+                <button id="btn-take-${p.id}" class="popup-btn primary" disabled style="opacity:0.5; width:100%; padding:10px; background:#0d6efd; color:white; border:none; border-radius:6px; cursor:not-allowed;" 
+                    onclick="window.startTakeProcess('${p.id}', true)">
+                    ✋ Взяти (Карантин)
+                </button>`;
+                    } else {
+                        popupHtml += `<p style="font-size:11px; color:#888; text-align:center;">На обробці до ${qDateStr}</p>`;
+                    }
+                } else {
+                    popupHtml += `<button class="popup-btn primary" style="width:100%; padding:10px; background:#0d6efd; color:white; border:none; border-radius:6px; cursor:pointer;" onclick="window.startTakeProcess('${p.id}', false)">
+                ✋ Взяти дільницю
+            </button>`;
                 }
-            </div>
-        `;
+            } else {
+                // Якщо дільниця зайнята
+                if (window.isAdmin || String(p.taken_by_id) === String(currentUserId)) {
+                    popupHtml += `<button class="popup-btn" style="width:100%; padding:10px; border:1px solid #dc3545; color:#dc3545; background:none; border-radius:6px; cursor:pointer;" onclick="window.returnParcel('${p.id}')">🔙 Здати дільницю</button>`;
+                }
+                popupHtml += `<div style="text-align:center; font-size:11px; color:#666; margin-top:5px;">Взяв: ${p.taken_by || 'Невідомо'}</div>`;
+            }
+
+            popupHtml += `</div>`;
+            return popupHtml;
         };
 
         // --- 4. ЗАВАНТАЖЕННЯ ДІЛЬНИЦЬ ---
@@ -725,101 +718,118 @@
 
             // Проходимо циклом по кожному об'єкту дільниці (p) з отриманого масиву parcels
             parcels.forEach(p => {
-                // Якщо у дільниці немає геометрії (координат), пропускаємо її, щоб уникнути помилок
-                if (!p.geom) return;
+    // 1. ПЕРЕВІРКА ГЕОМЕТРІЇ
+    if (!p.geom) return;
 
-                // 1. ДЕКОДУВАННЯ ГЕОМЕТРІЇ
-                // Якщо геометрія прийшла у вигляді рядка JSON, перетворюємо її на об'єкт JS
-                const geoData = (typeof p.geom === 'string') ? JSON.parse(p.geom) : p.geom;
+    // 2. ДЕКОДУВАННЯ
+    const geoData = (typeof p.geom === 'string') ? JSON.parse(p.geom) : p.geom;
 
-                // 2. ПІДГОТОВКА ДАНИХ (ПЕРЕМЕННА preparedData)
-                // Створюємо об'єкт з усіма властивостями дільниці для передачі в стилі та попапи
-                const preparedData = {
-                    ...p,
-                    // Перетворюємо рядок дати на об'єкт Date для коректного порівняння в стилях
-                    last_returned: p.last_returned ? new Date(p.last_returned) : null,
-                    status: p.status || 'free', // Статус за замовчуванням
-                    category: p.category || 'Приватний сектор', // Категорія за замовчуванням
-                    name: (p.name || '').toString() // Перетворюємо номер в рядок для безпечного виводу
-                };
+    // 3. СТВОРЕННЯ ШАРУ (Спочатку створюємо сам полігон)
+    // Тимчасово передаємо p для стилю, поки preparedData не готова
+    const polygonLayer = L.geoJSON(geoData, {
+        style: () => window.getStyle ? window.getStyle(p) : { color: '#a1a1a1' }
+    });
 
-                // 3. СТВОРЕННЯ ОСНОВНОГО ШАРУ (ПОЛІГОНІВ)
-                const polygonLayer = L.geoJSON(geoData, {
-                    style: () => window.getStyle ? window.getStyle(preparedData) : { color: '#a1a1a1' },
-                    // ДОДАЄМО ЦЕ: обробка кожного елемента всередині GeoJSON
-                    onEachFeature: (feature, layer) => {
-                        layer.bindPopup(() => window.createPopupContent(preparedData));
-                    }
-                });
+    // 4. ВИЗНАЧЕННЯ ЯКОРЯ (Тепер polygonLayer вже існує, тому помилки не буде)
+    const anchorPoint = (p.label_pos && p.label_pos.length === 2)
+        ? L.latLng(p.label_pos[0], p.label_pos[1])
+        : polygonLayer.getBounds().getCenter();
 
-                // 4. СТВОРЕННЯ ГРУПИ-КОНТЕЙНЕРА
-                const parcelGroup = L.featureGroup();
-                polygonLayer.addTo(parcelGroup);
+    // 5. ПІДГОТОВКА ДАНИХ (Тепер додаємо координати якоря)
+    const preparedData = {
+        ...p,
+        center_lat: anchorPoint.lat,
+        center_lng: anchorPoint.lng,
+        last_returned: p.last_returned ? new Date(p.last_returned) : null,
+        status: p.status || 'free',
+        category: p.category || 'Приватний сектор',
+        name: (p.name || '').toString()
+    };
 
-                // 5. ВИЗНАЧЕННЯ ЯКОРЯ (МІСЦЕ ДЛЯ НОМЕРА)
-                // Якщо в базі вказана точна точка для тексту (label_pos), беремо її.
-                // Якщо ні — розраховуємо автоматичний центр всієї геометричної фігури.
-                const anchorPoint = (p.label_pos && p.label_pos.length === 2)
-                    ? L.latLng(p.label_pos[0], p.label_pos[1])
-                    : polygonLayer.getBounds().getCenter();
+    // 6. ПРИВ'ЯЗКА ДАНИХ ДО ШАРУ ТА ПОПАПУ
+    polygonLayer.options.parcelData = preparedData;
+    
+    // Оновлюємо стиль вже з повними даними
+    if (window.getStyle) polygonLayer.setStyle(window.getStyle(preparedData));
 
-                // 6. ЛОГІКА ПУНКТИРУ ДЛЯ MULTIPOLYGON (СИСТЕМА "ЗІРКА")
-                // Якщо дільниця складається з декількох роз'єднаних частин
-                if (geoData.type === 'MultiPolygon' || geoData.type === 'Multipolygon') {
-                    const style = window.getStyle ? window.getStyle(preparedData) : { fillColor: '#a1a1a1' };
+    polygonLayer.bindPopup(() => {
+        return window.createPopupContent(polygonLayer.options.parcelData);
+    });
 
-                    // Перебираємо кожну окрему частину мультиполігону
-                    geoData.coordinates.forEach((polyCoords) => {
-                        // Конвертуємо координати з формату GeoJSON [довгота, широта] у формат Leaflet [широта, довгота]
-                        const coords = polyCoords[0].map(coord => [coord[1], coord[0]]);
-                        const partPolygon = L.polygon(coords); // Створюємо тимчасовий полігон для цієї частини
-                        const partCenter = partPolygon.getBounds().getCenter(); // Знаходимо центр цього шматка
+    // 7. СТВОРЕННЯ ГРУПИ ТА ДОДАВАННЯ ПОЛІГОНУ
+    const parcelGroup = L.featureGroup();
+    polygonLayer.addTo(parcelGroup);
 
-                        // ПЕРЕВІРКА: Чи знаходиться якір (номер) всередині меж цього конкретного шматка?
-                        const isAnchorInside = partPolygon.getBounds().contains(anchorPoint);
+    // 8. ЛОГІКА ПУНКТИРУ (Використовуємо вже існуючі anchorPoint та preparedData)
+    if (geoData.type === 'MultiPolygon' || geoData.type === 'Multipolygon') {
+        const style = window.getStyle ? window.getStyle(preparedData) : { fillColor: '#a1a1a1' };
+        geoData.coordinates.forEach((polyCoords) => {
+            const coords = polyCoords[0].map(coord => [coord[1], coord[0]]);
+            const partPolygon = L.polygon(coords);
+            const partCenter = partPolygon.getBounds().getCenter();
+            const isAnchorInside = partPolygon.getBounds().contains(anchorPoint);
 
-                        // Якщо якір зовні — малюємо пунктирну лінію від центру шматка до номера (якоря)
-                        if (!isAnchorInside) {
-                            const line = L.polyline([partCenter, anchorPoint], {
-                                color: style.fillColor || style.color || '#a1a1a1', // Колір лінії відповідає кольору дільниці
-                                weight: 3,           // Товщина лінії
-                                dashArray: '10, 15', // Малюнок пунктиру (10px лінія, 15px пропуск)
-                                opacity: 0.7,        // Прозорість
-                                interactive: false,  // Лінія не реагує на кліки (не заважає відкривати попап)
-                                pane: 'markerPane'   // Виводимо лінію на шар маркерів, щоб вона була ПОВЕРХ супутника і заливки
-                            });
-                            line.addTo(parcelGroup); // Додаємо лінію в групу дільниці
-                        }
-                    });
-                    // console.log(`🎯 Пунктири для №${preparedData.name} додано до групи`);
-                }
+            if (!isAnchorInside) {
+                L.polyline([partCenter, anchorPoint], {
+                    color: style.fillColor || style.color || '#a1a1a1',
+                    weight: 3,
+                    dashArray: '10, 15',
+                    opacity: 0.7,
+                    interactive: false,
+                    pane: 'markerPane'
+                }).addTo(parcelGroup);
+            }
+        });
+    }
 
-                // 7. СТВОРЕННЯ ЯРЛИКА (LABEL)
-                // ВАЖЛИВО: переконайтеся, що interactive: false, щоб він не перекривав клік по полігону
-                const label = L.marker(anchorPoint, {
-                    icon: L.divIcon({
-                        className: 'parcel-label',
-                        html: `<b style="color:white; text-shadow: 2px 2px 3px black;">${preparedData.name}</b>`,
-                        iconSize: [40, 20],
-                        iconAnchor: [20, 10]
-                    }),
-                    interactive: false
-                }).addTo(window.map);
+    // 9. СТВОРЕННЯ ЯРЛИКА
+    const label = L.marker(anchorPoint, {
+        icon: L.divIcon({
+            className: 'parcel-label',
+            html: `<b style="color:white; text-shadow: 2px 2px 3px black;">${preparedData.name}</b>`,
+            iconSize: [40, 20],
+            iconAnchor: [20, 10]
+        }),
+        interactive: false
+    }).addTo(window.map);
 
-                // 8. ВІДОБРАЖЕННЯ
-                parcelGroup.addTo(window.map);
-
-
-                // Реєструємо об'єкт у глобальному масиві для скрипта пошуку та фільтрації (search-filter.js)
-                window.allParcelLayers.push({
-                    id: p.id,
-                    name: preparedData.name.toLowerCase(), // Назва в нижньому регістрі для зручного пошуку
-                    data: preparedData,                   // Всі дані дільниці
-                    layer: parcelGroup,                   // Шар групи (для ховання/показу фільтрами)
-                    label: label                          // Шар ярлика
-                });
-            });
+    // 10. ВІДОБРАЖЕННЯ ТА РЕЄСТРАЦІЯ
+    parcelGroup.addTo(window.map);
+    window.allParcelLayers.push({
+        id: p.id,
+        name: preparedData.name.toLowerCase(),
+        data: preparedData,
+        layer: parcelGroup,
+        label: label
+    });
+});
         }
+
+        // Функція розблокування для адміна (викликається з чекбокса в попапі)
+        window.handleAdminUnlock = function (checkbox, parcelId) {
+            const btn = document.getElementById(`main-take-btn-${parcelId}`);
+            if (btn) {
+                if (checkbox.checked) {
+                    btn.disabled = false;
+                    btn.style.background = "#0d6efd";
+                    btn.style.color = "white";
+                    btn.style.cursor = "pointer";
+                    btn.style.opacity = "1";
+                } else {
+                    btn.disabled = true;
+                    btn.style.background = "#ccc";
+                    btn.style.color = "#666";
+                    btn.style.cursor = "not-allowed";
+                }
+            }
+        };
+
+        // Заглушка для переходу до наступного етапу (віконця підтвердження)
+        window.startTakeProcess = function (parcelId, isQuarantine) {
+            console.log("Процес взяття розпочато для:", parcelId, "Карантин:", isQuarantine);
+            // Сюди ми потім підключимо відкриття модального вікна
+            alert("Кнопка працює! Наступний крок: підключення вікна вибору вісника.");
+        };
 
         // --- 6. ЗАПУСК ПРИ ЗАВАНТАЖЕННІ ---
         document.addEventListener('DOMContentLoaded', async () => {
