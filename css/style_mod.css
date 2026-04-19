@@ -9,25 +9,93 @@
     border: none;
 }
 
-#filterMenu {
-    z-index: 10001 !important; /* Больше чем у Leaflet */
+
+
+.leaflet-control-layers.leaflet-control {
+    margin-bottom: 10px;
+}
+
+#reset-focus-btn {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: white;
+    padding: 10px 20px;
+    border-radius: 25px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    display: none; /* Спочатку прихована */
+    cursor: pointer;
+    border: 1px solid #ccc;
+    font-weight: bold;
+}
+button#reset-focus-btn {
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    background: #ffffffa8;
+    border: 1px solid rgb(204, 204, 204);
+    padding: 10px 20px;
+    border-radius: 30px;
+    box-shadow: rgba(0, 0, 0, 0.3) 0px 4px 10px;
+    cursor: pointer;
+    display: block;
+    font-weight: bold;
+    border: 1px solid #1b0ff9;
+}
+
+.m3-share-btn {
+   
+    padding: 6px 12px;
+    background-color: snow;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+   
+}
+.m3-share-btn:hover {
+    background-color: #a577f529;
+}
+
+.m3-share-btn:active {
+    transform: scale(0.95);
+}
+
+.icon-stack {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px; /* Розмір ланцюжка */
+    line-height: 1;
+}
+
+.mini-arrow {
+    position: absolute;
+    top: -5px;
+    right: -7px;
+    font-size: 10px;
+    /* Контур кольором кнопки, щоб іконки не зливалися */
+    text-shadow: 
+        -1px -1px 0 #E8DEF8,  
+         1px -1px 0 #E8DEF8,
+        -1px  1px 0 #E8DEF8,
+         1px  1px 0 #E8DEF8;
+}
+
+/* Якщо на маленьких екранах текст не влізає — ховаємо його, залишаючи іконку */
+@media (max-width: 320px) {
+    .btn-text { display: none; }
+    .m3-share-btn { padding: 8px; }
 }
 
 /* ПОВНА АДАПТАЦІЯ ПІД МОБІЛЬНІ ПРИСТРОЇ */
 @media screen and (max-width: 768px) {
     
-    /* 1. Фільтр-меню: робимо компактним та з прокруткою */
-    #filterMenu {
-        top: 10px !important;
-        left: 10px !important;
-        right: 10px !important;
-        width: auto !important;
-        max-height: 85vh !important; /* Щоб не вилізало за екран */
-        overflow-y: auto !important; /* Додаємо внутрішню прокрутку */
-        transform: none !important;
-        padding: 12px !important;
-        box-sizing: border-box;
-    }
+   
 
     /* 2. Модальні вікна (Видача дільниці): центрування */
     .modal, .logic-modal, .modal-container {

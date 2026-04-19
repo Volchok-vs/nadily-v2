@@ -642,7 +642,7 @@
             new AuthControl().addTo(window.map);
         }
 
-        
+
 
         // У вашому блоці handleUrlParams (якщо він в index) або після handleUrlParams():
         if (new URLSearchParams(window.location.search).has('parcel')) {
@@ -679,6 +679,7 @@
         };
         // --- 3. ЛОГІКА ПОПАПІВ ---
         window.createPopupContent = function (p) {
+            // 1. Розрахунок дат та статусів
             const now = new Date();
             const returnDate = p.last_returned ? new Date(p.last_returned) : new Date(0);
             const quarantineEndDate = new Date(returnDate);
@@ -687,17 +688,27 @@
             const isQuarantine = now < quarantineEndDate;
             const qDateStr = quarantineEndDate.toLocaleDateString('uk-UA');
             const isTaken = p.status === 'taken';
+
+            // Отримуємо дані про користувача
             const isAuth = !!localStorage.getItem('userId');
-            const currentUserId = localStorage.getItem('userId');
+            const currentUserId = localStorage.getItem('userId') || window.currentUserId;
 
-            const shareLink = `${window.location.origin}${window.location.pathname}?parcel=${encodeURIComponent(p.name)}`;
-            const googleMapsUrl = `http://maps.google.com/?q=${p.center_lat},${p.center_lng}`;
+            const shareLink = `${window.location.origin}${window.location.pathname}?parcel=${encodeURIComponent(p.name || p.number)}`;
+            const googleMapsUrl = `https://www.google.com/maps?q=${p.center_lat},${p.center_lng}`;
 
+            // 2. Формування базової верстки (Заголовок, Статус, Маршрут)
             let popupHtml = `<div class="popup-container" style="min-width:200px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
-            <span class="popup-title" style="font-weight:bold; font-size:16px;">Дільниця ${p.name}</span>
-            <button onclick="window.shareParcel('${p.name}', '${shareLink}')" style="border:none; background:none; cursor:pointer; font-size:18px;">📤</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; gap: 10px;">
+    <span class="popup-title" style="font-weight:bold; font-size:16px; color: #1D192B;">
+        Дільниця ${p.name || p.number}
+    </span>
+    
+    <button onclick="window.shareParcel('${p.name || p.number}', '${shareLink}')" class="m3-share-btn">
+        <div class="icon-stack">
+            🔗<span class="mini-arrow">➦</span>
         </div>
+    </button>
+</div>
 
         ${(!isTaken && isQuarantine) ? `
             <div style="color: #d32f2f; background: #ffebee; padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 12px; border: 1px solid #d32f2f; text-align:center;">
@@ -715,23 +726,49 @@
             ${window.isAdmin ? `<a href="parcel-details.html?id=${p.id}" class="popup-btn" style="flex:1; text-align:center; text-decoration:none; padding:8px; border:1px solid #ccc; border-radius:4px; color:black; font-size:12px;">⚙️ Картка</a>` : ''}
         </div>`;
 
+            // 3. Логіка кнопок дії
             if (!isTaken) {
                 if (isQuarantine) {
                     if (window.isAdmin) {
-                        popupHtml += `<button class="popup-btn primary" style="width:100%; padding:10px; background:#0d6efd; color:white; border:none; border-radius:6px;" onclick="window.startTakeProcess('${p.id}', true)">✋ Взяти (Адмін)</button>`;
+                        // Повертаємо блок розблокування для адміна (з вашого правильного коду)
+                        popupHtml += `
+                <div style="margin-bottom:8px;">
+                    <label style="font-size:11px; color:#1565C0; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                        <input type="checkbox" onchange="const btn=document.getElementById('btn-take-${p.id}'); btn.disabled=!this.checked; btn.style.opacity=this.checked?'1':'0.5'; btn.style.cursor=this.checked?'pointer':'not-allowed'"> 
+                        Розблокувати (Адмін)
+                    </label>
+                </div>
+                <button id="btn-take-${p.id}" class="popup-btn primary" disabled style="opacity:0.5; width:100%; padding:10px; background:#0d6efd; color:white; border:none; border-radius:6px; cursor:not-allowed;" 
+                    onclick="window.startTakeProcess('${p.id}', true)">
+                    ✋ Взяти (Карантин)
+                </button>`;
                     } else {
                         popupHtml += `<p style="font-size:11px; color:#888; text-align:center;">На обробці до ${qDateStr}</p>`;
                     }
                 } else {
+                    // Перевірка авторизації для вільної дільниці
                     if (isAuth) {
-                        popupHtml += `<button class="popup-btn primary" style="width:100%; padding:10px; background:#0d6efd; color:white; border:none; border-radius:6px;" onclick="window.startTakeProcess('${p.id}', false)">✋ Взяти дільницю</button>`;
+                        popupHtml += `<button class="popup-btn primary" style="width:100%; padding:10px; background:#0d6efd; color:white; border:none; border-radius:6px; cursor:pointer;" onclick="window.startTakeProcess('${p.id}', false)">
+                    ✋ Взяти дільницю
+                </button>`;
                     } else {
-                        popupHtml += `<button class="popup-btn" style="width:100%; padding:10px; background:#f8f9fa; border:1px dashed #ffa500; color:#e67e22; border-radius:6px;" onclick="window.location.href='login.html'">🔑 Увійдіть, щоб взяти</button>`;
+                        // Кнопка для неавторизованих користувачів
+                        popupHtml += `
+                <button class="popup-btn" 
+                    style="width:100%; padding:10px; background:#f8f9fa; border:1px dashed #ffa500; color:#e67e22; border-radius:6px; cursor:pointer; font-size:13px; font-weight:500;" 
+                    onclick="window.location.href='login.html'">
+                    🔑 Увійдіть, щоб взяти
+                </button>`;
                     }
                 }
             } else {
+                // Якщо дільниця зайнята (Збережено вашу перевірку власника)
                 if (window.isAdmin || (isAuth && String(p.taken_by_id) === String(currentUserId))) {
-                    popupHtml += `<button class="popup-btn" style="width:100%; padding:10px; border:1px solid #dc3545; color:#dc3545; background:none; border-radius:6px; font-weight:bold;" onclick="window.returnParcel(${p.id})">🔙 Здати дільницю</button>`;
+                    popupHtml += `<button class="popup-btn" 
+                style="width:100%; padding:10px; border:1px solid #dc3545; color:#dc3545; background:none; border-radius:6px; cursor:pointer; font-weight:bold;" 
+                onclick="window.returnParcel(${p.id})">
+                🔙 Здати дільницю
+            </button>`;
                 }
                 popupHtml += `<div style="text-align:center; font-size:11px; color:#666; margin-top:5px;">Взяв: ${p.taken_by || 'Невідомо'}</div>`;
             }
@@ -782,6 +819,7 @@
 
                 // Оновлюємо стиль вже з повними даними
                 if (window.getStyle) polygonLayer.setStyle(window.getStyle(preparedData));
+
 
                 polygonLayer.bindPopup(() => {
                     return window.createPopupContent(polygonLayer.options.parcelData);
@@ -836,38 +874,80 @@
             });
         }
 
+        // Слухаємо зміни в таблиці в реальному часі
+        supabase
+            .channel('any')
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'parcels'
+            }, payload => {
+                console.log('Дані оновлено в базі:', payload.new);
+                // Викликаємо функцію оновлення інтерфейсу
+                handleParcelUpdate(payload.new);
+            })
+            .subscribe();
+
+        // Функція, яка миттєво міняє колір на карті та в таблиці
+        function handleParcelUpdate(updatedParcel) {
+            // 1. Оновлюємо колір на карті Leaflet
+            if (window.parcelLayers && window.parcelLayers[updatedParcel.id]) {
+                const layer = window.parcelLayers[updatedParcel.id];
+
+                // Використовуємо вашу існуючу функцію стилів
+                if (typeof getParcelStyle === 'function') {
+                    layer.setStyle(getParcelStyle(updatedParcel));
+                } else {
+                    // Резервний варіант, якщо статус 'free'
+                    if (updatedParcel.status === 'free') {
+                        layer.setStyle({ fillColor: 'green', color: 'green', fillOpacity: 0.3 });
+                    }
+                }
+                // Оновлюємо дані всередині об'єкта шару
+                layer.feature.properties = { ...layer.feature.properties, ...updatedParcel };
+            }
+
+            // 2. Оновлюємо рядок у таблиці (якщо вона у вас є під картою)
+            const row = document.querySelector(`tr[data-id="${updatedParcel.id}"]`);
+            if (row) {
+                // Тут логіка оновлення комірок (статус, дата тощо)
+                const statusCell = row.querySelector('.status-cell');
+                if (statusCell) statusCell.innerHTML = updatedParcel.status === 'free' ? 'Вільна' : 'В роботі';
+            }
+        }
+
         // Функція скидання фокусу
         window.resetMapFocus = function () {
-    // 1. Очищуємо URL
-    window.history.replaceState({}, document.title, window.location.pathname);
+            // 1. Очищуємо URL
+            window.history.replaceState({}, document.title, window.location.pathname);
 
-    // 2. Ховаємо кнопку
-    const resetBtn = document.getElementById('reset-focus-btn');
-    if (resetBtn) resetBtn.style.display = 'none';
+            // 2. Ховаємо кнопку
+            const resetBtn = document.getElementById('reset-focus-btn');
+            if (resetBtn) resetBtn.style.display = 'none';
 
-    // 3. Повертаємо видимість та стилі
-    if (window.allParcelLayers) {
-        window.allParcelLayers.forEach(item => {
-            // Додаємо шар на карту, якщо він був видалений
-            if (!window.map.hasLayer(item.layer)) {
-                item.layer.addTo(window.map);
-            }
-            if (item.label && !window.map.hasLayer(item.label)) {
-                item.label.addTo(window.map);
-            }
+            // 3. Повертаємо видимість та стилі
+            if (window.allParcelLayers) {
+                window.allParcelLayers.forEach(item => {
+                    // Додаємо шар на карту, якщо він був видалений
+                    if (!window.map.hasLayer(item.layer)) {
+                        item.layer.addTo(window.map);
+                    }
+                    if (item.label && !window.map.hasLayer(item.label)) {
+                        item.label.addTo(window.map);
+                    }
 
-            // ПРИМУСОВО повертаємо стандартний стиль
-            // Використовуємо window.getStyle, бо саме вона ініціалізована у вашому проекті
-            if (typeof window.getStyle === 'function') {
-                const originalStyle = window.getStyle(item.data);
-                item.layer.setStyle(originalStyle);
+                    // ПРИМУСОВО повертаємо стандартний стиль
+                    // Використовуємо window.getStyle, бо саме вона ініціалізована у вашому проекті
+                    if (typeof window.getStyle === 'function') {
+                        const originalStyle = window.getStyle(item.data);
+                        item.layer.setStyle(originalStyle);
+                    }
+                });
+
+                // Опціонально: скидаємо зум, щоб побачити всі дільниці
+                // window.map.setView([49.2321, 29.0577], 15);
             }
-        });
-        
-        // Опціонально: скидаємо зум, щоб побачити всі дільниці
-        // window.map.setView([49.2321, 29.0577], 15);
-    }
-};;
+        };;
 
         // Функція розблокування для адміна (викликається з чекбокса в попапі)
         window.handleAdminUnlock = function (checkbox, parcelId) {
@@ -1052,16 +1132,30 @@
                 location.reload();
             }
         };
-        // Прокидаємо функцію у window, щоб onclick її бачив
-        window.returnParcel = async (id) => {
-            // Шукаємо назву для повідомлення confirm
-            const item = window.allParcelLayers.find(i => i.id === id);
-            const name = item ? item.name : id;
+window.returnParcel = async (id) => {
+    // 1. Знайти дані дільниці для повідомлення
+    const item = window.allParcelLayers ? window.allParcelLayers.find(i => i.id === id) : null;
+    const name = item ? (item.name || item.number) : id;
 
-            await returnParcel(id, name, supabase, () => {
-                location.reload();
-            });
-        };
+    // 2. Виклик логіки здачі
+    await returnParcel(id, name, window.supabase, () => {
+        // ПІСЛЯ УСПІХУ В БАЗІ:
+        
+        // Закриваємо попап (про всяк випадок перед перезавантаженням)
+        if (window.map) window.map.closePopup();
+
+        // Показуємо повідомлення
+        if (typeof showToast === 'function') {
+            showToast(`Дільницю №${name} здано. Оновлення карти...`);
+        }
+
+        // 3. ПЕРЕЗАВАНТАЖЕННЯ СТОРІНКИ
+        // Додаємо невелику затримку 500мс, щоб користувач встиг побачити Toast
+        setTimeout(() => {
+            location.reload();
+        }, 500);
+    });
+};
 
         // --- 6. ЗАПУСК ПРИ ЗАВАНТАЖЕННІ ---
         document.addEventListener('DOMContentLoaded', async () => {

@@ -369,12 +369,23 @@
       scrollWheelZoom: false,
       doubleClickZoom: false
     });
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
+
+    // НОВИЙ ШАР OSM:
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
     const parcelLayer = L.geoJSON(geom, {
-      style: { color: "#ff9f43", weight: 4, opacity: 1, fillColor: "#ff9f43", fillOpacity: 0.15 }
+      style: { 
+        color: "#6750A4", // Змінив на фіолетовий M3, щоб краще було видно на білій карті
+        weight: 4, 
+        opacity: 1, 
+        fillColor: "#6750A4", 
+        fillOpacity: 0.15 
+      }
     }).addTo(map);
     map.fitBounds(parcelLayer.getBounds(), { padding: [20, 20] });
-  }
+}
 
   async function loadHistory() {
     const { data: logs } = await supabase.from('territory_logs').select('*').eq('parcel_id', parcelId).order('returned_at', { ascending: false });
