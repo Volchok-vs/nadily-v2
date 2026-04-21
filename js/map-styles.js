@@ -74,7 +74,7 @@ export function getParcelStyle(pData) {
     }
 
     // 5. ЛОГІКА СТАРІННЯ (6, 7, 8+ МІСЯЦІВ)
-    let finalOpacity = 0.; 
+    let finalOpacity = 0.3; 
     let weight = 1.5;
 
     if (pData.status !== 'taken' && diffMonths >= 6) {
