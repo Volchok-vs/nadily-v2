@@ -60,7 +60,7 @@ export function getParcelStyle(pData) {
     // 3. ПЕРЕВІРКА СТАТУСУ "ЗАЙНЯТА"
     if (pData.status === 'taken') {
         baseColor = config.taken;
-        strokeColor = '#dbf706'; // Світло-жовта межа
+        strokeColor = '#dbf706aa'; // Світло-жовта межа
     }
 
     // 4. РОЗРАХУНОК КАРАНТИНУ (менше 3 місяців)
@@ -74,7 +74,7 @@ export function getParcelStyle(pData) {
     }
 
     // 5. ЛОГІКА СТАРІННЯ (6, 7, 8+ МІСЯЦІВ)
-    let finalOpacity = 0.2; 
+    let finalOpacity = 0.; 
     let weight = 1.5;
 
     if (pData.status !== 'taken' && diffMonths >= 6) {

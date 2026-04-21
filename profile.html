@@ -62,9 +62,13 @@
     .current-year-cell { background: #e8f5e9; } /* Підсвітка поточного року */
     </style>
     <link rel="stylesheet" href="css/profile-style.css" />
+    <link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
-<button class="mobile-nav-toggle" onclick="toggleSidebar()">☰</button>
+<div class="mobile-header">
+    <button class="mobile-nav-toggle-new" onclick="toggleSidebar()">☰</button>
+    <div class="mobile-title">Адмін-панель</div>
+</div>
 <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div class="sidebar">
         <h2 id="displayRole">Кабінет</h2>
@@ -654,7 +658,7 @@ async function showUserDetails(uId, uName) {
         const name = document.getElementById('display-name').innerText;
         const login = loginInput.value;
         const pass = document.getElementById('display-pass').innerText;
-        const text = `Вісник: ${name}\nЛогін: ${login}\nПароль: ${pass}`;
+        const text = `Ім'я: ${name}\nЛогін: ${login}\nПароль: ${pass}`;
         navigator.clipboard.writeText(text).then(() => alert("Скопійовано!"));
     };
 

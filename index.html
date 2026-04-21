@@ -9,9 +9,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-
-
-
     <style>
         body {
             margin: 0;
@@ -350,12 +347,13 @@
         }
     </style>
     <link rel="stylesheet" href="css/style_mod.css">
+    <link rel="stylesheet" href="css/responsive.css">
 </head>
 
 <body>
     <div id="map"></div>
 
-    <div id="modalOverlay" onclick="window.closeAllModals()"
+    <div id="modalOverlay" onclick="UI.closeAllModals()"
         style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:300;">
     </div>
 
@@ -409,14 +407,14 @@
                     <span><b>Змішана забудова:</b> Поєднання приватних та багатоповерхових будинків.</span>
                 </div>
 
-                <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+                <div style="display: none; align-items: flex-start; margin-bottom: 10px;">
                     <div
                         style="min-width: 35px; height: 18px; background: #0000FF; border: 2px solid rgba(0,0,0,0.1); margin-right: 12px; margin-top: 2px; border-radius: 3px;">
                     </div>
                     <span><b>Ділова зона:</b> Офісні центри та комерційні об’єкти.</span>
                 </div>
 
-                <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+                <div style="display: none; align-items: flex-start; margin-bottom: 10px;">
                     <div
                         style="min-width: 35px; height: 18px; background: #8B4513; border: 2px solid rgba(0,0,0,0.1); margin-right: 12px; margin-top: 2px; border-radius: 3px;">
                     </div>
@@ -467,7 +465,7 @@
 
                 <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
                     <div
-                        style="min-width: 35px; height: 18px; background: #163e25; border: 2px solid rgba(0,0,0,0.1); margin-right: 12px; margin-top: 2px; border-radius: 3px;">
+                        style="min-width: 35px; height: 18px; background: #163e25; border: 2px solid #dbf706aa; margin-right: 12px; margin-top: 2px; border-radius: 3px;">
                     </div>
                     <span><b>Темно-зелений:</b> Зараз у роботі.</span>
                 </div>
@@ -502,7 +500,7 @@
             cursor: pointer; 
             font-size: 22px; 
             font-weight: bold; 
-            color: #888;
+            color: #333333cf;
         ">&times;</span>
 
         <h4 style="margin:0 0 10px 0;">🔍 Фільтр дільниць</h4>
@@ -532,8 +530,7 @@
             </label>
         </div>
     </div>
-    <button id="reset-focus-btn" onclick="window.resetMapFocus()"
-        style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; background: white; border: 1px solid #ccc; padding: 10px 20px; border-radius: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; display: none; font-weight: bold;">
+    <button id="reset-focus-btn" onclick="window.resetMapFocus()">
         ⬅️ Показати всі дільниці
     </button>
     <script src="js/ui-controller.js"></script>
@@ -597,51 +594,56 @@
 
 
         // --- 2. ІНІЦІАЛІЗАЦІЯ КАРТИ ---
-        function initMainMap() {
-            // 1. ОПИС БАЗОВИХ ШАРІВ
-            const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            });
+        // --- 2. ІНІЦІАЛІЗАЦІЯ КАРТИ ---
+function initMainMap() {
+    // ... ваші змінні osm, topo, satelliteHybrid залишаються без змін ...
 
-            // Твоя нова топографічна карта
-            const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenTopoMap (SRTM)'
-            });
+    // 1. ОПИС БАЗОВИХ ШАРІВ
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' });
+    const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap (SRTM)' });
+    const satelliteOnly = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+    const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { pane: 'shadowPane' });
+    const satelliteHybrid = L.layerGroup([satelliteOnly, labels]);
 
-            // Гібрид (Супутник + Назви для зручності)
-            const satelliteOnly = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-            const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
-                pane: 'shadowPane'
-            });
-            const satelliteHybrid = L.layerGroup([satelliteOnly, labels]);
+    // 2. ДОДАНО ТУТ: Визначаємо, який шар увімкнути
+    const baseMaps = {
+        "🛰️ Гібрид": satelliteHybrid,
+        "🗺️ Схема (OSM)": osm,
+        "⛰️ Рельєф (Topo)": topo
+    };
+    
+    // Перевіряємо localStorage
+    const savedLayerName = localStorage.getItem('selectedBaseLayer');
+    // Якщо в пам'яті є шар і він існує в списку — беремо його, інакше — Гібрид
+    const initialLayer = (savedLayerName && baseMaps[savedLayerName]) 
+                         ? baseMaps[savedLayerName] 
+                         : satelliteHybrid;
 
-            // 2. ІНІЦІАЛІЗАЦІЯ КАРТИ
-            window.map = L.map('map', {
-                preferCanvas: false,
-                center: [49.2321, 29.0577],
-                zoom: 15,
-                layers: [satelliteHybrid], // Шар за замовчуванням
-                zoomControl: false,
-            });
+    // 3. ІНІЦІАЛІЗАЦІЯ КАРТИ
+    window.map = L.map('map', {
+        preferCanvas: false,
+        center: [49.2321, 29.0577],
+        zoom: 15,
+        layers: [initialLayer], // <--- ЗМІНЕНО ТУТ: тепер використовуємо initialLayer
+        zoomControl: false,
+    });
 
-            // 3. НАЛАШТУВАННЯ ПЕРЕМИКАЧА (baseMaps)
-            const baseMaps = {
-                "🛰️ Гібрид": satelliteHybrid,
-                "🗺️ Схема (OSM)": osm,
-                "⛰️ Рельєф (Topo)": topo
-            };
+    // Додаємо перемикач
+    L.control.layers(baseMaps, null, {
+        position: 'bottomleft',
+        collapsed: true
+    }).addTo(window.map);
 
-            // Додаємо перемикач (прибираємо супутник без назв)
-            L.control.layers(baseMaps, null, {
-                position: 'bottomleft',
-                collapsed: true
-            }).addTo(window.map);
+    // 4. ДОДАНО ТУТ: Подія для збереження вибору
+    window.map.on('baselayerchange', function (e) {
+        localStorage.setItem('selectedBaseLayer', e.name);
+        console.log("💾 Шар збережено:", e.name);
+    });
 
-            // Активуємо геолокацію та панель користувача
-            if (typeof initGeolocation === 'function') initGeolocation(window.map);
-            new AuthControl().addTo(window.map);
-        }
-
+    // ... далі ваш код (initGeolocation, AuthControl) ...
+    if (typeof initGeolocation === 'function') initGeolocation(window.map);
+    new AuthControl().addTo(window.map);
+}
 
 
         // У вашому блоці handleUrlParams (якщо він в index) або після handleUrlParams():
@@ -781,6 +783,7 @@
 
         // --- 4. ЗАВАНТАЖЕННЯ ДІЛЬНИЦЬ ---
         async function loadParcels() {
+            window.allParcelLayers = [];
             const { data: parcels, error } = await window.supabase.from('parcels').select('*');
             if (error) return console.error(error);
 
@@ -1132,78 +1135,65 @@
                 location.reload();
             }
         };
-window.returnParcel = async (id) => {
-    // 1. Знайти дані дільниці для повідомлення
-    const item = window.allParcelLayers ? window.allParcelLayers.find(i => i.id === id) : null;
-    const name = item ? (item.name || item.number) : id;
+        window.returnParcel = async (id) => {
+            // 1. Знайти дані дільниці для повідомлення
+            const item = window.allParcelLayers ? window.allParcelLayers.find(i => i.id === id) : null;
+            const name = item ? (item.name || item.number) : id;
 
-    // 2. Виклик логіки здачі
-    await returnParcel(id, name, window.supabase, () => {
-        // ПІСЛЯ УСПІХУ В БАЗІ:
-        
-        // Закриваємо попап (про всяк випадок перед перезавантаженням)
-        if (window.map) window.map.closePopup();
+            // 2. Виклик логіки здачі
+            await returnParcel(id, name, window.supabase, () => {
+                // ПІСЛЯ УСПІХУ В БАЗІ:
 
-        // Показуємо повідомлення
-        if (typeof showToast === 'function') {
-            showToast(`Дільницю №${name} здано. Оновлення карти...`);
-        }
+                // Закриваємо попап (про всяк випадок перед перезавантаженням)
+                if (window.map) window.map.closePopup();
 
-        // 3. ПЕРЕЗАВАНТАЖЕННЯ СТОРІНКИ
-        // Додаємо невелику затримку 500мс, щоб користувач встиг побачити Toast
-        setTimeout(() => {
-            location.reload();
-        }, 500);
-    });
-};
-
-        // --- 6. ЗАПУСК ПРИ ЗАВАНТАЖЕННІ ---
-        document.addEventListener('DOMContentLoaded', async () => {
-            initMainMap(); // Твоя ініціалізація карти
-            await loadParcels(); // Завантаження даних із Supabase
-
-            // ПРАВИЛЬНЕ ПІДКЛЮЧЕННЯ КОМБАЙНА
-            // Передаємо карту та масив дільниць у функцію ініціалізації
-            initSearchAndFilters(window.map, window.allParcelLayers);
-            // 3. ОБРОБКА ПОСИЛАННЯ (?parcel=...)
-            // Тепер, коли масив window.allParcelLayers готовий, шукаємо дільницю
-            if (typeof handleUrlParams === 'function') {
-                handleUrlParams();
-            }
-
-            // 4. Запускаємо інші інструменти
-            if (window.initToolControl) initToolControl(window.map);
-            if (window.initSearchAndFilters) {
-                initSearchAndFilters(window.map, window.allParcelLayers);
-            }
-            await loadParcels();
-
-            // 3. Тільки тепер запускаємо фокусування
-            if (window.handleUrlParams) {
-                console.log("Шукаю дільницю з URL...");
-                window.handleUrlParams();
-            }
-
-            // 4. Ініціалізація пошуку та фільтрів
-            if (typeof initSearchAndFilters === 'function') {
-                initSearchAndFilters(window.map, window.allParcelLayers);
-            }
-            // Виконуємо фокусування
-            if (window.handleUrlParams) {
-                window.handleUrlParams();
-
-                // Перевіряємо, чи ми зараз у режимі фокусу
-                const urlParams = new URLSearchParams(window.location.search);
-                const resetBtn = document.getElementById('reset-focus-btn');
-
-                if (urlParams.has('parcel') && resetBtn) {
-                    resetBtn.style.display = 'block';
+                // Показуємо повідомлення
+                if (typeof showToast === 'function') {
+                    showToast(`Дільницю №${name} здано. Оновлення карти...`);
                 }
-            }
 
-            // Оновлюємо лічильники
-            updateFilterCounts(window.allParcelLayers);
-        });
+                // 3. ПЕРЕЗАВАНТАЖЕННЯ СТОРІНКИ
+                // Додаємо невелику затримку 500мс, щоб користувач встиг побачити Toast
+                setTimeout(() => {
+                    location.reload();
+                }, 500);
+            });
+        };
+
+        document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Спершу карта
+    initMainMap(); 
+
+    // 2. ОДИН РАЗ завантажуємо дані
+    await loadParcels(); 
+
+    // 3. ОДИН РАЗ налаштовуємо пошук, коли дані вже є
+    if (typeof initSearchAndFilters === 'function') {
+        initSearchAndFilters(window.map, window.allParcelLayers);
+    }
+
+    // 4. ОДИН РАЗ запускаємо інструменти (лінійка і т.д.)
+    if (window.initToolControl) {
+        initToolControl(window.map);
+    }
+
+    // 5. ОДИН РАЗ обробляємо перехід за посиланням
+    if (typeof handleUrlParams === 'function') {
+        handleUrlParams();
+        
+        // Показуємо кнопку скидання, якщо в URL є дільниця
+        const urlParams = new URLSearchParams(window.location.search);
+        const resetBtn = document.getElementById('reset-focus-btn');
+        if (urlParams.has('parcel') && resetBtn) {
+            resetBtn.style.display = 'block';
+        }
+    }
+
+    // 6. ОДИН РАЗ рахуємо кількість для фільтрів
+    if (typeof updateFilterCounts === 'function') {
+        updateFilterCounts(window.allParcelLayers);
+    }
+});
     </script>
 
     <script src="js/dev-tools.js"></script>

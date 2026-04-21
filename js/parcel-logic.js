@@ -5,9 +5,9 @@ export function handleUrlParams() {
 
     if (targetParcel && window.allParcelLayers) {
         const targetName = targetParcel.toLowerCase().trim();
-
+        
         setTimeout(() => {
-            let foundItem = window.allParcelLayers.find(item =>
+            let foundItem = window.allParcelLayers.find(item => 
                 item.name.toString().toLowerCase().trim() === targetName
             );
 
@@ -19,18 +19,13 @@ export function handleUrlParams() {
                         item.layer.addTo(window.map);
                         if (item.label) item.label.addTo(window.map);
                     } else {
-                        // Замість window.map.removeLayer(item.layer);
-                        item.layer.setStyle({
-                            opacity: 0.1,
-                            fillOpacity: 0.05,
-                            interactive: true // щоб на них все одно можна було клікнути
-                        });
+                        window.map.removeLayer(item.layer);
                         if (item.label) window.map.removeLayer(item.label);
                     }
                 });
 
                 window.map.fitBounds(foundItem.layer.getBounds(), { padding: [50, 50], maxZoom: 17 });
-
+                
                 window.map.once('moveend', () => {
                     foundItem.layer.fire('click');
                 });
@@ -60,26 +55,31 @@ export async function shareParcel(name, link) {
  * @param {object} supabase - Клиент Supabase
  * @param {function} callback - Функция для обновления интерфейса (без перезагрузки)
  */
-export async function returnParcel(id, name, supabase, onSuccess) {
+export async function returnParcel(id, name, supabase, callback) {
     if (!confirm(`Здати дільницю №${name}?`)) return;
 
-    const today = new Date().toISOString(); // Або формат YYYY-MM-DD
+    // Получаем текущую дату в чистом формате ISO (ГГГГ-ММ-ДД)
+    const nowISO = new Date().toISOString().split('T')[0];
 
-    const { error } = await supabase
-        .from('parcels')
-        .update({ 
-            status: 'free', 
-            last_returned: today 
-        })
-        .eq('id', id);
+    // Обновляем статус и дату возврата. last_processed НЕ ТРОГАЕМ.
+    const { error } = await supabase.from('parcels').update({ 
+        status: 'free', 
+        taken_by_id: null, 
+        taken_by: null, 
+        taken_at: null, 
+        last_returned: nowISO 
+    }).eq('id', id);
 
-    if (error) {
-        console.error("Помилка:", error.message);
-        return;
+    if (!error) {
+        // Вызываем уведомление (Toast), если оно определено глобально
+        if (window.showToast) {
+            window.showToast(`Дільницю №${name} успішно здано!`);
+        }
+
+        // Вызываем функцию обновления интерфейса конкретной страницы
+        if (callback) await callback();
+    } else {
+        console.error("Помилка Supabase:", error.message);
+        if (window.showToast) window.showToast("Помилка при здачі", true);
     }
-
-    // ВИДАЛИТИ: location.reload();
-    
-    // ДОДАТИ: виклик callback-функції
-    if (onSuccess) onSuccess();
 }

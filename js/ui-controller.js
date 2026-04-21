@@ -23,6 +23,24 @@ window.UI = {
         if (modal) {
             modal.style.display = show ? 'block' : 'none';
             
+            // --- ЛОГІКА РЕЖИМУ КОРЕКЦІЇ ---
+            if (show && modalId === 'takeModal') {
+                const configs = JSON.parse(localStorage.getItem('app_dev_configs')) || {};
+                const isCorrectionMode = configs.correctionMode === true;
+                
+                const correctionSection = document.getElementById('manual-date-section');
+                const dateInput = document.getElementById('correction-date-input');
+
+                if (isCorrectionMode) {
+                    if (correctionSection) correctionSection.style.display = 'block';
+                    // Встановлюємо сьогоднішню дату як початкову
+                    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+                } else {
+                    if (correctionSection) correctionSection.style.display = 'none';
+                }
+            }
+            // ------------------------------
+
             // Додатково: скидаємо чекбокси всередині модалки при відкритті/закритті
             if (show) {
                 const bypass = modal.querySelector('#admin-bypass-checkbox');
@@ -51,7 +69,6 @@ window.UI = {
      * Приватний метод для керування прокруткою body
      */
     _updateBodyScroll() {
-        // Перевіряємо, чи є хоч один видимий елемент (крім оверлею)
         const anyVisible = this.selectors.some(selector => {
             if (selector === '#modalOverlay') return false;
             const el = document.querySelector(selector);
@@ -68,18 +85,14 @@ window.UI = {
 
 // Ініціалізація глобальних подій
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // Закриття фільтра через хрестик
     document.getElementById('closeFilter')?.addEventListener('click', () => {
         UI.toggleModal('filterMenu', false);
     });
 
-    // Закриття при кліку на оверлей
     document.getElementById('modalOverlay')?.addEventListener('click', () => {
         UI.closeAllModals();
     });
 
-    // Закриття при кліку повз меню фільтрів
     document.addEventListener('click', (e) => {
         const filterMenu = document.getElementById('filterMenu');
         if (filterMenu && filterMenu.style.display === 'block') {
@@ -89,7 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Обробник клавіші Escape
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             UI.closeAllModals();

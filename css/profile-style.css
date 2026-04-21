@@ -7,6 +7,7 @@
     flex-direction: column; 
     padding: 20px 0; 
     transition: transform 0.3s ease; /* Додаємо плавний рух */
+    overflow-y: auto;
 }
 
 /* Кнопка перемикача (бургер) */
@@ -49,12 +50,7 @@
     position: relative;
 }
 
-#territoryTable {
-    width: 100%;        /* Таблиця намагається вписатися */
-    min-width: 600px;   /* Але не стискається менше за цей поріг, щоб дані були читабельні */
-    border-collapse: collapse;
-    table-layout: fixed;
-}
+
 
 #territoryTable {
     table-layout: fixed; /* Змушує таблицю суворо дотримуватися заданої ширини ширини */
@@ -137,6 +133,59 @@
     position: relative;
 }
 
+/* Шапка для мобілок */
+.mobile-header {
+    display: none; /* За замовчуванням прихована на ПК */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background: white;
+    border-bottom: 1px solid #ddd;
+    z-index: 1000; /* Щоб була поверх усього */
+    align-items: center;
+    padding: 0 15px;
+    box-sizing: border-box;
+}
+
+.mobile-title {
+    font-weight: bold;
+    margin-left: 50px; /* Місце, щоб не налізало на кнопку */
+    color: #2c3e50;
+}
+
+/* Новий стиль кнопки всередині шапки */
+.mobile-nav-toggle-new {
+    background: #2c3e50;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 20px;
+    position: absolute;
+    left: 10px;
+}
+
+/* Адаптивність: показуємо шапку і посуваємо контент */
+@media (max-width: 768px) {
+    .mobile-header {
+        display: flex;
+    }
+    
+    /* Головний контент треба опустити нижче, щоб шапка його не закривала */
+    .main-content {
+        margin-top: 60px !important; 
+        height: calc(100vh - 60px) !important;
+        overflow-y: auto;
+    }
+
+    /* Стару кнопку, яка тобі заважала, приховуємо */
+    .mobile-nav-toggle {
+        display: none !important;
+    }
+}
 /* Адаптивність для телефонів */
 @media (max-width: 768px) {
     .mobile-nav-toggle { display: block; }
@@ -159,9 +208,7 @@
         display: block;
     }
 
-    .main-content {
-        padding-top: 70px !important; /* Місце для кнопки зверху */
-    }
+   
 
     .table-container {
         overflow-x: auto;

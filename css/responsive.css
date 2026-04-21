@@ -1,0 +1,68 @@
+/* ============================================================
+   DESKTOP FIRST: Базові стилі вже написані для ПК
+   Ми використовуємо max-width для адаптації під менші екрани
+   ============================================================ */
+
+/* Ноутбуки та великі планшети (менше 1200px) */
+@media screen and (max-width: 1200px) {
+    .container {
+        max-width: 95%;
+        padding: 20px;
+    }
+}
+
+/* Планшети в альбомній орієнтації (менше 1024px) */
+@media screen and (max-width: 1024px) {
+    .details-layout {
+        gap: 15px;
+    }
+    .header h1 {
+        font-size: 1.4rem;
+    }
+}
+
+/* Планшети та великі телефони (менше 768px) */
+@media screen and (max-width: 768px) {
+    .details-layout {
+        flex-direction: column; /* Стекуємо блоки один під одного */
+    }
+        
+    
+}
+
+/**
+ * Адаптація для мобільних пристроїв
+ * @description Global mobile device breakpoint (Extra small)
+ * @range From 0px to 575.98px
+ */
+@media (max-width: 575.98px) {
+    /* Оптимально для вашого Google Pixel 7 */
+    
+}
+
+/* Смартфони (менше 480px) — наприклад, ваш Pixel 7 */
+@media screen and (max-width: 480px) {
+    
+    
+    .container {
+        padding: 15px;
+    }
+
+    .badge {
+        font-size: 0.8rem;
+        padding: 4px 8px;
+    }
+
+    /* Робимо кнопки дій (Взяти/Здати) великими */
+    #takeBtn, #adminReturnBtn {
+        padding: 12px;
+        font-size: 1rem;
+    }
+}
+
+/* Спеціально для дуже малих екранів (менше 360px) */
+@media screen and (max-width: 360px) {
+    .header h1 {
+        font-size: 1.2rem;
+    }
+}
