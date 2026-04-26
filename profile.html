@@ -1,82 +1,225 @@
 <!DOCTYPE html>
 <html lang="uk">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Кабінет Адміністратора</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --sidebar-width: 250px; --primary: #007bff; --bg: #f4f7f6; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; height: 100dvh; width: 100%; overflow: hidden; }
-        
+        :root {
+            --sidebar-width: 250px;
+            --primary: #007bff;
+            --bg: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            margin: 0;
+            display: flex;
+            height: 100dvh;
+            width: 100%;
+            overflow: hidden;
+        }
+
         /* Бокове меню */
-        .sidebar { width: var(--sidebar-width); background: #2c3e50; color: white; display: flex; flex-direction: column; padding: 20px 0; }
-        .sidebar h2 { padding: 0 20px; font-size: 1.2rem; margin-bottom: 30px; color: #ecf0f1; }
-        .nav-item { padding: 15px 20px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; text-decoration: none; color: #bdc3c7; }
-        .nav-item:hover, .nav-item.active { background: #34495e; color: white; }
-        .nav-item i { margin-right: 10px; }
-        .logout-btn { margin-top: 20px; color: #e74c3c; border-top: 1px solid #34495e; }
+        .sidebar {
+            width: var(--sidebar-width);
+            background: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+        }
+
+        .sidebar h2 {
+            padding: 0 20px;
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            color: #ecf0f1;
+        }
+
+        .nav-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: #bdc3c7;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: #34495e;
+            color: white;
+        }
+
+        .nav-item i {
+            margin-right: 10px;
+        }
+
+        .logout-btn {
+            margin-top: 20px;
+            color: #e74c3c;
+            border-top: 1px solid #34495e;
+        }
 
         /* Контентна область */
-        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        
-        /* Таблиці та списки */
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
-        tr:hover { background: #f9f9f9; cursor: pointer; }
-        .badge { background: #eee; padding: 4px 8px; border-radius: 12px; font-size: 0.85rem; }
-        
-        .hidden { display: none; }
-        .btn-back { margin-bottom: 15px; cursor: pointer; color: var(--primary); display: inline-block; }
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
 
-        .territory-grid { border: 2px solid #333; width: auto; min-width: 100%; }
-        .territory-grid th, .territory-grid td { 
-            border: 1px solid #444; 
-            text-align: center; 
-            padding: 5px; 
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
+        /* Таблиці та списки */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+            cursor: pointer;
+        }
+
+        .badge {
+            background: #eee;
+            padding: 4px 8px;
+            border-radius: 12px;
             font-size: 0.85rem;
         }
-        .territory-grid thead th { background: #e9ecef; font-weight: bold; }
-        .cell-date { font-size: 0.75rem; width: 80px; }
-        .parcel-num { font-weight: bold; font-size: 1.1rem; background: #f8f9fa; }
 
-        #territoryTable th, #territoryTable td {
-        border: 1px solid #444;
-        padding: 8px;
-        text-align: center;
-        font-family: sans-serif;
+        .hidden {
+            display: none;
         }
+
+        .btn-back {
+            margin-bottom: 15px;
+            cursor: pointer;
+            color: var(--primary);
+            display: inline-block;
+        }
+
+        .territory-grid {
+            border: 2px solid #333;
+            width: auto;
+            min-width: 100%;
+        }
+
+        .territory-grid th,
+        .territory-grid td {
+            border: 1px solid #444;
+            text-align: center;
+            padding: 5px;
+            font-size: 0.85rem;
+        }
+
+        .territory-grid thead th {
+            background: #e9ecef;
+            font-weight: bold;
+        }
+
+        .cell-date {
+            font-size: 0.75rem;
+            width: 80px;
+        }
+
+        .parcel-num {
+            font-weight: bold;
+            font-size: 1.1rem;
+            background: #f8f9fa;
+        }
+
+        #territoryTable th,
+        #territoryTable td {
+            border: 1px solid #444;
+            padding: 8px;
+            text-align: center;
+            font-family: sans-serif;
+        }
+
         #territoryTable thead th {
             background-color: #f2f2f2;
             font-weight: bold;
             text-transform: uppercase;
             font-size: 12px;
         }
-        .num-col { background: #eee; font-weight: bold; width: 50px; font-size: 16px; }
-        .name-row { background: #fff; font-weight: bold; color: #2c3e50; height: 30px; }
-        .date-row { background: #fafafa; height: 25px; }
-        .date-cell { font-size: 11px; width: 90px; color: #555; }
 
-        .last-done-col { background: #f0f0f0; width: 100px; font-size: 11px; color: #d32f2f; font-weight: bold; }
-    .current-year-cell { background: #e8f5e9; } /* Підсвітка поточного року */
+        .num-col {
+            background: #eee;
+            font-weight: bold;
+            width: 50px;
+            font-size: 16px;
+        }
+
+        .name-row {
+            background: #fff;
+            font-weight: bold;
+            color: #2c3e50;
+            height: 30px;
+        }
+
+        .date-row {
+            background: #fafafa;
+            height: 25px;
+        }
+
+        .date-cell {
+            font-size: 11px;
+            width: 90px;
+            color: #555;
+        }
+
+        .last-done-col {
+            background: #f0f0f0;
+            width: 100px;
+            font-size: 11px;
+            color: #d32f2f;
+            font-weight: bold;
+        }
+
+        .current-year-cell {
+            background: #e8f5e9;
+        }
+
+        /* Підсвітка поточного року */
     </style>
     <link rel="stylesheet" href="css/profile-style.css" />
     <link rel="stylesheet" href="css/responsive.css">
 </head>
+
 <body>
-<div class="mobile-header">
-    <button class="mobile-nav-toggle-new" onclick="toggleSidebar()">☰</button>
-    <div class="mobile-title">Адмін-панель</div>
-</div>
-<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    <div class="mobile-header">
+        <button class="mobile-nav-toggle-new" onclick="toggleSidebar()">☰</button>
+        <div class="mobile-title">Адмін-панель</div>
+    </div>
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div class="sidebar">
         <h2 id="displayRole">Кабінет</h2>
         <div class="nav-item active" onclick="switchTab('my-card')">👤 Моя картка</div>
         <div id="adminMenu" class="hidden">
             <div class="nav-item" onclick="switchTab('group-cards')">👥 Картки групи</div>
             <div class="nav-item" onclick="switchTab('all-territories')">📋 S-13</div>
-            <a href="dev-settings.html" id="devLink" class="nav-item" style="display: none; border-left: 3px solid #ff9800; color: #ff9800;">
+            <a href="dev-settings.html" id="devLink" class="nav-item"
+                style="display: none; border-left: 3px solid #ff9800; color: #ff9800;">
                 🛠 Режим розробки
             </a>
         </div>
@@ -94,52 +237,64 @@
         </div>
 
         <div id="tab-group-cards" class="tab-content hidden">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h1 style="margin: 0;">Вісники групи</h1>
-        <button onclick="openAddPublisherModal()" style="background: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            + Додати
-        </button>
-    </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h1 style="margin: 0;">Вісники групи</h1>
+                <button onclick="openAddPublisherModal()"
+                    style="background: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    + Додати
+                </button>
+            </div>
 
-    <div class="card">
-        <table>
-            <thead>
-                <tr>
-                    <th>Прізвище та ім'я</th>
-                    <th>Кількість дільниць</th>
-                </tr>
-            </thead>
-            <tbody id="publishersList">
-                </tbody>
-        </table>
-    </div>
-</div>
-
-<div id="addPublisherModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:9999; padding:15px; box-sizing:border-box;">
-    <div style="background:white; padding:25px; border-radius:15px; width:100%; max-width:400px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
-        <h2 style="margin-top:0; color:#333; font-size:1.4rem;">Новий вісник</h2>
-        
-        <div style="margin-bottom:15px;">
-            <label style="display:block; margin-bottom:5px; font-weight:bold; font-size:0.85rem; color:#666;">Прізвище</label>
-            <input type="text" id="newPubLastName" placeholder="Наприклад: Шевченко" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:1rem; box-sizing:border-box;">
+            <div class="card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Прізвище та ім'я</th>
+                            <th>Кількість дільниць</th>
+                        </tr>
+                    </thead>
+                    <tbody id="publishersList">
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        <div style="margin-bottom:15px;">
-            <label style="display:block; margin-bottom:5px; font-weight:bold; font-size:0.85rem; color:#666;">Ім'я</label>
-            <input type="text" id="newPubFirstName" placeholder="Наприклад: Тарас" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:1rem; box-sizing:border-box;">
-        </div>
+        <div id="addPublisherModal"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:9999; padding:15px; box-sizing:border-box;">
+            <div
+                style="background:white; padding:25px; border-radius:15px; width:100%; max-width:400px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+                <h2 style="margin-top:0; color:#333; font-size:1.4rem;">Новий вісник</h2>
 
-        <div style="margin-bottom:25px;">
-            <label style="display:block; margin-bottom:5px; font-weight:bold; font-size:0.85rem; color:#666;">Логін (необов'язково)</label>
-            <input type="text" id="newPubLogin" placeholder="Наприклад: taras77" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:1rem; box-sizing:border-box;">
-        </div>
+                <div style="margin-bottom:15px;">
+                    <label
+                        style="display:block; margin-bottom:5px; font-weight:bold; font-size:0.85rem; color:#666;">Прізвище</label>
+                    <input type="text" id="newPubLastName" placeholder="Наприклад: Шевченко"
+                        style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:1rem; box-sizing:border-box;">
+                </div>
 
-        <div style="display:flex; gap:12px;">
-            <button onclick="closeAddPublisherModal()" style="flex:1; background:#f1f2f6; color:#2f3542; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold;">Скасувати</button>
-            <button onclick="saveNewPublisher()" style="flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold;">Зберегти</button>
+                <div style="margin-bottom:15px;">
+                    <label
+                        style="display:block; margin-bottom:5px; font-weight:bold; font-size:0.85rem; color:#666;">Ім'я</label>
+                    <input type="text" id="newPubFirstName" placeholder="Наприклад: Тарас"
+                        style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:1rem; box-sizing:border-box;">
+                </div>
+
+                <div style="margin-bottom:25px;">
+                    <label
+                        style="display:block; margin-bottom:5px; font-weight:bold; font-size:0.85rem; color:#666;">Логін
+                        (необов'язково)</label>
+                    <input type="text" id="newPubLogin" placeholder="Наприклад: taras77"
+                        style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:1rem; box-sizing:border-box;">
+                </div>
+
+                <div style="display:flex; gap:12px;">
+                    <button onclick="closeAddPublisherModal()"
+                        style="flex:1; background:#f1f2f6; color:#2f3542; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold;">Скасувати</button>
+                    <button onclick="saveNewPublisher()"
+                        style="flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold;">Зберегти</button>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
 
         <div id="tab-user-details" class="tab-content hidden">
             <div class="btn-back" onclick="switchTab('group-cards')">← Назад до списку</div>
@@ -148,14 +303,16 @@
                 <h3>Активні дільниці вісника</h3>
                 <div id="detailUserParcels"></div>
             </div>
-            <div id="admin-settings-block" style="display: none; border: 2px dashed #2196F3; padding: 15px; border-radius: 8px; margin-top: 20px; background: #f0f7ff;">
+            <div id="admin-settings-block"
+                style="display: none; border: 2px dashed #2196F3; padding: 15px; border-radius: 8px; margin-top: 20px; background: #f0f7ff;">
                 <h3 style="margin-top: 0; color: #1565C0;">⚙️ Налаштування доступу</h3>
-                
+
                 <div style="margin-bottom: 15px;">
                     <label style="display: block; margin-bottom: 5px; font-weight: bold;">
                         <input type="checkbox" id="unlock-role-check"> Редагувати роль:
                     </label>
-                    <select id="user-role-select" disabled style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; background: #eee;">
+                    <select id="user-role-select" disabled
+                        style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; background: #eee;">
                         <option value="user">User (Користувач)</option>
                         <option value="admin">Admin (Адміністратор)</option>
                         <option value="super_admin" id="opt-super-admin">Super Admin (Розробник)</option>
@@ -165,396 +322,487 @@
                 <hr style="border: 0; border-top: 1px solid #d1d9e6; margin: 15px 0;">
 
                 <div id="auth-info-section">
-                    <button id="show-auth-btn" style="width: 100%; padding: 10px; background: #1565C0; color: white; border: none; border-radius: 4px; cursor: pointer;">Показати дані для входу</button>
-                    
-                    <div id="auth-data-display" style="display: none; margin-top: 15px; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                    <button id="show-auth-btn"
+                        style="width: 100%; padding: 10px; background: #1565C0; color: white; border: none; border-radius: 4px; cursor: pointer;">Показати
+                        дані для входу</button>
+
+                    <div id="auth-data-display"
+                        style="display: none; margin-top: 15px; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
                         <p><b>Ім'я:</b> <span id="display-name"></span></p>
-                        
-                        <p><b>Логін:</b> 
-                            <input type="text" id="edit-login" disabled style="border: 1px solid #ccc; border-radius: 4px; padding: 2px 5px; width: 120px; background: #eee;">
+
+                        <p><b>Логін:</b>
+                            <input type="text" id="edit-login" disabled
+                                style="border: 1px solid #ccc; border-radius: 4px; padding: 2px 5px; width: 120px; background: #eee;">
                             <label style="font-size: 11px; margin-left: 5px; cursor: pointer;">
                                 <input type="checkbox" id="unlock-login-check"> ✏️
                             </label>
                         </p>
 
-                        <p><b>Пароль:</b> <span id="display-pass" style="font-family: monospace; background: #f8f9fa; padding: 2px 8px; border: 1px solid #ddd; border-radius: 3px;"></span></p>
-                        
-                        <div style="margin: 10px 0; padding: 10px; border: 1px solid #ffe0b2; background: #fffde7; border-radius: 4px;">
+                        <p><b>Пароль:</b> <span id="display-pass"
+                                style="font-family: monospace; background: #f8f9fa; padding: 2px 8px; border: 1px solid #ddd; border-radius: 3px;"></span>
+                        </p>
+
+                        <div
+                            style="margin: 10px 0; padding: 10px; border: 1px solid #ffe0b2; background: #fffde7; border-radius: 4px;">
                             <label style="font-size: 12px; color: #c62828; font-weight: bold; cursor: pointer;">
                                 <input type="checkbox" id="unlock-gen-check"> Дозволити зміну пароля
                             </label>
-                            <button id="gen-pass-btn" disabled style="display: block; margin-top: 8px; width: 100%; padding: 8px; font-size: 12px; background: #eceff1; border: 1px solid #cfd8dc; cursor: pointer;">Згенерувати новий пароль</button>
+                            <button id="gen-pass-btn" disabled
+                                style="display: block; margin-top: 8px; width: 100%; padding: 8px; font-size: 12px; background: #eceff1; border: 1px solid #cfd8dc; cursor: pointer;">Згенерувати
+                                новий пароль</button>
                         </div>
 
-                        <button id="copy-auth-btn" style="width: 100%; padding: 10px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">📋 Копіювати дані (ім'я, логін, пас)</button>
+                        <button id="copy-auth-btn"
+                            style="width: 100%; padding: 10px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">📋
+                            Копіювати дані (ім'я, логін, пас)</button>
                     </div>
                 </div>
-                
-                <button id="save-user-settings" style="width: 100%; margin-top: 15px; padding: 12px; background: #ff9800; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">Зберегти всі зміни</button>
+
+                <button id="save-user-settings"
+                    style="width: 100%; margin-top: 15px; padding: 12px; background: #ff9800; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">Зберегти
+                    всі зміни</button>
             </div>
         </div>
 
         <div id="tab-all-territories" class="tab-content hidden">
-    <h1>📋 Реєстр обліку дільниць (${getTheocraticYearRange()})</h1>
-    <div class="card" style="overflow-x: auto;">
-        <table id="territoryTable">
-            <thead id="tHead"></thead>
-            <tbody id="tBody"></tbody>
-        </table>
-    </div>
-</div>
+            <h1 class="table-title">📋 Записи про опрацювання території (${getTheocraticYearRange()})</h1>
+            <div class="card" style="overflow-x: auto;">
+                <table id="territoryTable">
+                    <thead id="tHead"></thead>
+                    <tbody id="tBody"></tbody>
+                </table>
+            </div>
+        </div>
 
         <style>
             /* Стилі для друкованого вигляду таблиці */
-            #territoryTable th, #territoryTable td {
-                border: 1px solid #000 !important; /* Чіткі межі як у журналі */
+            #territoryTable th,
+            #territoryTable td {
+                border: 1px solid #000 !important;
+                /* Чіткі межі як у журналі */
                 padding: 1px;
                 text-align: center;
                 vertical-align: middle;
             }
-            .num-col { background: #eee; font-weight: bold; width: 60px; font-size: 18px; }
-            .name-cell { background: #fff; font-weight: bold; height: 35px; font-size: 14px; }
-            .date-cell { font-size: 11px; width: 100px; color: #333; height: 25px; }
+
+            .num-col {
+                background: #eee;
+                font-weight: bold;
+                width: 60px;
+                font-size: 18px;
+            }
+
+            .name-cell {
+                background: #fff;
+                font-weight: bold;
+                height: 35px;
+                font-size: 14px;
+            }
+
+            .date-cell {
+                font-size: 11px;
+                width: 100px;
+                color: #333;
+                height: 25px;
+            }
         </style>
     </div>
 
-<script type="module">
-    import { supabase } from "./js/config.js"; // Просто імпортуємо готову "розетку"
-    import { returnParcel } from './js/parcel-logic.js';
+    <script type="module">
+        import { supabase } from "./js/config.js"; // Просто імпортуємо готову "розетку"
+        import { returnParcel } from './js/parcel-logic.js';
 
-    const userId = localStorage.getItem('userId');
-    const userRole = localStorage.getItem('userRole');
+        const userId = localStorage.getItem('userId');
+        const userRole = localStorage.getItem('userRole');
 
-    if (!userId) window.location.href = 'login.html';
+        if (!userId) window.location.href = 'login.html';
 
-    // Функція перемикання меню
-    window.toggleSidebar = () => {
-        const sidebar = document.querySelector('.sidebar');
-        const overlay = document.querySelector('.sidebar-overlay');
-        sidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
-    };
-
-    // Оновлюємо switchTab, щоб він закривав меню
-    const oldSwitchTab = window.switchTab;
-    window.switchTab = (tabName) => {
-        oldSwitchTab(tabName);
-        
-        // Закриваємо меню після кліку на мобільному
-        if (window.innerWidth <= 768) {
+        // Функція перемикання меню
+        window.toggleSidebar = () => {
             const sidebar = document.querySelector('.sidebar');
             const overlay = document.querySelector('.sidebar-overlay');
-            if (sidebar.classList.contains('active')) {
-                sidebar.classList.remove('active');
-                overlay.classList.remove('active');
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        };
+
+        // Оновлюємо switchTab, щоб він закривав меню
+        const oldSwitchTab = window.switchTab;
+        window.switchTab = (tabName) => {
+            oldSwitchTab(tabName);
+
+            // Закриваємо меню після кліку на мобільному
+            if (window.innerWidth <= 768) {
+                const sidebar = document.querySelector('.sidebar');
+                const overlay = document.querySelector('.sidebar-overlay');
+                if (sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                    overlay.classList.remove('active');
+                }
+            }
+        };
+
+        // 1. Функція перемикання (відкрити/закрити)
+        window.toggleSidebar = () => {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            if (sidebar && overlay) {
+                sidebar.classList.toggle('active');
+                overlay.classList.toggle('active');
+            }
+        };
+
+        // 2. Єдина функція для перемикання вкладок
+        window.switchTab = (tabName) => {
+            // --- Логіка перемикання контенту ---
+            // 1. Ховаємо всі вкладки
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+
+            // 2. Знімаємо активність з усіх пунктів меню
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+            // 3. Показуємо потрібну вкладку
+            const activeTab = document.getElementById('tab-' + tabName);
+            if (activeTab) {
+                activeTab.classList.remove('hidden');
+
+                // ОНОВЛЮЄМО АДРЕСУ В БРАУЗЕРІ
+                const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + tabName;
+                window.history.pushState({ path: newUrl }, '', newUrl);
+
+                // 4. Якщо це реєстр — запускаємо завантаження даних
+                if (tabName === 'all-territories') {
+                    loadAllTerritoriesGrid();
+                }
+            }
+
+            // --- Логіка закриття меню на мобілках ---
+            const sidebar = document.querySelector('.sidebar');
+            // Якщо ширина екрану менше 768пкс і меню зараз відкрите (має клас active)
+            if (window.innerWidth <= 768 && sidebar && sidebar.classList.contains('active')) {
+                window.toggleSidebar(); // Викликаємо функцію, щоб сховати його
+            }
+        };
+
+        window.logout = () => {
+            // 1. Очищуємо всі дані користувача
+            localStorage.clear();
+            // 2. Перенаправляємо на карту (index.html)
+            // Тепер після виходу користувач побачить карту як звичайний відвідувач
+            window.location.href = 'index.html';
+        };
+
+        // Робимо функцію глобальною для onclick у HTML
+        window.returnParcel = (id, name) => {
+            returnParcel(id, name, supabase, async () => {
+                // Тут ми просто викликаємо функцію завантаження даних, 
+                // яка вже є у вас на сторінці профілю (зазвичай це loadUserParcels)
+                if (typeof loadUserParcels === 'function') {
+                    await loadUserParcels();
+                } else {
+                    // Якщо назва інша, просто викличте ту функцію, що заповнює ваш список
+                    location.reload(); // як запасний варіант
+                }
+            });
+        };
+
+        // --- 2. ОСНОВНА ЛОГІКА ТА ІНІЦІАЛІЗАЦІЯ ---
+
+        async function init() {
+            document.getElementById('userName').innerText = localStorage.getItem('userName') || 'Користувач';
+            document.getElementById('displayRole').innerText = userRole === 'super_admin' ? 'Супер Адмін' : (userRole === 'admin' ? 'Адміністратор' : 'Вісник');
+
+            // Показуємо меню адміна
+            if (userRole === 'admin' || userRole === 'super_admin') {
+                const adminMenu = document.getElementById('adminMenu');
+                if (adminMenu) adminMenu.classList.remove('hidden');
+                if (userRole === 'super_admin') {
+                    document.getElementById('devLink').style.display = 'flex';
+                }
+                loadGroupStats();
+            }
+
+            loadMyParcels();
+
+            // ОБРОБКА ПАРАМЕТРІВ URL (Крок 3)
+            const urlParams = new URLSearchParams(window.location.search);
+            const tab = urlParams.get('tab');
+
+            if (tab === 'all-territories') {
+                window.switchTab('all-territories');
+            } else if (tab === 'my-card' || !tab) {
+                window.switchTab('my-card');
             }
         }
-    };
 
-// 1. Функція перемикання (відкрити/закрити)
-window.toggleSidebar = () => {
-    const sidebar = document.querySelector('.sidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-    if (sidebar && overlay) {
-        sidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
-    }
-};
+        // --- 3. ДОПОМІЖНІ ФУНКЦІЇ ДЛЯ РЕЄСТРУ ---
 
-// 2. Єдина функція для перемикання вкладок
-window.switchTab = (tabName) => {
-    // --- Логіка перемикання контенту ---
-    // 1. Ховаємо всі вкладки
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-    
-    // 2. Знімаємо активність з усіх пунктів меню
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        function getTheocraticYearText() {
+            const now = new Date();
+            const currentYear = now.getFullYear();
 
-    // 3. Показуємо потрібну вкладку
-    const activeTab = document.getElementById('tab-' + tabName);
-    if (activeTab) {
-        activeTab.classList.remove('hidden');
+            // Визначаємо стартовий рік (якщо вересень або пізніше — поточний, інакше — попередній)
+            const startYear = (now.getMonth() >= 8) ? currentYear : currentYear - 1;
 
-        // ОНОВЛЮЄМО АДРЕСУ В БРАУЗЕРІ
-        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + tabName;
-        window.history.pushState({ path: newUrl }, '', newUrl);
-        
-        // 4. Якщо це реєстр — запускаємо завантаження даних
-        if (tabName === 'all-territories') {
-            loadAllTerritoriesGrid();
+            // Отримуємо наступний рік і беремо від нього останні дві цифри
+            const nextYearShort = (startYear + 1).toString().slice(-2);
+
+            // Повертаємо у форматі 2025/26
+            return `${startYear}/${nextYearShort}`;
         }
-    }
 
-    // --- Логіка закриття меню на мобілках ---
-    const sidebar = document.querySelector('.sidebar');
-    // Якщо ширина екрану менше 768пкс і меню зараз відкрите (має клас active)
-    if (window.innerWidth <= 768 && sidebar && sidebar.classList.contains('active')) {
-        window.toggleSidebar(); // Викликаємо функцію, щоб сховати його
-    }
-};
+        function getTheocraticStart() {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            return (now.getMonth() >= 8) ? new Date(currentYear, 8, 1) : new Date(currentYear - 1, 8, 1);
+        }
 
-    window.logout = () => {
-        // 1. Очищуємо всі дані користувача
-        localStorage.clear();
-        // 2. Перенаправляємо на карту (index.html)
-        // Тепер після виходу користувач побачить карту як звичайний відвідувач
-        window.location.href = 'index.html';
-    };
+        // Ця функція формує бланк S-13. Вона групує дані з логів по ID дільниці.
+        async function loadAllTerritoriesGrid() {
+            const tHead = document.getElementById('tHead');
+            const tBody = document.getElementById('tBody');
+            if (!tHead || !tBody) return;
 
-    // Робимо функцію глобальною для onclick у HTML
-    window.returnParcel = (id, name) => {
-        returnParcel(id, name, supabase, async () => {
-            // Тут ми просто викликаємо функцію завантаження даних, 
-            // яка вже є у вас на сторінці профілю (зазвичай це loadUserParcels)
-            if (typeof loadUserParcels === 'function') {
-                await loadUserParcels(); 
-            } else {
-                // Якщо назва інша, просто викличте ту функцію, що заповнює ваш список
-                location.reload(); // як запасний варіант
+            const rangeStart = getTheocraticStart();
+            const titleElement = document.querySelector('#tab-all-territories h1');
+            if (titleElement) titleElement.innerText = `📋 Записи про опрацювання території ${getTheocraticYearText()}`;
+
+            // Завантаження даних
+            const rangeStartISO = rangeStart.toISOString();
+
+            const [parcelsRes, logsRes] = await Promise.all([
+                supabase.from('parcels').select('*'),
+                supabase.from('territory_logs')
+                    .select('*')
+                    .or(`taken_at.gte.${rangeStartISO},returned_at.gte.${rangeStartISO}`)
+                    .order('taken_at', { ascending: true })
+            ]);
+
+            if (parcelsRes.error || logsRes.error) {
+                console.error("Помилка завантаження реєстру:", parcelsRes.error || logsRes.error);
+                return;
             }
-        });
-    };
 
-    // --- 2. ОСНОВНА ЛОГІКА ТА ІНІЦІАЛІЗАЦІЯ ---
+            const parcels = parcelsRes.data.sort((a, b) => {
+                const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
+                const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
+                return numA - numB;
+            });
 
-    async function init() {
-        document.getElementById('userName').innerText = localStorage.getItem('userName') || 'Користувач';
-        document.getElementById('displayRole').innerText = userRole === 'super_admin' ? 'Супер Адмін' : (userRole === 'admin' ? 'Адміністратор' : 'Вісник');
+            const allLogs = logsRes.data;
+            const combinedData = {};
 
-        // Показуємо меню адміна
-        if (userRole === 'admin' || userRole === 'super_admin') {
-            const adminMenu = document.getElementById('adminMenu');
-            if (adminMenu) adminMenu.classList.remove('hidden');
-            if (userRole === 'super_admin') {
-                document.getElementById('devLink').style.display = 'flex';
-            }
-            loadGroupStats();
-        }
+            parcels.forEach(p => {
+                // 1. Беремо всі закриті записи з логів (з заїздом у цей службовий рік)
+                const pLogs = allLogs.filter(log => log.parcel_id === p.id).map(log => ({
+                    name: log.publisher_name,
+                    in: log.taken_at,
+                    out: log.returned_at
+                }));
 
-        loadMyParcels();
+                // 2. ПЕРЕВІРКА ПОТОЧНОГО СТАНУ (дільниця на руках)
+                // Прибираємо перевірку (>= rangeStart), залишаємо тільки перевірку статусу
+                if (p.status === 'taken' && p.taken_by) {
+                    // Перевіряємо, чи цей активний запис ще не потрапив у pLogs 
+                    // (наприклад, якщо його вже здали сьогодні, він може бути в обох місцях)
+                    const alreadyInLogs = pLogs.some(l => !l.out && l.name === p.taken_by);
 
-        // ОБРОБКА ПАРАМЕТРІВ URL (Крок 3)
-        const urlParams = new URLSearchParams(window.location.search);
-        const tab = urlParams.get('tab');
+                    if (!alreadyInLogs) {
+                        pLogs.push({
+                            name: p.taken_by,
+                            in: p.taken_at, // Дата може бути хоч за 2024 рік
+                            out: null       // Поле опрацювання буде порожнім або "пр"
+                        });
+                    }
+                }
+                combinedData[p.id] = pLogs;
+            });
 
-        if (tab === 'all-territories') {
-            window.switchTab('all-territories');
-        } else if (tab === 'my-card' || !tab) {
-            window.switchTab('my-card');
-        }
-    }
+            let maxCols = 1;
+            Object.values(combinedData).forEach(list => { if (list.length > maxCols) maxCols = list.length; });
 
-    // --- 3. ДОПОМІЖНІ ФУНКЦІЇ ДЛЯ РЕЄСТРУ ---
-
-    function getTheocraticYearText() {
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        return (now.getMonth() >= 8) ? `${currentYear}-${currentYear + 1}` : `${currentYear - 1}-${currentYear}`;
-    }
-
-    function getTheocraticStart() {
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        return (now.getMonth() >= 8) ? new Date(currentYear, 8, 1) : new Date(currentYear - 1, 8, 1);
-    }
-
-    async function loadAllTerritoriesGrid() {
-    const tHead = document.getElementById('tHead');
-    const tBody = document.getElementById('tBody');
-    if (!tHead || !tBody) return;
-
-    const rangeStart = getTheocraticStart();
-    const titleElement = document.querySelector('#tab-all-territories h1');
-    if (titleElement) titleElement.innerText = `📋 Реєстр обліку дільниць (${getTheocraticYearText()})`;
-
-    // Завантаження даних
-    const [parcelsRes, logsRes] = await Promise.all([
-        supabase.from('parcels').select('*'),
-        supabase.from('territory_logs')
-            .select('*')
-            .gte('taken_at', rangeStart.toISOString())
-            .order('taken_at', { ascending: true })
-    ]);
-
-    if (parcelsRes.error || logsRes.error) {
-        console.error("Помилка завантаження реєстру:", parcelsRes.error || logsRes.error);
-        return;
-    }
-
-    const parcels = parcelsRes.data.sort((a, b) => {
-        const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
-        const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
-        return numA - numB;
-    });
-
-    const allLogs = logsRes.data;
-    const combinedData = {};
-    
-    parcels.forEach(p => {
-        const pLogs = allLogs.filter(log => log.parcel_id === p.id).map(log => ({
-            name: log.publisher_name, 
-            in: log.taken_at, 
-            out: log.returned_at
-        }));
-
-        if (p.status === 'taken' && p.taken_at && new Date(p.taken_at) >= rangeStart) {
-            if (!pLogs.some(l => !l.out && l.name === p.taken_by)) {
-                pLogs.push({ name: p.taken_by, in: p.taken_at, out: null });
-            }
-        }
-        combinedData[p.id] = pLogs;
-    });
-
-    let maxCols = 1;
-    Object.values(combinedData).forEach(list => { if (list.length > maxCols) maxCols = list.length; });
-
-    // --- ЗМІНИ ТУТ: ФІКСОВАНА ШИРИНА В ЗАГОЛОВКУ ---
-    tHead.innerHTML = `
+            // --- ЗМІНИ ТУТ: ФІКСОВАНА ШИРИНА В ЗАГОЛОВКУ ---
+            tHead.innerHTML = `
         <tr>
             <th rowspan="2" style="width: 40px; min-width: 40px; border:1px solid #444;">№</th>
             <th rowspan="2" class="help-tooltip" style="width: 110px; min-width: 110px; border:1px solid #444; cursor: help; position: relative;">
                 Остання дата опрацювання<span style="color:red;">*</span>
                 <span class="tooltiptext">Заповнюючи новий бланк, познач у цій колонці останню дату опрацювання кожної території</span>
             </th>
-            ${`<th colspan="2" style="width: 220px; min-width: 220px; border:1px solid #444;">Вісник</th>`.repeat(maxCols)}
+            ${`<th colspan="2" style="width: 210px; min-width: 210px; border:1px solid #444;">Вісник</th>`.repeat(maxCols)}
         </tr>
         <tr>
             ${`<th style="background:#e2efda; width: 100px; min-width: 100px; border:1px solid #444;">Дата отримання</th>
-               <th style="background:#fce4d6; width: 100px; min-width: 100px; border:1px solid #444;">Дата працювання</th>`.repeat(maxCols)}
+               <th style="background:#fce4d6; width: 100px; min-width: 100px; border:1px solid #444;">Дата опрацювання</th>`.repeat(maxCols)}
         </tr>
     `;
 
-    tBody.innerHTML = '';
-    parcels.forEach(p => {
-        const pSessions = combinedData[p.id] || [];
-        const lastReturn = p.last_returned ? new Date(p.last_returned) : null;
-        let lastDoneDate = (lastReturn && lastReturn < rangeStart) ? lastReturn.toLocaleDateString('uk-UA') : "-";
+            tBody.innerHTML = '';
+            parcels.forEach(p => {
+                const pSessions = combinedData[p.id] || [];
 
-        const tr1 = document.createElement('tr');
-        const tr2 = document.createElement('tr');
+                // 1. ДЖЕРЕЛО ДАНИХ: використовуємо поле last_processed з таблиці parcels
+                // Це значення оновлюється в базі, коли дільниця позначається як "опрацьована"
+                const lastProcDate = p.last_processed ? new Date(p.last_processed) : null;
 
-        // --- ЗМІНИ ТУТ: ДОДАНО ІНЛАЙН СТИЛІ ДЛЯ TD ---
-        let tr1Html = `
-            <td rowspan="2" class="num-col" style="width: 50px; text-align: center; border:1px solid #444;">
-                <a href="parcel-details.html?id=${p.id}&from=all" style="text-decoration:none; color:#007bff; font-weight:bold;">
-                    №${p.name}
-                </a>
-            </td>
-            <td rowspan="2" class="last-done-col" style="width: 100px; text-align: center; border:1px solid #444;">${lastDoneDate}</td>
-        `;
-        
-        let tr2Html = '';
+                // 2. МЕЖА СЛУЖБОВОГО РОКУ: отримуємо 1 вересня (наприклад, 01.09.2025)
+                // Функція getTheocraticStart() розраховує це автоматично
+                const rangeStart = getTheocraticStart();
 
-        for (let i = 0; i < maxCols; i++) {
-            const s = pSessions[i];
-            const pName = s ? s.name : '';
-            const dIn = s ? new Date(s.in).toLocaleDateString('uk-UA') : '';
-            const dOut = (s && s.out) ? new Date(s.out).toLocaleDateString('uk-UA') : '';
+                let lastDoneDate = "-"; // Значення за замовчуванням
 
-            // Фіксуємо ширину для імен та дат
-            tr1Html += `<td colspan="2" class="name-row" style="width: 200px; border:1px solid #444; padding: 4px; overflow: hidden; white-space: nowrap;">${pName}</td>`;
-            tr2Html += `
-                <td class="date-cell" style="width: 100px; background:#e8f5e9; border:1px solid #444; text-align: center;">${dIn}</td>
-                <td class="date-cell" style="width: 100px; background:#fff3e0; border:1px solid #444; text-align: center;">${dOut}</td>
-            `;
+                // 3. ЛОГІКА ВІДОБРАЖЕННЯ:
+                // Якщо дата опрацювання була ДО 1 вересня поточного року — виводимо її в червоний стовпчик.
+                // Якщо ПІСЛЯ — стовпчик залишається порожнім, бо це опрацювання вже є в основній частині таблиці.
+                if (lastProcDate && lastProcDate < rangeStart) {
+                    lastDoneDate = lastProcDate.toLocaleDateString('uk-UA', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: '2-digit'
+                    });
+                }
+
+                const tr1 = document.createElement('tr');
+                const tr2 = document.createElement('tr');
+
+                // Додаємо стиль: якщо дата є, робимо її червоною
+                const lastDoneStyle = lastDoneDate !== "-" ? "color: #d32f2f; font-weight: bold;" : "";
+
+                let tr1Html = `
+        <td rowspan="2" class="num-col" style="width: 50px; text-align: center; border:1px solid #444;">
+            <a href="parcel-details.html?id=${p.id}&from=all" style="text-decoration:none; color:#007bff; font-weight:bold;">
+                №${p.name}
+            </a>
+        </td>
+        <td rowspan="2" class="last-done-col" style="width: 100px; text-align: center; border:1px solid #444; ${lastDoneStyle}">
+            ${lastDoneDate}
+        </td>
+    `;
+
+                let tr2Html = '';
+
+                // Знаходимо цикл у функції loadAllTerritoriesGrid, де формується tr2Html
+                for (let i = 0; i < maxCols; i++) {
+                    const s = pSessions[i];
+                    const pName = s ? s.name : '';
+
+                    // Форматування дати отримання
+                    const dIn = s ? new Date(s.in).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' }) : '';
+
+                    // ЛОГІКА ВИПРАВЛЕНА: прибираємо "пр", залишаємо порожньо
+                    let dOut = '';
+                    if (s && s.out) {
+                        // Якщо є дата повернення (returned_at), виводимо її
+                        dOut = new Date(s.out).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' });
+                    }
+                    // Якщо s.out немає (дільниця на руках) — dOut залишиться порожнім рядком ''
+
+                    // Візуальне виділення для старих замовлень (взятих до 1 вересня)
+                    const isOldOrder = s && new Date(s.in) < rangeStart;
+                    const dInStyle = isOldOrder ? "color: #1976d2; font-weight: bold;" : "";
+
+                    tr1Html += `<td colspan="2" class="name-row" style="width: 200px; border:1px solid #444; padding: 4px; overflow: hidden; white-space: nowrap; font-size: 0.9em;">${pName}</td>`;
+                    tr2Html += `
+        <td class="date-cell" style="width: 100px; background:#e8f5e9; border:1px solid #444; text-align: center; ${dInStyle}">${dIn}</td>
+        <td class="date-cell" style="width: 100px; background:#fff3e0; border:1px solid #444; text-align: center;">${dOut}</td>
+    `;
+                }
+
+                tr1.innerHTML = tr1Html;
+                tr2.innerHTML = tr2Html;
+                tBody.appendChild(tr1);
+                tBody.appendChild(tr2);
+            });
         }
-        
-        tr1.innerHTML = tr1Html;
-        tr2.innerHTML = tr2Html;
-        tBody.appendChild(tr1);
-        tBody.appendChild(tr2);
-    });
-}
-    window.loadAllTerritoriesGrid = loadAllTerritoriesGrid;
+        window.loadAllTerritoriesGrid = loadAllTerritoriesGrid;
 
-    async function loadMyParcels() {
-        const { data } = await supabase.from('parcels').select('*').eq('taken_by_id', userId).eq('status', 'taken');
-        renderParcelList(data, 'myParcels', true);
-    }
+        async function loadMyParcels() {
+            const { data } = await supabase.from('parcels').select('*').eq('taken_by_id', userId).eq('status', 'taken');
+            renderParcelList(data, 'myParcels', true);
+        }
 
-    // --- СПИСОК ГРУПИ (ВИПРАВЛЕНО: Прізвища на першому місці + захист від апострофів) ---
-async function loadGroupStats() {
-    // Додаємо select('last_name') та сортування order('last_name')
-    const { data: users, error: uErr } = await supabase
-        .from('publishers')
-        .select('id, name, last_name')
-        .order('last_name', { ascending: true });
+        // --- СПИСОК ГРУПИ (ВИПРАВЛЕНО: Прізвища на першому місці + захист від апострофів) ---
+        async function loadGroupStats() {
+            // Додаємо select('last_name') та сортування order('last_name')
+            const { data: users, error: uErr } = await supabase
+                .from('publishers')
+                .select('id, name, last_name')
+                .order('last_name', { ascending: true });
 
-    const { data: parcels, error: pErr } = await supabase
-        .from('parcels')
-        .select('taken_by_id')
-        .eq('status', 'taken');
-    
-    if (uErr || pErr) return;
+            const { data: parcels, error: pErr } = await supabase
+                .from('parcels')
+                .select('taken_by_id')
+                .eq('status', 'taken');
 
-    const listBody = document.getElementById('publishersList');
-    if (!listBody) return;
-    
-    listBody.innerHTML = '';
-    
-    users.forEach(user => {
-        const count = parcels.filter(p => p.taken_by_id === user.id).length;
-        const tr = document.createElement('tr');
-        
-        const lastName = (user.last_name || '').trim();
-        const firstName = (user.name || '').trim();
-        const fullName = `${lastName} ${firstName}`.trim();
+            if (uErr || pErr) return;
 
-        // Формуємо вигляд: Прізвище (жирним) Ім'я
-        tr.innerHTML = `
+            const listBody = document.getElementById('publishersList');
+            if (!listBody) return;
+
+            listBody.innerHTML = '';
+
+            users.forEach(user => {
+                const count = parcels.filter(p => p.taken_by_id === user.id).length;
+                const tr = document.createElement('tr');
+
+                const lastName = (user.last_name || '').trim();
+                const firstName = (user.name || '').trim();
+                const fullName = `${lastName} ${firstName}`.trim();
+
+                // Формуємо вигляд: Прізвище (жирним) Ім'я
+                tr.innerHTML = `
             <td><b>${lastName}</b> ${firstName}</td>
             <td><span class="badge">${count}</span></td>
         `;
 
-        // БЕЗПЕЧНИЙ КЛІК: цей метод ніколи не зламається через апостроф '
-        tr.onclick = () => {
-            showUserDetails(user.id, fullName);
-        };
-        
-        listBody.appendChild(tr);
-    });
-}
+                // БЕЗПЕЧНИЙ КЛІК: цей метод ніколи не зламається через апостроф '
+                tr.onclick = () => {
+                    showUserDetails(user.id, fullName);
+                };
 
-// --- ДЕТАЛІ ВІСНИКА (БЕЗ ЗМІН) ---
-async function showUserDetails(uId, uName) {
-    window.switchTab('user-details');
-    document.getElementById('detailUserName').innerText = uName;
+                listBody.appendChild(tr);
+            });
+        }
 
-    const { data: parcels } = await supabase.from('parcels').select('*').eq('taken_by_id', uId).eq('status', 'taken');
-    renderParcelList(parcels, 'detailUserParcels', false);
+        // --- ДЕТАЛІ ВІСНИКА (БЕЗ ЗМІН) ---
+        async function showUserDetails(uId, uName) {
+            window.switchTab('user-details');
+            document.getElementById('detailUserName').innerText = uName;
 
-    const { data: userData, error } = await supabase
-        .from('publishers')
-        .select('id, name, login, role, secret_key') 
-        .eq('id', uId)
-        .single();
+            const { data: parcels } = await supabase.from('parcels').select('*').eq('taken_by_id', uId).eq('status', 'taken');
+            renderParcelList(parcels, 'detailUserParcels', false);
 
-    if (!error && userData) {
-        initAdminPanel(uId, userData);
-    }
-}
+            const { data: userData, error } = await supabase
+                .from('publishers')
+                .select('id, name, login, role, secret_key')
+                .eq('id', uId)
+                .single();
 
-    function renderParcelList(parcels, containerId, isMyCard) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    
-    const role = localStorage.getItem('userRole');
-    const isAdmin = (role === 'admin' || role === 'super_admin');
+            if (!error && userData) {
+                initAdminPanel(uId, userData);
+            }
+        }
 
-    if (!parcels || parcels.length === 0) {
-        container.innerHTML = '<p style="color:gray;">Немає активних дільниць.</p>';
-        return;
-    }
+        function renderParcelList(parcels, containerId, isMyCard) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
 
-    container.innerHTML = parcels.map(p => {
-        const days = Math.floor((new Date() - new Date(p.taken_at)) / (1000 * 60 * 60 * 24));
-        
-        // Показуємо кнопку, якщо це власна картка АБО якщо переглядає Адмін
-        const showReturnBtn = isMyCard || isAdmin;
+            const role = localStorage.getItem('userRole');
+            const isAdmin = (role === 'admin' || role === 'super_admin');
 
-        // ... ваш існуючий код renderParcelList ...
+            if (!parcels || parcels.length === 0) {
+                container.innerHTML = '<p style="color:gray;">Немає активних дільниць.</p>';
+                return;
+            }
 
-        return `
+            container.innerHTML = parcels.map(p => {
+                const days = Math.floor((new Date() - new Date(p.taken_at)) / (1000 * 60 * 60 * 24));
+
+                // Показуємо кнопку, якщо це власна картка АБО якщо переглядає Адмін
+                const showReturnBtn = isMyCard || isAdmin;
+
+                // ... ваш існуючий код renderParcelList ...
+
+                return `
             <div style="border:1px solid #eee; padding:15px; margin-bottom:10px; border-radius:8px; cursor:pointer;" 
                  onclick="window.location.href='parcel-details.html?id=${p.id}&from=${isMyCard ? 'my' : 'all'}'">
                 <div style="display:flex; justify-content:space-between;">
@@ -568,179 +816,180 @@ async function showUserDetails(uId, uName) {
                         Здати
                     </button>` : ''}
             </div>`;
-            // ... решта коду ...
-    }).join('');
-}
-
-    // Функція генерації пароля (6 цифр + 2 букви)
-    function generatePassword() {
-        const digits = "0123456789";
-        const letters = "abcdefghijklmnopqrstuvwxyz";
-        
-        let chars = [];
-
-        // Додаємо 6 випадкових цифр
-        for (let i = 0; i < 6; i++) {
-            chars.push(digits.charAt(Math.floor(Math.random() * digits.length)));
+                // ... решта коду ...
+            }).join('');
         }
 
-        // Додаємо 2 випадкові букви
-        for (let i = 0; i < 2; i++) {
-            chars.push(letters.charAt(Math.floor(Math.random() * letters.length)));
+        // Функція генерації пароля (6 цифр + 2 букви)
+        function generatePassword() {
+            const digits = "0123456789";
+            const letters = "abcdefghijklmnopqrstuvwxyz";
+
+            let chars = [];
+
+            // Додаємо 6 випадкових цифр
+            for (let i = 0; i < 6; i++) {
+                chars.push(digits.charAt(Math.floor(Math.random() * digits.length)));
+            }
+
+            // Додаємо 2 випадкові букви
+            for (let i = 0; i < 2; i++) {
+                chars.push(letters.charAt(Math.floor(Math.random() * letters.length)));
+            }
+
+            // Тасування Фішера-Єйтса (Fisher-Yates Shuffle) для максимальної випадковості
+            for (let i = chars.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [chars[i], chars[j]] = [chars[j], chars[i]];
+            }
+
+            return chars.join('');
         }
 
-        // Тасування Фішера-Єйтса (Fisher-Yates Shuffle) для максимальної випадковості
-        for (let i = chars.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [chars[i], chars[j]] = [chars[j], chars[i]];
+        async function initAdminPanel(targetUserId, targetUserData) {
+            const currentRole = localStorage.getItem('userRole');
+            if (currentRole !== 'admin' && currentRole !== 'super_admin') return;
+
+            document.getElementById('admin-settings-block').style.display = 'block';
+
+            // Елементи управління
+            const roleSelect = document.getElementById('user-role-select');
+            const roleCheck = document.getElementById('unlock-role-check');
+            const loginInput = document.getElementById('edit-login');
+            const loginCheck = document.getElementById('unlock-login-check');
+            const genCheck = document.getElementById('unlock-gen-check');
+            const genBtn = document.getElementById('gen-pass-btn');
+
+            // Початкові значення
+            roleSelect.value = targetUserData.role || 'user';
+            roleSelect.disabled = true; // Завжди вимкнено при відкритті
+            loginInput.value = targetUserData.login || '';
+            loginInput.disabled = true;
+
+            // Обмеження для Адміна
+            if (currentRole === 'admin') {
+                const optSA = document.getElementById('opt-super-admin');
+                if (optSA) optSA.disabled = true;
+            }
+
+            // ЛОГІКА АКТИВАЦІЇ ПОЛІВ ЧЕРЕЗ ЧЕКБОКСИ
+            roleCheck.onchange = () => {
+                roleSelect.disabled = !roleCheck.checked;
+                roleSelect.style.background = roleCheck.checked ? "#fff" : "#eee";
+            };
+
+            loginCheck.onchange = () => {
+                loginInput.disabled = !loginCheck.checked;
+                loginInput.style.background = loginCheck.checked ? "#fff" : "#eee";
+            };
+
+            genCheck.onchange = () => {
+                genBtn.disabled = !genCheck.checked;
+                genBtn.style.background = genCheck.checked ? "#cfd8dc" : "#eceff1"; // легка підсвітка кнопки
+            };
+
+            // Показ даних
+            document.getElementById('show-auth-btn').onclick = () => {
+                document.getElementById('display-name').innerText = targetUserData.name || '';
+                document.getElementById('display-pass').innerText = targetUserData.secret_key || '';
+                document.getElementById('auth-data-display').style.display = 'block';
+            };
+
+            // Генерація пароля
+            genBtn.onclick = () => {
+                const newPass = generatePassword();
+                document.getElementById('display-pass').innerText = newPass;
+            };
+
+            // Копіювання
+            document.getElementById('copy-auth-btn').onclick = () => {
+                const name = document.getElementById('display-name').innerText;
+                const login = loginInput.value;
+                const pass = document.getElementById('display-pass').innerText;
+                const text = `Ім'я: ${name}\nЛогін: ${login}\nПароль: ${pass}`;
+                navigator.clipboard.writeText(text).then(() => alert("Скопійовано!"));
+            };
+
+            // Збереження
+            document.getElementById('save-user-settings').onclick = async () => {
+                const updateData = {};
+
+                // Зберігаємо роль, тільки якщо чекбокс був активний
+                if (roleCheck.checked) updateData.role = roleSelect.value;
+
+                // Зберігаємо логін, тільки якщо чекбокс був активний
+                if (loginCheck.checked) updateData.login = loginInput.value;
+
+                // Зберігаємо пароль (secret_key), якщо він був згенерований або змінений
+                const currentDisplayedPass = document.getElementById('display-pass').innerText;
+                if (genCheck.checked && currentDisplayedPass !== targetUserData.secret_key) {
+                    updateData.secret_key = currentDisplayedPass;
+                }
+
+                if (Object.keys(updateData).length === 0) {
+                    alert("Нічого не змінено (активуйте чекбокси для редагування)");
+                    return;
+                }
+
+                const { error } = await supabase.from('publishers').update(updateData).eq('id', targetUserId);
+
+                if (!error) {
+                    alert("Дані успішно оновлено!");
+                    location.reload();
+                } else {
+                    alert("Помилка: " + error.message);
+                }
+            };
         }
 
-        return chars.join('');
-    }
+        init();
 
-    async function initAdminPanel(targetUserId, targetUserData) {
-    const currentRole = localStorage.getItem('userRole');
-    if (currentRole !== 'admin' && currentRole !== 'super_admin') return;
+        // --- КЕРУВАННЯ ВІСНИКАМИ ---
 
-    document.getElementById('admin-settings-block').style.display = 'block';
+        window.openAddPublisherModal = () => {
+            const modal = document.getElementById('addPublisherModal');
+            modal.style.display = 'flex';
+        };
 
-    // Елементи управління
-    const roleSelect = document.getElementById('user-role-select');
-    const roleCheck = document.getElementById('unlock-role-check');
-    const loginInput = document.getElementById('edit-login');
-    const loginCheck = document.getElementById('unlock-login-check');
-    const genCheck = document.getElementById('unlock-gen-check');
-    const genBtn = document.getElementById('gen-pass-btn');
+        window.closeAddPublisherModal = () => {
+            document.getElementById('addPublisherModal').style.display = 'none';
+            document.getElementById('newPubLastName').value = '';
+            document.getElementById('newPubFirstName').value = '';
+            document.getElementById('newPubLogin').value = '';
+        };
 
-    // Початкові значення
-    roleSelect.value = targetUserData.role || 'user';
-    roleSelect.disabled = true; // Завжди вимкнено при відкритті
-    loginInput.value = targetUserData.login || '';
-    loginInput.disabled = true;
+        window.saveNewPublisher = async () => {
+            const lastName = document.getElementById('newPubLastName').value.trim();
+            const firstName = document.getElementById('newPubFirstName').value.trim();
+            const login = document.getElementById('newPubLogin').value.trim();
 
-    // Обмеження для Адміна
-    if (currentRole === 'admin') {
-        const optSA = document.getElementById('opt-super-admin');
-        if (optSA) optSA.disabled = true;
-    }
+            if (!lastName || !firstName) {
+                return alert("Введіть прізвище та ім'я");
+            }
 
-    // ЛОГІКА АКТИВАЦІЇ ПОЛІВ ЧЕРЕЗ ЧЕКБОКСИ
-    roleCheck.onchange = () => {
-        roleSelect.disabled = !roleCheck.checked;
-        roleSelect.style.background = roleCheck.checked ? "#fff" : "#eee";
-    };
+            const { error } = await supabase.from('publishers').insert([{
+                name: firstName,
+                last_name: lastName,
+                login: login || null,
+                role: 'user'
+            }]);
 
-    loginCheck.onchange = () => {
-        loginInput.disabled = !loginCheck.checked;
-        loginInput.style.background = loginCheck.checked ? "#fff" : "#eee";
-    };
+            if (!error) {
+                alert("Вісника додано");
+                closeAddPublisherModal();
 
-    genCheck.onchange = () => {
-        genBtn.disabled = !genCheck.checked;
-        genBtn.style.background = genCheck.checked ? "#cfd8dc" : "#eceff1"; // легка підсвітка кнопки
-    };
+                // Отримуємо ID поточної активної вкладки
+                const activeTab = document.querySelector('.tab-content:not(.hidden)')?.id || 'tab-group-cards';
 
-    // Показ даних
-    document.getElementById('show-auth-btn').onclick = () => {
-        document.getElementById('display-name').innerText = targetUserData.name || '';
-        document.getElementById('display-pass').innerText = targetUserData.secret_key || '';
-        document.getElementById('auth-data-display').style.display = 'block';
-    };
+                // Перезавантажуємо сторінку, зберігаючи вкладку в URL
+                window.location.href = window.location.pathname + '?tab=' + activeTab;
+            } else {
+                alert("Помилка: " + error.message);
+            }
+        };
 
-    // Генерація пароля
-    genBtn.onclick = () => {
-        const newPass = generatePassword();
-        document.getElementById('display-pass').innerText = newPass;
-    };
-
-    // Копіювання
-    document.getElementById('copy-auth-btn').onclick = () => {
-        const name = document.getElementById('display-name').innerText;
-        const login = loginInput.value;
-        const pass = document.getElementById('display-pass').innerText;
-        const text = `Ім'я: ${name}\nЛогін: ${login}\nПароль: ${pass}`;
-        navigator.clipboard.writeText(text).then(() => alert("Скопійовано!"));
-    };
-
-    // Збереження
-    document.getElementById('save-user-settings').onclick = async () => {
-        const updateData = {};
-        
-        // Зберігаємо роль, тільки якщо чекбокс був активний
-        if (roleCheck.checked) updateData.role = roleSelect.value;
-        
-        // Зберігаємо логін, тільки якщо чекбокс був активний
-        if (loginCheck.checked) updateData.login = loginInput.value;
-        
-        // Зберігаємо пароль (secret_key), якщо він був згенерований або змінений
-        const currentDisplayedPass = document.getElementById('display-pass').innerText;
-        if (genCheck.checked && currentDisplayedPass !== targetUserData.secret_key) {
-            updateData.secret_key = currentDisplayedPass;
-        }
-
-        if (Object.keys(updateData).length === 0) {
-            alert("Нічого не змінено (активуйте чекбокси для редагування)");
-            return;
-        }
-
-        const { error } = await supabase.from('publishers').update(updateData).eq('id', targetUserId);
-
-        if (!error) {
-            alert("Дані успішно оновлено!");
-            location.reload();
-        } else {
-            alert("Помилка: " + error.message);
-        }
-    };
-}
-
-    init();
-
-    // --- КЕРУВАННЯ ВІСНИКАМИ ---
-
-window.openAddPublisherModal = () => {
-    const modal = document.getElementById('addPublisherModal');
-    modal.style.display = 'flex';
-};
-
-window.closeAddPublisherModal = () => {
-    document.getElementById('addPublisherModal').style.display = 'none';
-    document.getElementById('newPubLastName').value = '';
-    document.getElementById('newPubFirstName').value = '';
-    document.getElementById('newPubLogin').value = '';
-};
-
-window.saveNewPublisher = async () => {
-    const lastName = document.getElementById('newPubLastName').value.trim();
-    const firstName = document.getElementById('newPubFirstName').value.trim();
-    const login = document.getElementById('newPubLogin').value.trim();
-
-    if (!lastName || !firstName) {
-        return alert("Введіть прізвище та ім'я");
-    }
-
-    const { error } = await supabase.from('publishers').insert([{
-        name: firstName,
-        last_name: lastName,
-        login: login || null,
-        role: 'user'
-    }]);
-
-    if (!error) {
-        alert("Вісника додано");
-        closeAddPublisherModal();
-        
-        // Отримуємо ID поточної активної вкладки
-        const activeTab = document.querySelector('.tab-content:not(.hidden)')?.id || 'tab-group-cards';
-        
-        // Перезавантажуємо сторінку, зберігаючи вкладку в URL
-        window.location.href = window.location.pathname + '?tab=' + activeTab;
-    } else {
-        alert("Помилка: " + error.message);
-    }
-};
-
-</script>
+    </script>
 
 </body>
+
 </html>

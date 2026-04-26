@@ -176,9 +176,12 @@
     
     /* Головний контент треба опустити нижче, щоб шапка його не закривала */
     .main-content {
-        margin-top: 60px !important; 
-        height: calc(100vh - 60px) !important;
-        overflow-y: auto;
+        margin-top: 50px !important; 
+        padding: 20px 0;
+    }
+
+    h1.table-title {
+        padding: 0 30px;
     }
 
     /* Стару кнопку, яка тобі заважала, приховуємо */

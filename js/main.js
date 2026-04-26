@@ -6,6 +6,7 @@ export const currentUserId = localStorage.getItem('userId');
 export const userFullName = localStorage.getItem('userFullName');
 export const isAdmin = (userRole === 'admin' || userRole === 'super_admin');
 
+
 // Функція застосування фільтрів
 window.applyFilters = () => {
     const searchInput = document.getElementById('searchNumber');
@@ -71,53 +72,41 @@ document.addEventListener('change', (e) => {
 // ... ваші експорти та логіка фільтрів ...
 
 export function initToolControl(mapInstance) {
+    if (!mapInstance) return;
+
     const ToolControl = L.Control.extend({
         options: { position: 'topleft' },
         onAdd: function () {
             const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+            
+            // Зупиняємо передачу кліків з меню на карту
+            L.DomEvent.disableClickPropagation(container);
 
-            // Функція-помощник для кнопок
             const createBtn = (html, title, onClickAction) => {
-                const btn = L.DomUtil.create('button', 'leaflet-custom-btn', container);
+                const btn = L.DomUtil.create('button', '', container);
                 btn.innerHTML = html;
                 btn.title = title;
-
-                L.DomEvent.on(btn, 'click', function (e) {
+                btn.style.cssText = 'width:34px; height:34px; background:white; cursor:pointer; font-size:18px; border:none; display:block; border-bottom:1px solid #ccc;';
+                
+                L.DomEvent.on(btn, 'click', (e) => {
                     L.DomEvent.stopPropagation(e);
                     L.DomEvent.preventDefault(e);
                     onClickAction(e);
                 });
-
                 return btn;
             };
 
-            // 1. Кнопка Де я?
-            createBtn('🎯', "Моя локація", () => {
-                if (typeof window.locateMe === 'function') {
-                    window.locateMe();
-                } else {
-                    mapInstance.locate({ setView: true, maxZoom: 16 });
-                }
+            // 🎯 Кнопка локації
+            createBtn('🎯', "Де я?", () => {
+                mapInstance.locate({ setView: true, maxZoom: 16 });
             });
 
-            // 2. Кнопка Фільтр
-            // Усередині ToolControl для кнопки Фільтр
-            createBtn('🔍', "Фільтр дільниць", () => {
+            // 🔍 Кнопка фільтрів (ВИПРАВЛЕНО)
+            createBtn('🔍', "Фільтри", () => {
                 const menu = document.getElementById('filterMenu');
-                const isVisible = menu && menu.style.display === 'block';
-
-                // Використовуємо універсальну функцію замість ручного керування style.display
-                UI.toggleModal('filterMenu', !isVisible);
-
-                if (!isVisible) {
-                    // Оновлюємо цифри при відкритті
-                    window.updateFilterCounters();
-
-                    // Перевіряємо видимість "Мої дільниці"
-                    const myLabel = document.getElementById('myParcelsLabel');
-                    if (myLabel) {
-                        myLabel.style.display = localStorage.getItem('userId') ? 'block' : 'none';
-                    }
+                if (menu) {
+                    const isHidden = window.getComputedStyle(menu).display === 'none';
+                    menu.style.display = isHidden ? 'block' : 'none';
                 }
             });
 
@@ -125,17 +114,17 @@ export function initToolControl(mapInstance) {
         }
     });
 
-    // Додаємо контроль на мапу
     mapInstance.addControl(new ToolControl());
 }
 
-// Запуск ініціалізації при появі мапи
+// Автозапуск контролів
 const checkMap = setInterval(() => {
     if (window.map) {
         initToolControl(window.map);
         clearInterval(checkMap);
     }
 }, 100);
+
 
 
 // Функція для оновлення цифр у меню фільтрів

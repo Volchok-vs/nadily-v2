@@ -3,6 +3,7 @@
  * Використовує категорії, статус "Зайнята", Карантин та логіку старіння (8+ місяців)
  */
 export function getParcelStyle(pData) {
+    
     // 1. КОНФІГУРАЦІЯ БАЗОВИХ КОЛЬОРІВ
     // Беремо кольори з бази (якщо завантажені), інакше — стандартні
     const config = (window.mapConfig && window.mapConfig.colors) ? window.mapConfig.colors : {
@@ -70,7 +71,7 @@ export function getParcelStyle(pData) {
 
     if (pData.status !== 'taken' && diffMonths < 3) {
         baseColor = config.quarantine;
-        strokeColor = '#cbc7c7';
+        strokeColor = '#e6e2e2';
     }
 
     // 5. ЛОГІКА СТАРІННЯ (6, 7, 8+ МІСЯЦІВ)
