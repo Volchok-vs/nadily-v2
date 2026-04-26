@@ -42,6 +42,7 @@
 }
 
 
+
 .m3-share-btn {
 
     padding: 6px 12px;
@@ -158,6 +159,29 @@
         padding: 10px 0;
         border-bottom: 1px solid #eee;
         font-size: 16px;
+    }
+
+    div#filterMenu {
+        width: 205px;
+        padding: 10px;
+        top: 90px;
+        left: 1px;
+    }
+
+    .filter-section {
+        margin-bottom: 3px;
+        padding: 2px;
+    }
+
+    .sub-list {
+        margin-top: 1px;
+        padding-top: 1px;
+    }
+
+    #filterMenu .row {
+
+        padding: 2px 4px;
+
     }
 
 

@@ -78,7 +78,7 @@ export function initToolControl(mapInstance) {
         options: { position: 'topleft' },
         onAdd: function () {
             const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
-            
+
             // Зупиняємо передачу кліків з меню на карту
             L.DomEvent.disableClickPropagation(container);
 
@@ -87,7 +87,7 @@ export function initToolControl(mapInstance) {
                 btn.innerHTML = html;
                 btn.title = title;
                 btn.style.cssText = 'width:34px; height:34px; background:white; cursor:pointer; font-size:18px; border:none; display:block; border-bottom:1px solid #ccc;';
-                
+
                 L.DomEvent.on(btn, 'click', (e) => {
                     L.DomEvent.stopPropagation(e);
                     L.DomEvent.preventDefault(e);
@@ -144,24 +144,32 @@ window.updateFilterCounters = () => {
         const data = item.data;
         if (!data) return;
 
-        if (data.status === 'taken') {
+        // Рахуємо "Вільні" (якщо статус не "taken")
+        if (data.status !== 'taken') {
+            counts.free++;
+        } 
+        // Рахуємо "На руках"
+        else {
             counts.taken++;
-            if (String(data.taken_by_id) === String(currentUserId)) {
+            // Рахуємо "Мої", тільки якщо ID збігається і МИ АВТОРИЗОВАНІ
+            if (currentUserId && String(data.taken_by_id) === String(currentUserId)) {
                 counts.mine++;
             }
-        } else {
-            counts.free++;
         }
     });
 
-    // Оновлюємо текст у HTML
-    const updateText = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.innerText = `(${val})`;
-    };
+    // Оновлюємо цифри всередині меню
+    const menu = document.getElementById('filterMenu');
+    if (menu) {
+        // Допоміжна функція для пошуку бейджа всередині конкретної секції
+        const setBadge = (secId, val) => {
+            const badge = menu.querySelector(`#${secId} .count-badge`);
+            if (badge) badge.innerText = val;
+        };
 
-    updateText('cnt-all', counts.all);
-    updateText('cnt-free', counts.free);
-    updateText('cnt-taken', counts.taken);
-    updateText('cnt-mine', counts.mine);
+        setBadge('sec-all', counts.all);
+        setBadge('sec-free', counts.free);
+        setBadge('sec-taken', counts.taken);
+        setBadge('sec-mine', counts.mine);
+    }
 };

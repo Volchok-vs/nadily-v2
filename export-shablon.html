@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        /* Основні стилі для імітації PDF-аркуша */
+        .page-preview {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 8mm 5mm 10mm 5mm; /* Верхній відступ для першої сторінки */
+            background: white;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            margin: 20px auto;
+            border: 1px solid #ccc; /* Тільки для прев'ю */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-title {
+            text-align: center;
+            font-size: 17pt;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .header-year {
+            font-size: 13pt;
+            font-weight: bold;
+            margin-bottom: 15px;
+            margin-left: 5mm;
+        }
+
+        .service-year-line {
+            border-bottom: 1px solid black;
+            padding: 0 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2.5px solid black;
+            table-layout: fixed;
+        }
+
+        th, td {
+            border: 1.5px solid black;
+            text-align: center;
+        }
+
+        /* Стилі шапки */
+        thead tr {
+            background: #eeeeee;
+            height: 42px;
+        }
+
+        .th-small { font-size: 8pt; padding: 2px; }
+        .th-visnyk { padding: 0; }
+        
+        .visnyk-title {
+            font-size: 10pt;
+            height: 18px;
+            border-bottom: 1.5px solid black;
+            line-height: 18px;
+        }
+
+        .visnyk-sub {
+            display: flex;
+            font-size: 7pt;
+            height: 24px;
+            line-height: 9pt;
+            align-items: flex-start;
+            padding-top: 2px;
+        }
+
+        .visnyk-sub-cell {
+            flex: 1;
+            padding-bottom: 1mm; /* Той самий інтервал 1мм, про який ви просили */
+        }
+
+        .border-left { border-left: 1.5px solid black; height: 100%; }
+
+        /* Стилі комірок даних */
+        .row-id { font-size: 9pt; width: 35px; }
+        .row-date { font-size: 8.5pt; width: 75px; background: #fffde7; }
+        .log-cell { width: 135px; padding: 0; }
+        
+        .publisher-name {
+            height: 18px;
+            border-bottom: 1px solid black;
+            font-size: 10pt;
+            line-height: 18px;
+            overflow: hidden;
+        }
+
+        .log-dates {
+            display: flex;
+            height: 18px;
+            line-height: 18px;
+            font-size: 9pt;
+        }
+
+        .log-date-half { flex: 1; }
+
+        /* Футер */
+        .footer {
+            margin-top: 3mm;
+            padding-left: 2mm;
+        }
+
+        .footer-note { font-size: 8pt; margin: 0; line-height: 1.2; }
+        .footer-code { font-size: 9.5pt; margin: 3px 0 0 0; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="page-preview">
+    <div class="header-title">ЗАПИСИ ПРО ОПРАЦЮВАННЯ ТЕРИТОРІЙ</div>
+    <div class="header-year">Службовий рік: <span class="service-year-line">2025/2026</span></div>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="th-small" style="width: 35px;">№<br>Тер.</th>
+                <th class="th-small" style="width: 75px;">Остання дата<br>опрацювання*</th>
+                <th class="th-visnyk">
+                    <div class="visnyk-title">Вісник</div>
+                    <div class="visnyk-sub">
+                        <div class="visnyk-sub-cell">Дата<br>отримання</div>
+                        <div class="visnyk-sub-cell border-left">Дата<br>опрацювання</div>
+                    </div>
+                </th>
+                <th class="th-visnyk">
+                    <div class="visnyk-title">Вісник</div>
+                    <div class="visnyk-sub">
+                        <div class="visnyk-sub-cell">Дата<br>отримання</div>
+                        <div class="visnyk-sub-cell border-left">Дата<br>опрацювання</div>
+                    </div>
+                </th>
+                <th class="th-visnyk">
+                    <div class="visnyk-title">Вісник</div>
+                    <div class="visnyk-sub">
+                        <div class="visnyk-sub-cell">Дата<br>отримання</div>
+                        <div class="visnyk-sub-cell border-left">Дата<br>опрацювання</div>
+                    </div>
+                </th>
+                <th class="th-visnyk">
+                    <div class="visnyk-title">Вісник</div>
+                    <div class="visnyk-sub">
+                        <div class="visnyk-sub-cell">Дата<br>отримання</div>
+                        <div class="visnyk-sub-cell border-left">Дата<br>опрацювання</div>
+                    </div>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="row-id">1</td>
+                <td class="row-date">12.04.26</td>
+                <td class="log-cell">
+                    <div class="publisher-name">Іваненко І.</div>
+                    <div class="log-dates">
+                        <div class="log-date-half">01.09</div>
+                        <div class="log-date-half" style="border-left: 1px solid black;">15.09</div>
+                    </div>
+                </td>
+                <td class="log-cell">
+                    <div class="publisher-name"></div>
+                    <div class="log-dates">
+                        <div class="log-date-half"></div>
+                        <div class="log-date-half" style="border-left: 1px solid black;"></div>
+                    </div>
+                </td>
+                <td class="log-cell">
+                    <div class="publisher-name"></div>
+                    <div class="log-dates">
+                        <div class="log-date-half"></div>
+                        <div class="log-date-half" style="border-left: 1px solid black;"></div>
+                    </div>
+                </td>
+                <td class="log-cell">
+                    <div class="publisher-name"></div>
+                    <div class="log-dates">
+                        <div class="log-date-half"></div>
+                        <div class="log-date-half" style="border-left: 1px solid black;"></div>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+    </table>
+
+    <div class="footer">
+        <p class="footer-note">*Заповнюючи новий бланк, познач у цій колонці останню дату опрацювання кожної території.</p>
+        <p class="footer-code">S-13-K 1/22</p>
+    </div>
+</div>

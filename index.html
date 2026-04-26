@@ -107,18 +107,7 @@
         }
 
         /* Меню фильтров */
-        #filterMenu {
-            position: fixed;
-            top: 66px;
-            left: 57px;
-            z-index: 1001;
-            background: #ffffffd9;
-            padding: 10px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            display: none;
-            width: 250px;
-        }
+
 
         .filter-group {
             margin-bottom: 15px;
@@ -365,15 +354,6 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        #filterMenu {
-            background: white;
-            padding: 15px;
-            border-radius: 18px;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-            max-height: 85vh;
-            overflow-y: auto;
-            transition: all 0.3s ease;
-        }
 
         /* Мобільна адаптація */
         @media (max-width: 600px) {
@@ -423,37 +403,8 @@
             font-weight: bold;
         }
 
-              
-
-        #filterMenu {
-            z-index: 10001;
-            /* Поверх всього */
-            position: fixed;
-            top: 10px;
-            left: 55px;
-            /* Щоб не перекривати кнопки зліва */
-            background: white;
-            display: none;
-            /* Керується кнопкою */
-        }
-
-
-
         /* Додай це в блок <style> твого index.html */
 
-        #filterMenu {
-            position: fixed;
-            top: 60px;
-            left: 10px;
-            width: 280px;
-            background: white;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-            z-index: 10000;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
 
         #searchBox {
             width: 100%;
@@ -894,7 +845,7 @@
         import { isAdmin, currentUserId } from './js/main.js';
         import { initGeolocation } from './js/geolocation.js'; // перевірте шлях до файлу
         import { initSearchAndFilters, updateFilterCounts } from './js/search-filter.js';
-
+        import { getDurationText } from './js/status-helper.js';
 
         // Ініціалізація глобальних змінних
         window.userRole = localStorage.getItem('userRole');
@@ -1023,7 +974,7 @@
         };
         // --- 3. ЛОГІКА ПОПАПІВ ---
         window.createPopupContent = function (p) {
-            // 1. Розрахунок дат та статусів
+            // --- 1. Розрахунок дат та статусів ---
             const now = new Date();
             const returnDate = p.last_returned ? new Date(p.last_returned) : new Date(0);
             const quarantineEndDate = new Date(returnDate);
@@ -1033,26 +984,36 @@
             const qDateStr = quarantineEndDate.toLocaleDateString('uk-UA');
             const isTaken = p.status === 'taken';
 
-            // Отримуємо дані про користувача
             const isAuth = !!localStorage.getItem('userId');
             const currentUserId = localStorage.getItem('userId') || window.currentUserId;
 
-            const shareLink = `${window.location.origin}${window.location.pathname}?parcel=${encodeURIComponent(p.name || p.number)}`;
-            const googleMapsUrl = `https://www.google.com/maps?q=${p.center_lat},${p.center_lng}`;
+            // --- ПРАВКА ТУТ: Розрахунок тривалості ---
+            let duration = "";
+            try {
+                if (typeof getDurationText === 'function') {
+                    // Для зайнятих беремо taken_at, для вільних - коли повернули
+                    const dateToUse = isTaken ? p.taken_at : p.last_returned;
+                    if (dateToUse) {
+                        duration = getDurationText(dateToUse);
+                    }
+                }
+            } catch (e) {
+                console.warn("Помилка розрахунку дати:", e);
+            }
 
-            // 2. Формування базової верстки (Заголовок, Статус, Маршрут)
+            const shareLink = `${window.location.origin}${window.location.pathname}?parcel=${encodeURIComponent(p.name || p.number)}`;
+            const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${p.center_lat},${p.center_lng}`;
+
+            // --- 2. Формування верстки ---
             let popupHtml = `<div class="popup-container" style="min-width:200px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; gap: 10px;">
-    <span class="popup-title" style="font-weight:bold; font-size:16px; color: #1D192B;">
-        Дільниця ${p.name || p.number}
-    </span>
-    
-    <button onclick="window.shareParcel('${p.name || p.number}', '${shareLink}')" class="m3-share-btn">
-        <div class="icon-stack">
-            🔗<span class="mini-arrow">➦</span>
+            <span class="popup-title" style="font-weight:bold; font-size:16px; color: #1D192B;">
+                Дільниця ${p.name || p.number}
+            </span>
+            <button onclick="window.shareParcel('${p.name || p.number}', '${shareLink}')" class="m3-share-btn">
+                <div class="icon-stack">🔗<span class="mini-arrow">➦</span></div>
+            </button>
         </div>
-    </button>
-</div>
 
         ${(!isTaken && isQuarantine) ? `
             <div style="color: #d32f2f; background: #ffebee; padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 12px; border: 1px solid #d32f2f; text-align:center;">
@@ -1063,6 +1024,7 @@
             <span style="font-weight:bold; color:${isTaken ? '#e74c3c' : (isQuarantine ? '#808080' : '#28a745')}">
                 ● ${isTaken ? 'Зайнята' : (isQuarantine ? 'Карантин' : 'Вільна')}
             </span>
+            ${duration ? `<span style="font-size:11px; color:#666; font-weight:normal; margin-left:4px;">${duration}</span>` : ''}
         </div>
 
         <div class="popup-btn-row" style="display:flex; gap:5px; margin-top:10px; margin-bottom:10px;">
@@ -1070,11 +1032,10 @@
             ${window.isAdmin ? `<a href="parcel-details.html?id=${p.id}" class="popup-btn" style="flex:1; text-align:center; text-decoration:none; padding:8px; border:1px solid #ccc; border-radius:4px; color:black; font-size:12px;">⚙️ Картка</a>` : ''}
         </div>`;
 
-            // 3. Логіка кнопок дії
+            // --- 3. Логіка кнопок (залишається без змін) ---
             if (!isTaken) {
                 if (isQuarantine) {
                     if (window.isAdmin) {
-                        // Повертаємо блок розблокування для адміна (з вашого правильного коду)
                         popupHtml += `
                 <div style="margin-bottom:8px;">
                     <label style="font-size:11px; color:#1565C0; cursor:pointer; display:flex; align-items:center; gap:5px;">
@@ -1090,31 +1051,27 @@
                         popupHtml += `<p style="font-size:11px; color:#888; text-align:center;">На обробці до ${qDateStr}</p>`;
                     }
                 } else {
-                    // Перевірка авторизації для вільної дільниці
                     if (isAuth) {
                         popupHtml += `<button class="popup-btn primary" style="width:100%; padding:10px; background:#0d6efd; color:white; border:none; border-radius:6px; cursor:pointer;" onclick="window.startTakeProcess('${p.id}', false)">
                     ✋ Взяти дільницю
                 </button>`;
                     } else {
-                        // Кнопка для неавторизованих користувачів
-                        popupHtml += `
-                <button class="popup-btn" 
-                    style="width:100%; padding:10px; background:#f8f9fa; border:1px dashed #ffa500; color:#e67e22; border-radius:6px; cursor:pointer; font-size:13px; font-weight:500;" 
-                    onclick="window.location.href='login.html'">
+                        popupHtml += `<button class="popup-btn" style="width:100%; padding:10px; background:#f8f9fa; border:1px dashed #ffa500; color:#e67e22; border-radius:6px; cursor:pointer; font-size:13px; font-weight:500;" onclick="window.location.href='login.html'">
                     🔑 Увійдіть, щоб взяти
                 </button>`;
                     }
                 }
             } else {
-                // Якщо дільниця зайнята (Збережено вашу перевірку власника)
                 if (window.isAdmin || (isAuth && String(p.taken_by_id) === String(currentUserId))) {
-                    popupHtml += `<button class="popup-btn" 
-                style="width:100%; padding:10px; border:1px solid #dc3545; color:#dc3545; background:none; border-radius:6px; cursor:pointer; font-weight:bold;" 
-                onclick="window.returnParcel(${p.id})">
+                    popupHtml += `<button class="popup-btn" style="width:100%; padding:10px; border:1px solid #dc3545; color:#dc3545; background:none; border-radius:6px; cursor:pointer; font-weight:bold;" onclick="window.returnParcel(${p.id})">
                 🔙 Здати дільницю
             </button>`;
                 }
-                popupHtml += `<div style="text-align:center; font-size:11px; color:#666; margin-top:5px;">Взяв: ${p.taken_by || 'Невідомо'}</div>`;
+
+                // Показуємо "Взяв" тільки адміну
+                if (window.isAdmin) {
+                    popupHtml += `<div style="text-align:center; font-size:11px; color:#666; margin-top:5px; border-top:1px dashed #eee; padding-top:5px;">Взяв: ${p.taken_by || 'Невідомо'}</div>`;
+                }
             }
 
             popupHtml += `</div>`;
