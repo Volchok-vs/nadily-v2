@@ -2,111 +2,116 @@
  * Модуль для роботи з геолокацією користувача на карті Leaflet.
  * Додає синю точку, коло точності та інформаційне віконце.
  */
+/**
+ * Модуль для роботи з геолокацією користувача на карті Leaflet.
+ */
 export function initGeolocation(map) {
-    // Змінні-контейнери для об'єктів на карті
-    let userLocationMarker = null; // Маркер (крапка) користувача
-    let userAccuracyCircle = null; // Коло навколо крапки (похибка GPS)
-    let accuracyBox = null;        // HTML-елемент для тексту з точністю
+    let userLocationMarker = null;
+    let userAccuracyCircle = null;
+    let accuracyBox = null;
+    let hideTimer = null; // Таймер для автоматичного приховування
+    let countdownInterval = null; // Інтервал для відліку секунд
 
-    /**
-     * Створення візуального віконця для виводу точності в метрах.
-     * Створюється один раз при ініціалізації.
-     */
     const createAccuracyBox = () => {
-        // Створюємо div-елемент через вбудовані інструменти Leaflet
         accuracyBox = L.DomUtil.create('div', 'accuracy-info-box');
         
-        // Налаштування зовнішнього вигляду через inline-стилі
         Object.assign(accuracyBox.style, {
             position: 'fixed',
-            bottom: '25px',           // Відступ знизу
-            left: '50%',              // Центрування по горизонталі
+            bottom: '25px',
+            left: '50%',
             transform: 'translateX(-50%)',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)', // Темний напівпрозорий фон
-            color: '#fff',            // Білий текст
-            padding: '6px 16px',      // Внутрішні відступи
-            borderRadius: '20px',     // Закруглені краї
-            fontSize: '13px',         // Розмір шрифту
-            zIndex: '10002',          // Поверх карти, але під модалками
-            display: 'none',          // Приховано, поки не знайдемо координати
-            pointerEvents: 'none',    // Кліки проходять крізь віконце на карту
-            backdropFilter: 'blur(5px)', // Ефект розмиття фону за віконцем
-            boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            color: '#fff',
+            padding: '8px 18px',
+            borderRadius: '25px',
+            fontSize: '13px',
+            zIndex: '10002',
+            display: 'none',
+            pointerEvents: 'none',
+            backdropFilter: 'blur(5px)',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
             textAlign: 'center',
-            transition: 'opacity 0.3s' // Плавна поява
+            transition: 'opacity 0.5s'
         });
 
         document.body.appendChild(accuracyBox);
     };
 
-    // Запускаємо створення віконця відразу при ініціалізації модуля
     createAccuracyBox();
 
-    /**
-     * Глобальна функція для виклику геолокації.
-     * Прив'язана до window, щоб працювати з кнопок в index.html.
-     */
     window.locateMe = function() {
-        // Запит до браузера на пошук місцезнаходження
         map.locate({
-            setView: true,           // Автоматично центрувати карту на користувачеві
-            maxZoom: 17,             // Не наближати занадто сильно
-            enableHighAccuracy: true // ПРИМУСОВО вмикає GPS на пристрої (важливо для Pixel 7)
+            setView: true,
+            maxZoom: 17,
+            enableHighAccuracy: true 
         });
     };
 
-    /**
-     * ОБРОБНИК: Викликається автоматично, коли координати успішно отримано.
-     * @param {Object} e - об'єкт події з координатами та точністю.
-     */
     map.on('locationfound', function(e) {
-        const radius = e.accuracy; // Точність у метрах, яку повернув GPS-датчик
+        const radius = e.accuracy;
 
-        // ОЧИЩЕННЯ: Видаляємо старі маркери, якщо вони вже були на карті
+        // Очищення попередніх таймерів, якщо натиснули кнопку повторно
+        if (hideTimer) clearTimeout(hideTimer);
+        if (countdownInterval) clearInterval(countdownInterval);
+
         if (userLocationMarker) {
             map.removeLayer(userLocationMarker);
             map.removeLayer(userAccuracyCircle);
         }
 
-        // ОНОВЛЕННЯ ВІКОНЦЯ: Показуємо текст користувачу
+        // Логіка відліку (наприклад, 7 секунд)
+        let secondsLeft = 7;
         accuracyBox.style.display = 'block';
-        accuracyBox.innerHTML = `📡 Точність GPS: ±${radius.toFixed(1)} м`;
+        accuracyBox.style.opacity = '1';
 
-        // КОЛО ТОЧНОСТІ: Малюємо зону навколо користувача
+        const updateText = (sec) => {
+            accuracyBox.innerHTML = `📡 Точність: ±${radius.toFixed(1)} м <span style="margin-left:8px; opacity:0.6; font-size:11px;">(${sec}с)</span>`;
+        };
+
+        updateText(secondsLeft);
+
+        // Запуск зворотного відліку
+        countdownInterval = setInterval(() => {
+            secondsLeft--;
+            if (secondsLeft > 0) {
+                updateText(secondsLeft);
+            } else {
+                clearInterval(countdownInterval);
+            }
+        }, 1000);
+
+        // Автоматичне зникнення через встановлений час
+        hideTimer = setTimeout(() => {
+            accuracyBox.style.opacity = '0';
+            setTimeout(() => {
+                accuracyBox.style.display = 'none';
+            }, 500); // Час на завершення CSS-анімації
+        }, secondsLeft * 1000);
+
+        // Візуалізація на карті
         userAccuracyCircle = L.circle(e.latlng, radius, {
-            color: '#136aec',      // Колір контуру (синій)
-            fillColor: '#136aec',  // Колір заливки
-            fillOpacity: 0.15,     // Напівпрозорість (15%)
-            weight: 2,             // Товщина лінії
-            interactive: false     // Коло не реагує на кліки
-        }).addTo(map);
-
-        // МАРКЕР: Малюємо саму "синю точку"
-        userLocationMarker = L.circleMarker(e.latlng, {
-            radius: 8,             // Статичний розмір точки в пікселях
-            color: '#ffffff',      // Біла обводка для контрасту на супутнику
-            weight: 3,             // Товщина білої лінії
-            fillColor: '#136aec',  // Насичений синій колір
-            fillOpacity: 1,        // Непрозора точка
+            color: '#136aec',
+            fillColor: '#136aec',
+            fillOpacity: 0.15,
+            weight: 2,
             interactive: false
         }).addTo(map);
 
-        console.log(`Позиція знайдена. Похибка: ${radius.toFixed(1)} м.`);
+        userLocationMarker = L.circleMarker(e.latlng, {
+            radius: 8,
+            color: '#ffffff',
+            weight: 3,
+            fillColor: '#136aec',
+            fillOpacity: 1,
+            interactive: false
+        }).addTo(map);
     });
 
-    /**
-     * ОБРОБНИК: Викликається, якщо доступ до GPS заблоковано або сигнал відсутній.
-     */
     map.on('locationerror', function(e) {
-        // Ховаємо віконце точності при помилці
         if (accuracyBox) accuracyBox.style.display = 'none';
-        
-        // Виводимо попередження залежно від причини
         const errorMsg = (e.code === 1) 
-            ? "Доступ до геолокації заборонено. Будь ласка, дозвольте доступ у налаштуваннях браузера."
-            : "Не вдалося визначити місцезнаходження: " + e.message;
-            
+            ? "Доступ до геолокації заборонено."
+            : "Помилка GPS: " + e.message;
         alert(errorMsg);
-        console.warn("GPS Error:", e.message);
     });
 }
