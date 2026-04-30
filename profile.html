@@ -73,14 +73,6 @@
             overflow-y: auto;
         }
 
-        .card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            margin-bottom: 20px;
-        }
-
         /* Таблиці та списки */
         table {
             width: 100%;
@@ -200,13 +192,436 @@
             background: #e8f5e9;
         }
 
-        /* Підсвітка поточного року */
+        /* Контейнер адмін-панелі */
+        .admin-settings-container {
+            display: none;
+            margin-top: 25px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        /* Картки секцій */
+        .admin-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            margin-bottom: 15px;
+        }
+
+        .admin-card.secondary {
+            background: #f8f9fa;
+            border-color: #dee2e6;
+        }
+
+        /* Заголовки */
+        .admin-card-title {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .admin-card-title.gray {
+            color: #495057;
+        }
+
+        /* Форми та сітки */
+        .admin-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Поля вводу */
+        .admin-input,
+        .admin-select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            background: white;
+            box-sizing: border-box;
+        }
+
+        .admin-select {
+            cursor: pointer;
+        }
+
+        .admin-input:disabled,
+        .admin-select:disabled {
+            background: #eee;
+            cursor: not-allowed;
+        }
+
+        /* Кнопки */
+        .btn-admin {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            border: none;
+            font-size: 0.95rem;
+        }
+
+        .btn-main {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-main:hover {
+            background: #0056b3;
+        }
+
+        .btn-outline {
+            background: white;
+            color: #1565C0;
+            border: 1px solid #1565C0;
+        }
+
+        .btn-outline:hover {
+            background: #f0f7ff;
+        }
+
+        .btn-success {
+            background: #2e7d32;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+            box-shadow: 0 4px 10px rgba(255, 152, 0, 0.2);
+        }
+
+        .btn-delete {
+            background: transparent;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-top: 15px;
+        }
+
+        .btn-delete:hover {
+            opacity: 1;
+            background: #fff5f5;
+        }
+
+        /* Секція безпеки */
+        .security-row {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .auth-display-box {
+            display: none;
+            margin-top: 15px;
+            background: white;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .password-reset-zone {
+            background: #fff8e1;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ffe082;
+            margin-bottom: 15px;
+        }
+
+        .password-reset-zone .warning-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #d32f2f;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* Стиль для компактного перемикача */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #1565C0;
+        }
+
+        .switch-container input {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Повноекранний лоадер */
+        #main-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Шапка вкладки */
+        .tab-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .tab-header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        /* Кнопка Додати */
+        .btn-add {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: background 0.2s;
+        }
+
+        .btn-add:hover {
+            background: #218838;
+        }
+
+
+        /* Стилізація таблиці */
+        .publishers-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .publishers-table th,
+        .publishers-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .publishers-table th {
+            background: #f8f9fa;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .publishers-table tr {
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .publishers-table tr:hover {
+            background: #f1f8ff;
+        }
+
+        /* Бейдж з числом дільниць */
+        .badge {
+            background: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        /* Контейнер для табів тепер притиснутий до картки */
+        .origin-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 0;
+            /* Прибираємо відступ, щоб таби торкалися картки */
+            padding-left: 10px;
+        }
+
+        /* Базовий стиль табів-вушок */
+        .origin-tab-btn {
+            padding: 10px 20px;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            /* У всіх табів немає нижньої межі */
+            background: #e9ecef;
+            /* Неактивні таби сіріші */
+            border-radius: 10px 10px 0 0;
+            /* Заокруглення тільки зверху */
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #666;
+            transition: all 0.2s;
+            position: relative;
+            z-index: 1;
+            /* Неактивні таби нижче за рівнем */
+        }
+
+        /* Активний таб */
+        .origin-tab-btn.active {
+            background: white;
+            /* Колір такий же, як у картки */
+            color: #007bff;
+            font-weight: bold;
+            z-index: 3;
+            /* Виводимо на передній план */
+            margin-bottom: -1px;
+            /* Насуваємо на рамку картки */
+            padding-bottom: 11px;
+            /* Компенсуємо зміщення, щоб текст не стрибав */
+            border-color: #ddd;
+        }
+
+        /* Стиль самої картки */
+        .card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 0 10px 10px 10px;
+            /* Верхній лівий кут гострий, щоб злитись з табом */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            position: relative;
+            z-index: 2;
+            /* Картка вище неактивних табів */
+            padding: 15px;
+        }
+
+        /* Ефект злиття табів з карткою */
+        .origin-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 0;
+            padding-left: 10px;
+        }
+
+        .origin-tab-btn {
+            padding: 10px 18px;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            background: #eaeeef;
+            border-radius: 10px 10px 0 0;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #555;
+            transition: all 0.2s;
+            position: relative;
+            z-index: 1;
+        }
+
+        .origin-tab-btn.active {
+            background: white;
+            color: #007bff;
+            font-weight: bold;
+            z-index: 3;
+            margin-bottom: -1px;
+            padding-bottom: 11px;
+            border-color: #ddd;
+        }
+
+        .publishers-card {
+            border-radius: 0 10px 10px 10px;
+            /* Гострий кут зліва зверху для злиття */
+            z-index: 2;
+            position: relative;
+            border-top: 1px solid #ddd;
+        }
+
+        /* Стилі заголовків таблиці для сортування */
+        .sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+
+        .sortable:hover {
+            background: #f8f9fa;
+        }
+
+        .sort-icon {
+            margin-left: 5px;
+            font-size: 0.8rem;
+            color: #bbb;
+        }
+
+        .sortable:hover .sort-icon {
+            color: #007bff;
+        }
     </style>
     <link rel="stylesheet" href="css/profile-style.css" />
     <link rel="stylesheet" href="css/responsive.css">
 </head>
 
 <body>
+    <div id="main-loader">
+        <div class="spinner"></div>
+    </div>
     <div class="mobile-header">
         <button class="mobile-nav-toggle-new" onclick="toggleSidebar()">☰</button>
         <div class="mobile-title">Адмін-панель</div>
@@ -237,20 +652,30 @@
         </div>
 
         <div id="tab-group-cards" class="tab-content hidden">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h1 style="margin: 0;">Вісники групи</h1>
-                <button onclick="openAddPublisherModal()"
-                    style="background: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div class="tab-header">
+                <h1>Вісники групи</h1>
+                <button onclick="openAddPublisherModal()" class="btn-add">
                     + Додати
                 </button>
             </div>
 
-            <div class="card">
-                <table>
+            <div class="origin-tabs">
+                <button onclick="filterByOrigin('active')" class="origin-tab-btn active">Всі активні</button>
+                <button onclick="filterByOrigin('Липовець')" class="origin-tab-btn">🏠 Липовець</button>
+                <button onclick="filterByOrigin('Іллінці')" class="origin-tab-btn">🚗 Іллінці</button>
+                <button onclick="filterByOrigin('Гості')" class="origin-tab-btn">👣 Гості</button>
+            </div>
+
+            <div class="card publishers-card">
+                <table class="publishers-table">
                     <thead>
                         <tr>
-                            <th>Прізвище та ім'я</th>
-                            <th>Кількість дільниць</th>
+                            <th onclick="toggleSort('name')" class="sortable">
+                                Прізвище та ім'я <span id="sort-icon-name" class="sort-icon">↕</span>
+                            </th>
+                            <th onclick="toggleSort('count')" class="sortable" style="text-align: center;">
+                                Кількість дільниць <span id="sort-icon-count" class="sort-icon">↕</span>
+                            </th>
                         </tr>
                     </thead>
                     <tbody id="publishersList">
@@ -265,18 +690,33 @@
                 style="background:white; padding:25px; border-radius:15px; width:100%; max-width:400px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
                 <h2 style="margin-top:0; color:#333; font-size:1.4rem;">Новий вісник</h2>
 
+                <!-- ТЕПЕР ІМ'Я ПЕРШЕ -->
                 <div style="margin-bottom:15px;">
                     <label
-                        style="display:block; margin-bottom:5px; font-weight:bold; font-size:0.85rem; color:#666;">Прізвище</label>
+                        style="display:block; margin-bottom:5px; font-weight:bold; font-size:0.85rem; color:#666;">Ім'я</label>
+                    <input type="text" id="newPubFirstName"
+                        oninput="validateUniqueName('newPubFirstName', 'newPubLastName')" placeholder="Наприклад: Тарас"
+                        style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:1rem; box-sizing:border-box;">
+                </div>
+
+                <!-- ТЕПЕР ПРІЗВИЩЕ ДРУГЕ -->
+                <div style="margin-bottom:15px;">
+                    <label id="labelLastName"
+                        style="display:block; margin-bottom:5px; font-weight:bold; font-size:0.85rem; color:#666;">Прізвище
+                        (необов'язково)</label>
                     <input type="text" id="newPubLastName" placeholder="Наприклад: Шевченко"
                         style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:1rem; box-sizing:border-box;">
                 </div>
 
                 <div style="margin-bottom:15px;">
                     <label
-                        style="display:block; margin-bottom:5px; font-weight:bold; font-size:0.85rem; color:#666;">Ім'я</label>
-                    <input type="text" id="newPubFirstName" placeholder="Наприклад: Тарас"
-                        style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:1rem; box-sizing:border-box;">
+                        style="display:block; margin-bottom:5px; font-weight:bold; font-size:0.85rem; color:#666;">Походження</label>
+                    <select id="newPubGroupTag"
+                        style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:1rem; box-sizing:border-box; background: white;">
+                        <option value="Липовець">🏠 Липовець</option>
+                        <option value="Іллінці">🚗 Іллінці</option>
+                        <option value="Гості">👣 Гості</option>
+                    </select>
                 </div>
 
                 <div style="margin-bottom:25px;">
@@ -303,64 +743,99 @@
                 <h3>Активні дільниці вісника</h3>
                 <div id="detailUserParcels"></div>
             </div>
-            <div id="admin-settings-block"
-                style="display: none; border: 2px dashed #2196F3; padding: 15px; border-radius: 8px; margin-top: 20px; background: #f0f7ff;">
-                <h3 style="margin-top: 0; color: #1565C0;">⚙️ Налаштування доступу</h3>
+            <div id="admin-settings-block" class="admin-settings-container">
 
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">
-                        <input type="checkbox" id="unlock-role-check"> Редагувати роль:
-                    </label>
-                    <select id="user-role-select" disabled
-                        style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; background: #eee;">
-                        <option value="user">User (Користувач)</option>
-                        <option value="admin">Admin (Адміністратор)</option>
-                        <option value="super_admin" id="opt-super-admin">Super Admin (Розробник)</option>
-                    </select>
-                </div>
+                <div class="admin-card">
+                    <h3 class="admin-card-title">👤 Основні дані</h3>
 
-                <hr style="border: 0; border-top: 1px solid #d1d9e6; margin: 15px 0;">
-
-                <div id="auth-info-section">
-                    <button id="show-auth-btn"
-                        style="width: 100%; padding: 10px; background: #1565C0; color: white; border: none; border-radius: 4px; cursor: pointer;">Показати
-                        дані для входу</button>
-
-                    <div id="auth-data-display"
-                        style="display: none; margin-top: 15px; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                        <p><b>Ім'я:</b> <span id="display-name"></span></p>
-
-                        <p><b>Логін:</b>
-                            <input type="text" id="edit-login" disabled
-                                style="border: 1px solid #ccc; border-radius: 4px; padding: 2px 5px; width: 120px; background: #eee;">
-                            <label style="font-size: 11px; margin-left: 5px; cursor: pointer;">
-                                <input type="checkbox" id="unlock-login-check"> ✏️
-                            </label>
-                        </p>
-
-                        <p><b>Пароль:</b> <span id="display-pass"
-                                style="font-family: monospace; background: #f8f9fa; padding: 2px 8px; border: 1px solid #ddd; border-radius: 3px;"></span>
-                        </p>
-
-                        <div
-                            style="margin: 10px 0; padding: 10px; border: 1px solid #ffe0b2; background: #fffde7; border-radius: 4px;">
-                            <label style="font-size: 12px; color: #c62828; font-weight: bold; cursor: pointer;">
-                                <input type="checkbox" id="unlock-gen-check"> Дозволити зміну пароля
-                            </label>
-                            <button id="gen-pass-btn" disabled
-                                style="display: block; margin-top: 8px; width: 100%; padding: 8px; font-size: 12px; background: #eceff1; border: 1px solid #cfd8dc; cursor: pointer;">Згенерувати
-                                новий пароль</button>
+                    <div class="admin-grid">
+                        <!-- Поля вводу (залишаються без змін) -->
+                        <div class="form-group">
+                            <label class="form-label">Ім'я та Прізвище</label>
+                            <div class="input-row">
+                                <input type="text" id="edit-pub-first-name" class="admin-input" placeholder="Ім'я"
+                                    oninput="validateUniqueName('edit-pub-first-name', 'edit-pub-last-name')">
+                                <input type="text" id="edit-pub-last-name" class="admin-input"
+                                    placeholder="Прізвище (необов'язково)">
+                            </div>
                         </div>
 
-                        <button id="copy-auth-btn"
-                            style="width: 100%; padding: 10px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">📋
-                            Копіювати дані (ім'я, логін, пас)</button>
+                        <div class="form-group">
+                            <label class="form-label">Походження (Група)</label>
+                            <select id="edit-pub-group-tag" class="admin-select">
+                                <option value="Липовець">🏠 Липовець</option>
+                                <option value="Іллінці">🚗 Іллінці</option>
+                                <option value="Гості">👣 Гості</option>
+                            </select>
+                        </div>
+
+                        <!-- НОВИЙ БЛОК КНОПОК В ОДИН РЯДОК -->
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button id="save-main-data-btn" class="btn-admin btn-main" style="flex: 2; margin: 0;">
+                                Оновити профіль
+                            </button>
+
+                            <button id="delete-user-btn" class="btn-admin btn-delete"
+                                style="flex: 1; margin: 0; padding: 10px;">
+                                🗑️ Видалити
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <button id="save-user-settings"
-                    style="width: 100%; margin-top: 15px; padding: 12px; background: #ff9800; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">Зберегти
-                    всі зміни</button>
+                <div class="admin-card secondary">
+                    <h3 class="admin-card-title gray">🔐 Безпека та Роль</h3>
+
+                    <div class="security-row">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="unlock-role-check"> 🔓 Редагувати роль
+                        </label>
+                        <select id="user-role-select" class="admin-select" disabled>
+                            <option value="user">User (Користувач)</option>
+                            <option value="admin">Admin (Адміністратор)</option>
+                            <option value="super_admin" id="opt-super-admin">Super Admin (Розробник)</option>
+                        </select>
+                    </div>
+
+                    <div id="auth-info-section">
+                        <label class="switch-container">
+                            <span>👁️ Показати дані для входу</span>
+                            <input type="checkbox" id="show-auth-toggle">
+                        </label>
+
+                        <div id="auth-data-display" class="auth-display-box">
+                            <p><b>Вісник:</b> <span id="display-name" style="color: #1565C0; font-weight: bold;"></span>
+                            </p>
+
+                            <p>
+                                <b>Логін:</b>
+                                <input type="text" id="edit-login" class="admin-input"
+                                    style="width: 140px; display: inline-block; padding: 4px 8px;" disabled>
+                                <label class="checkbox-label" style="display: inline-flex; margin-left: 5px;">
+                                    <input type="checkbox" id="unlock-login-check"> ✏️
+                                </label>
+                            </p>
+
+                            <div class="password-reset-zone">
+                                <p><b>Пароль:</b> <span id="display-pass" style="font-family: monospace;">••••••</span>
+                                </p>
+                                <label class="warning-label">
+                                    <input type="checkbox" id="unlock-gen-check"> Дозволити зміну пароля
+                                </label>
+                                <button id="gen-pass-btn" class="btn-admin"
+                                    style="margin-top: 8px; padding: 8px; font-size: 12px;" disabled>
+                                    🔄 Згенерувати новий пароль
+                                </button>
+                            </div>
+
+                            <button id="copy-auth-btn" class="btn-admin btn-success">📋 Копіювати доступ</button>
+                        </div>
+                    </div>
+
+                    <button id="save-user-settings" class="btn-admin btn-warning" style="margin-top: 15px;">
+                        Зберегти всі налаштування доступу
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -412,6 +887,16 @@
         import { supabase } from "./js/config.js"; // Просто імпортуємо готову "розетку"
         import { returnParcel } from './js/parcel-logic.js';
 
+        // ВСТАВЛЯТИ СЮДИ
+        function getGroupEmoji(tag) {
+            const emojis = {
+                'Липовець': '🏠',
+                'Іллінці': '🚗',
+                'Гості': '👣'
+            };
+            return emojis[tag] || '👤';
+        }
+
         const userId = localStorage.getItem('userId');
         const userRole = localStorage.getItem('userRole');
 
@@ -423,22 +908,6 @@
             const overlay = document.querySelector('.sidebar-overlay');
             sidebar.classList.toggle('active');
             overlay.classList.toggle('active');
-        };
-
-        // Оновлюємо switchTab, щоб він закривав меню
-        const oldSwitchTab = window.switchTab;
-        window.switchTab = (tabName) => {
-            oldSwitchTab(tabName);
-
-            // Закриваємо меню після кліку на мобільному
-            if (window.innerWidth <= 768) {
-                const sidebar = document.querySelector('.sidebar');
-                const overlay = document.querySelector('.sidebar-overlay');
-                if (sidebar.classList.contains('active')) {
-                    sidebar.classList.remove('active');
-                    overlay.classList.remove('active');
-                }
-            }
         };
 
         // 1. Функція перемикання (відкрити/закрити)
@@ -453,33 +922,45 @@
 
         // 2. Єдина функція для перемикання вкладок
         window.switchTab = (tabName) => {
-            // --- Логіка перемикання контенту ---
-            // 1. Ховаємо всі вкладки
+            // --- 1. Логіка перемикання контенту ---
+            // Ховаємо всі вкладки
             document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
 
-            // 2. Знімаємо активність з усіх пунктів меню
+            // Знімаємо активність з усіх пунктів меню
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
-            // 3. Показуємо потрібну вкладку
-            const activeTab = document.getElementById('tab-' + tabName);
+            // Показуємо потрібну вкладку
+            const activeTab = document.getElementById('tab-' + tabName) || document.getElementById(tabName);
             if (activeTab) {
                 activeTab.classList.remove('hidden');
 
-                // ОНОВЛЮЄМО АДРЕСУ В БРАУЗЕРІ
-                const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + tabName;
+                // --- 2. РОЗУМНЕ ОНОВЛЕННЯ АДРЕСИ (ЗБЕРЕЖЕННЯ uId) ---
+                const urlParams = new URLSearchParams(window.location.search);
+                const uId = urlParams.get('uId');
+
+                let newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + tabName;
+
+                // Якщо ми в деталях вісника і маємо ID — додаємо його назад в URL
+                if (tabName === 'user-details' && uId) {
+                    newUrl += `&uId=${uId}`;
+                }
+
                 window.history.pushState({ path: newUrl }, '', newUrl);
 
-                // 4. Якщо це реєстр — запускаємо завантаження даних
+                // --- 3. Додаткові дії для вкладок ---
                 if (tabName === 'all-territories') {
                     loadAllTerritoriesGrid();
                 }
             }
 
-            // --- Логіка закриття меню на мобілках ---
-            const sidebar = document.querySelector('.sidebar');
-            // Якщо ширина екрану менше 768пкс і меню зараз відкрите (має клас active)
-            if (window.innerWidth <= 768 && sidebar && sidebar.classList.contains('active')) {
-                window.toggleSidebar(); // Викликаємо функцію, щоб сховати його
+            // --- 4. Логіка закриття меню на мобілках (з Блоку 1) ---
+            if (window.innerWidth <= 768) {
+                const sidebar = document.querySelector('.sidebar');
+                const overlay = document.querySelector('.sidebar-overlay');
+                if (sidebar && sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                    if (overlay) overlay.classList.remove('active');
+                }
             }
         };
 
@@ -505,13 +986,87 @@
             });
         };
 
-        // --- 2. ОСНОВНА ЛОГІКА ТА ІНІЦІАЛІЗАЦІЯ ---
 
+
+        let currentSortCol = 'name'; // Початкове сортування за назвою
+        let sortAsc = true;         // Напрямок за зростанням
+
+        // Функція перемикання сортування
+        window.toggleSort = (column) => {
+            if (currentSortCol === column) {
+                sortAsc = !sortAsc; // Змінюємо напрямок
+            } else {
+                currentSortCol = column;
+                sortAsc = true;     // Нова колонка — завжди спочатку за зростанням
+            }
+
+            // Оновлюємо іконки
+            document.getElementById('sort-icon-name').innerText = '↕';
+            document.getElementById('sort-icon-count').innerText = '↕';
+            const activeIcon = document.getElementById(`sort-icon-${column}`);
+            activeIcon.innerText = sortAsc ? '↑' : '↓';
+            activeIcon.style.color = '#007bff';
+
+            // Сортуємо дані
+            allUsers.sort((a, b) => {
+                let valA, valB;
+                if (column === 'name') {
+                    valA = `${a.last_name} ${a.name}`.toLowerCase();
+                    valB = `${b.last_name} ${b.name}`.toLowerCase();
+                } else {
+                    valA = a.parcelCount || 0;
+                    valB = b.parcelCount || 0;
+                }
+
+                if (valA < valB) return sortAsc ? -1 : 1;
+                if (valA > valB) return sortAsc ? 1 : -1;
+                return 0;
+            });
+
+            // Отримуємо поточний активний фільтр (місто), щоб перемалювати список
+            const activeBtn = document.querySelector('.origin-tab-btn.active');
+            // Витягуємо назву міста або 'active' з onclick або тексту
+            const filter = activeBtn.innerText.includes('Липовець') ? 'Липовець' :
+                activeBtn.innerText.includes('Іллінці') ? 'Іллінці' :
+                    activeBtn.innerText.includes('Гості') ? 'Гості' : 'active';
+
+            renderPublishersList(filter);
+        };
+
+        // Оновіть вашу функцію filterByOrigin, щоб вона враховувала сортування
+        window.filterByOrigin = (origin) => {
+            document.querySelectorAll('.origin-tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('onclick').includes(`'${origin}'`)) {
+                    btn.classList.add('active');
+                }
+            });
+            renderPublishersList(origin);
+        };
+
+        // Робимо функцію доступною для HTML-атрибутів oninput
+        window.validateUniqueName = validateUniqueName;
+
+        // --- 2. ОСНОВНА ЛОГІКА ТА ІНІЦІАЛІЗАЦІЯ ---
         async function init() {
+            // === 1. ДОДАЙТЕ ЦЕЙ БЛОК ДЛЯ ФІЛЬТРІВ ТУТ ===
+            document.querySelectorAll('.tab-filter').forEach(btn => {
+                btn.onclick = () => {
+                    // Видаляємо активний клас у всіх кнопок і додаємо натиснутій
+                    document.querySelectorAll('.tab-filter').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    // Викликаємо перемальовування списку
+                    if (typeof renderPublishersList === 'function') {
+                        renderPublishersList();
+                    }
+                };
+            });
+            // ===========================================
+
             document.getElementById('userName').innerText = localStorage.getItem('userName') || 'Користувач';
             document.getElementById('displayRole').innerText = userRole === 'super_admin' ? 'Супер Адмін' : (userRole === 'admin' ? 'Адміністратор' : 'Вісник');
 
-            // Показуємо меню адміна
             if (userRole === 'admin' || userRole === 'super_admin') {
                 const adminMenu = document.getElementById('adminMenu');
                 if (adminMenu) adminMenu.classList.remove('hidden');
@@ -523,14 +1078,35 @@
 
             loadMyParcels();
 
-            // ОБРОБКА ПАРАМЕТРІВ URL (Крок 3)
+            // ОБРОБКА ПАРАМЕТРІВ URL
             const urlParams = new URLSearchParams(window.location.search);
             const tab = urlParams.get('tab');
+            const uId = urlParams.get('uId');
 
-            if (tab === 'all-territories') {
-                window.switchTab('all-territories');
-            } else if (tab === 'my-card' || !tab) {
+            if (tab === 'user-details' && uId) {
+                const { data: userData } = await supabase.from('publishers').select('*').eq('id', uId).single();
+                if (userData) {
+                    const fullName = `${userData.last_name || ''} ${userData.name || ''}`.trim();
+                    await showUserDetails(uId, fullName);
+                    hideLoader();
+                    return;
+                }
+            }
+
+            if (tab) {
+                window.switchTab(tab);
+            } else {
                 window.switchTab('my-card');
+            }
+
+            hideLoader();
+        }
+        // Функція для плавного зникнення лоадера
+        function hideLoader() {
+            const loader = document.getElementById('main-loader');
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 300); // Повністю видаляємо з DOM
             }
         }
 
@@ -721,59 +1297,86 @@
         }
 
         // --- СПИСОК ГРУПИ (ВИПРАВЛЕНО: Прізвища на першому місці + захист від апострофів) ---
+        // Глобальна змінна для зберігання даних (кеш)
+        let allUsers = [];
+
         async function loadGroupStats() {
-            // Додаємо select('last_name') та сортування order('last_name')
+            // 1. Отримуємо користувачів
             const { data: users, error: uErr } = await supabase
                 .from('publishers')
-                .select('id, name, last_name')
+                .select('id, name, last_name, group_tag')
                 .order('last_name', { ascending: true });
 
+            // 2. Отримуємо взяті картки
             const { data: parcels, error: pErr } = await supabase
                 .from('parcels')
                 .select('taken_by_id')
                 .eq('status', 'taken');
 
-            if (uErr || pErr) return;
+            if (uErr || pErr) {
+                console.error("Помилка завантаження:", uErr || pErr);
+                return;
+            }
 
+            // 3. Об'єднуємо дані: додаємо кожному користувачу кількість його карток
+            allUsers = users.map(user => ({
+                ...user,
+                parcelCount: parcels.filter(p => p.taken_by_id === user.id).length
+            }));
+
+            // Показуємо "Всі активні" за замовчуванням при завантаженні
+            renderPublishersList('active');
+        }
+
+        // Окрема функція для малювання списку (її можна викликати при натисканні на таби)
+        function renderPublishersList(currentFilter = 'active') {
             const listBody = document.getElementById('publishersList');
             if (!listBody) return;
 
             listBody.innerHTML = '';
 
-            users.forEach(user => {
-                const count = parcels.filter(p => p.taken_by_id === user.id).length;
+            // Фільтруємо масив allUsers
+            const filteredUsers = allUsers.filter(user => {
+                if (currentFilter === 'active') return user.parcelCount > 0;
+                if (currentFilter === 'all') return true; // якщо захочете додати кнопку "Всі"
+
+                // Фільтрація за містом (Липовець, Іллінці, Гості)
+                return user.group_tag === currentFilter;
+            });
+
+            filteredUsers.forEach(user => {
                 const tr = document.createElement('tr');
+                const emoji = typeof getGroupEmoji === 'function' ? getGroupEmoji(user.group_tag) : '';
+                const fullName = `${user.last_name || ''} ${user.name || ''}`;
 
-                const lastName = (user.last_name || '').trim();
-                const firstName = (user.name || '').trim();
-                const fullName = `${lastName} ${firstName}`.trim();
-
-                // Формуємо вигляд: Прізвище (жирним) Ім'я
                 tr.innerHTML = `
-            <td><b>${lastName}</b> ${firstName}</td>
-            <td><span class="badge">${count}</span></td>
+            <td><span>${emoji}</span> <b>${user.last_name || ''}</b> ${user.name || ''}</td>
+            <td><span class="badge">${user.parcelCount}</span></td>
         `;
 
-                // БЕЗПЕЧНИЙ КЛІК: цей метод ніколи не зламається через апостроф '
-                tr.onclick = () => {
-                    showUserDetails(user.id, fullName);
-                };
-
+                tr.onclick = () => showUserDetails(user.id, fullName);
                 listBody.appendChild(tr);
             });
         }
 
         // --- ДЕТАЛІ ВІСНИКА (БЕЗ ЗМІН) ---
         async function showUserDetails(uId, uName) {
+            // 1. Оновлюємо URL, щоб він містив ID вісника
+            const newUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?tab=user-details&uId=${uId}`;
+            window.history.pushState({ path: newUrl }, '', newUrl);
+
+            // Далі ваш старий код без змін...
             window.switchTab('user-details');
             document.getElementById('detailUserName').innerText = uName;
 
+            // Завантаження дільниць
             const { data: parcels } = await supabase.from('parcels').select('*').eq('taken_by_id', uId).eq('status', 'taken');
             renderParcelList(parcels, 'detailUserParcels', false);
 
+            // Завантаження даних профілю
             const { data: userData, error } = await supabase
                 .from('publishers')
-                .select('id, name, login, role, secret_key')
+                .select('*') // Тут важливо, щоб підтягнулися всі поля, включаючи last_name
                 .eq('id', uId)
                 .single();
 
@@ -846,25 +1449,78 @@
             return chars.join('');
         }
 
+        // Глобальна змінна для відстеження поточного користувача в адмінці
+        let currentTargetUserId = null;
+
+        // Функція валідації "на льоту"
+        // Функція валідації "на льоту"
+        function validateUniqueName(nameInputId, lastNameInputId) {
+            const nameInput = document.getElementById(nameInputId);
+            const lastNameInput = document.getElementById(lastNameInputId);
+            if (!nameInput || !lastNameInput) return;
+
+            const firstName = nameInput.value.trim().toLowerCase();
+            if (!firstName) {
+                nameInput.style.borderColor = "";
+                return;
+            }
+
+            // Перевірка: чи є в базі (allUsers) таке ім'я (крім поточного користувача)
+            const nameExists = allUsers.some(u =>
+                u.name.toLowerCase() === firstName && u.id !== currentTargetUserId
+            );
+
+            if (nameExists) {
+                // Якщо ім'я вже зайняте, виділяємо поле і просимо прізвище[cite: 1]
+                nameInput.style.borderColor = "#ff9800";
+                lastNameInput.placeholder = "⚠️ Прізвище обов'язкове (двійник)";
+                lastNameInput.style.backgroundColor = "#fff8e1";
+            } else {
+                nameInput.style.borderColor = "";
+                lastNameInput.placeholder = "Прізвище (необов'язково)";
+                lastNameInput.style.backgroundColor = "";
+            }
+        }
+
         async function initAdminPanel(targetUserId, targetUserData) {
             const currentRole = localStorage.getItem('userRole');
             if (currentRole !== 'admin' && currentRole !== 'super_admin') return;
 
+            // ВАЖЛИВО: Встановлюємо ID для глобальної перевірки імен
+            currentTargetUserId = targetUserId;
+
             document.getElementById('admin-settings-block').style.display = 'block';
 
-            // Елементи управління
+            // Отримуємо елементи
             const roleSelect = document.getElementById('user-role-select');
             const roleCheck = document.getElementById('unlock-role-check');
             const loginInput = document.getElementById('edit-login');
             const loginCheck = document.getElementById('unlock-login-check');
             const genCheck = document.getElementById('unlock-gen-check');
             const genBtn = document.getElementById('gen-pass-btn');
+            const editLastName = document.getElementById('edit-pub-last-name');
+            const editFirstName = document.getElementById('edit-pub-first-name');
+            const editGroupTag = document.getElementById('edit-pub-group-tag');
 
-            // Початкові значення
+            // Очищуємо старі дані перед показом нових
+            document.getElementById('auth-data-display').style.display = 'none';
+            document.getElementById('display-name').innerText = '';
+            document.getElementById('display-pass').innerText = '••••••';
+
+            // Заповнюємо новими даними конкретного вісника
             roleSelect.value = targetUserData.role || 'user';
-            roleSelect.disabled = true; // Завжди вимкнено при відкритті
             loginInput.value = targetUserData.login || '';
+            editLastName.value = targetUserData.last_name || '';
+            editFirstName.value = targetUserData.name || '';
+            editGroupTag.value = targetUserData.group_tag || 'Липовець';
+
+            // Скидаємо чекбокси редагування
+            roleCheck.checked = false;
+            roleSelect.disabled = true;
+            loginCheck.checked = false;
             loginInput.disabled = true;
+            genCheck.checked = false;
+            genBtn.disabled = true;
 
             // Обмеження для Адміна
             if (currentRole === 'admin') {
@@ -885,14 +1541,20 @@
 
             genCheck.onchange = () => {
                 genBtn.disabled = !genCheck.checked;
-                genBtn.style.background = genCheck.checked ? "#cfd8dc" : "#eceff1"; // легка підсвітка кнопки
+                genBtn.style.background = genCheck.checked ? "#cfd8dc" : "#eceff1";
             };
 
-            // Показ даних
-            document.getElementById('show-auth-btn').onclick = () => {
-                document.getElementById('display-name').innerText = targetUserData.name || '';
-                document.getElementById('display-pass').innerText = targetUserData.secret_key || '';
-                document.getElementById('auth-data-display').style.display = 'block';
+            const authToggle = document.getElementById('show-auth-toggle');
+            const authDisplay = document.getElementById('auth-data-display');
+
+            authToggle.onchange = () => {
+                if (authToggle.checked) {
+                    document.getElementById('display-name').innerText = targetUserData.name || '';
+                    document.getElementById('display-pass').innerText = targetUserData.secret_key || '';
+                    authDisplay.style.display = 'block';
+                } else {
+                    authDisplay.style.display = 'none';
+                }
             };
 
             // Генерація пароля
@@ -903,44 +1565,115 @@
 
             // Копіювання
             document.getElementById('copy-auth-btn').onclick = () => {
-                const name = document.getElementById('display-name').innerText;
-                const login = loginInput.value;
+                const nameForLogin = document.getElementById('display-name').innerText;
+                const customLogin = document.getElementById('edit-login').value.trim();
                 const pass = document.getElementById('display-pass').innerText;
-                const text = `Ім'я: ${name}\nЛогін: ${login}\nПароль: ${pass}`;
-                navigator.clipboard.writeText(text).then(() => alert("Скопійовано!"));
+                const finalLogin = customLogin ? customLogin : nameForLogin;
+
+                let textParts = [`Логін: ${finalLogin}`, `Пароль: ${pass}`];
+                navigator.clipboard.writeText(textParts.join('\n')).then(() => {
+                    alert("Дані для входу скопійовано!");
+                });
             };
 
-            // Збереження
+            // Збереження БЕЗПЕКИ (Роль, Логін, Пароль)
             document.getElementById('save-user-settings').onclick = async () => {
                 const updateData = {};
-
-                // Зберігаємо роль, тільки якщо чекбокс був активний
                 if (roleCheck.checked) updateData.role = roleSelect.value;
-
-                // Зберігаємо логін, тільки якщо чекбокс був активний
                 if (loginCheck.checked) updateData.login = loginInput.value;
 
-                // Зберігаємо пароль (secret_key), якщо він був згенерований або змінений
                 const currentDisplayedPass = document.getElementById('display-pass').innerText;
                 if (genCheck.checked && currentDisplayedPass !== targetUserData.secret_key) {
                     updateData.secret_key = currentDisplayedPass;
                 }
 
                 if (Object.keys(updateData).length === 0) {
-                    alert("Нічого не змінено (активуйте чекбокси для редагування)");
+                    alert("Нічого не змінено (активуйте чекбокси)");
                     return;
                 }
 
                 const { error } = await supabase.from('publishers').update(updateData).eq('id', targetUserId);
-
-                if (!error) {
-                    alert("Дані успішно оновлено!");
-                    location.reload();
-                } else {
-                    alert("Помилка: " + error.message);
-                }
+                if (!error) { alert("Дані безпеки оновлено!"); location.reload(); }
             };
+
+            // --- ЛОГІКА ВИДАЛЕННЯ (Ваша оригінальна з поверненням дільниць) ---
+            const deleteBtn = document.getElementById('delete-user-btn');
+            if (deleteBtn) {
+                deleteBtn.onclick = async () => {
+                    const uName = targetUserData.name;
+                    const uLastName = targetUserData.last_name || '';
+
+                    if (!confirm(`Ви впевнені, що хочете видалити вісника ${uLastName} ${uName}?`)) return;
+                    if (!confirm(`УВАГА: Всі дільниці вісника будуть автоматично ЗДАНІ. Продовжити?`)) return;
+
+                    try {
+                        const { data: activeParcels, error: fetchError } = await supabase
+                            .from('parcels').select('id, name').eq('taken_by_id', targetUserId);
+
+                        if (fetchError) throw fetchError;
+
+                        if (activeParcels && activeParcels.length > 0) {
+                            const nowISO = new Date().toISOString().split('T')[0];
+                            for (const parcel of activeParcels) {
+                                await supabase.from('parcels').update({
+                                    status: 'free', taken_by_id: null, taken_by: null,
+                                    taken_at: null, last_returned: nowISO
+                                }).eq('id', parcel.id);
+                            }
+                        }
+
+                        const { error: deleteError } = await supabase.from('publishers').delete().eq('id', targetUserId);
+                        if (deleteError) throw deleteError;
+
+                        alert(`Вісника ${uLastName} ${uName} видалено.`);
+                        window.location.href = window.location.pathname + '?tab=group-cards';
+                    } catch (err) {
+                        alert("Сталася помилка при видаленні: " + err.message);
+                    }
+                };
+            }
+
+            // --- ОНОВЛЕНО: ЛОГІКА ОНОВЛЕННЯ ОСНОВНИХ ДАНИХ (З перевіркою імені) ---
+            const saveMainDataBtn = document.getElementById('save-main-data-btn');
+            if (saveMainDataBtn) {
+                saveMainDataBtn.onclick = async () => {
+                    const newName = editFirstName.value.trim(); // Ім'я першим[cite: 1]
+                    const newLastName = editLastName.value.trim();
+                    const newGroupTag = editGroupTag.value;
+
+                    if (!newName) {
+                        alert("Ім'я не може бути порожнім");
+                        return;
+                    }
+
+                    // Перевірка на конфлікт імен[cite: 1]
+                    const nameExists = allUsers.some(u =>
+                        u.name.toLowerCase() === newName.toLowerCase() && u.id !== targetUserId
+                    );
+
+                    if (nameExists && !newLastName) {
+                        alert(`Вісник з ім'ям "${newName}" вже є в системі. Будь ласка, вкажіть прізвище.`);
+                        return;
+                    }
+
+                    const { error } = await supabase.from('publishers').update({
+                        name: newName,
+                        last_name: newLastName || null, // Якщо пусте — пишемо null[cite: 1]
+                        group_tag: newGroupTag
+                    }).eq('id', targetUserId);
+
+                    if (!error) {
+                        alert("Дані вісника оновлено!");
+                        const activeTab = document.querySelector('.tab-content:not(.hidden)')?.id || 'group-cards';
+                        window.location.href = window.location.pathname + '?tab=' + activeTab;
+                    } else {
+                        alert("Помилка: " + error.message);
+                    }
+                };
+            }
         }
+
+
 
         init();
 
@@ -956,33 +1689,37 @@
             document.getElementById('newPubLastName').value = '';
             document.getElementById('newPubFirstName').value = '';
             document.getElementById('newPubLogin').value = '';
+            const tagSelect = document.getElementById('newPubGroupTag');
+            if (tagSelect) tagSelect.selectedIndex = 0;
         };
 
+        // Оновлена функція збереження нового вісника[cite: 1]
         window.saveNewPublisher = async () => {
-            const lastName = document.getElementById('newPubLastName').value.trim();
             const firstName = document.getElementById('newPubFirstName').value.trim();
+            const lastName = document.getElementById('newPubLastName').value.trim();
             const login = document.getElementById('newPubLogin').value.trim();
+            const groupTag = document.getElementById('newPubGroupTag').value;
 
-            if (!lastName || !firstName) {
-                return alert("Введіть прізвище та ім'я");
+            if (!firstName) return alert("Будь ласка, введіть ім'я");
+
+            // Перевірка на дублікат імені перед записом[cite: 1]
+            const nameExists = allUsers.some(u => u.name.toLowerCase() === firstName.toLowerCase());
+
+            if (nameExists && !lastName) {
+                return alert(`Вісник з ім'ям "${firstName}" вже є. Для збереження обов'язково вкажіть прізвище.`);
             }
 
             const { error } = await supabase.from('publishers').insert([{
-                name: firstName,
-                last_name: lastName,
+                name: firstName, // Ім'я - основний ідентифікатор[cite: 2]
+                last_name: lastName || null,
                 login: login || null,
+                group_tag: groupTag,
                 role: 'user'
             }]);
 
             if (!error) {
-                alert("Вісника додано");
-                closeAddPublisherModal();
-
-                // Отримуємо ID поточної активної вкладки
-                const activeTab = document.querySelector('.tab-content:not(.hidden)')?.id || 'tab-group-cards';
-
-                // Перезавантажуємо сторінку, зберігаючи вкладку в URL
-                window.location.href = window.location.pathname + '?tab=' + activeTab;
+                alert("Вісника додано!");
+                location.reload();
             } else {
                 alert("Помилка: " + error.message);
             }

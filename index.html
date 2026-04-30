@@ -664,6 +664,18 @@
 
         <select id="v-name-select" style="width:100%; padding:10px; margin-bottom:15px; border-radius:6px;"></select>
 
+        <div id="admin-date-edit-container"
+            style="display:none; margin-bottom: 15px; padding: 12px; border: 1px dashed #1565C0; border-radius: 8px; background: #f0f7ff;">
+            <label
+                style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size: 13px; color: #1565C0; margin-bottom: 8px; font-weight: bold;">
+                <input type="checkbox" id="enable-date-edit"
+                    onchange="document.getElementById('custom-take-date').disabled = !this.checked">
+                Змінити дату видачі
+            </label>
+            <input type="date" id="custom-take-date" disabled
+                style="width: stretch; padding: 10px; border-radius: 6px; border: 1px solid #ccc; background: white; font-size: 14px; color: #333;">
+        </div>
+
         <button id="confirm-take-btn" onclick="window.confirmTake()"
             style="width:100%; background:#179133; color:white; border:none; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer;">ПІДТВЕРДИТИ</button>
     </div>
@@ -1335,21 +1347,39 @@
             const bypassCheckbox = document.getElementById('admin-bypass-checkbox');
             const confirmBtn = document.getElementById('confirm-take-btn');
 
+            // --- ДОДАНО: Поле вибору дати для адміна ---
+            // Оновлений блок підготовки дати (замість попереднього)
+            const dateContainer = document.getElementById('admin-date-edit-container');
+            const customDateInput = document.getElementById('custom-take-date');
+            const enableCheck = document.getElementById('enable-date-edit');
+
+            if (dateContainer && window.isAdmin) {
+                dateContainer.style.display = 'block';
+
+                // Встановлюємо сьогодні як дефолт (у форматі YYYY-MM-DD)
+                const today = new Date().toISOString().split('T')[0];
+                customDateInput.value = today;
+
+                // Скидаємо чекбокс та блокуємо інпут
+                if (enableCheck) enableCheck.checked = false;
+                if (customDateInput) customDateInput.disabled = true;
+            } else if (dateContainer) {
+                dateContainer.style.display = 'none';
+            }
+            // -------------------------------------------
+
             // 4. Логіка для КАРАНТИННОЇ дільниці
             if (isQuarantine) {
-                // Розрахунок дати (3 місяці від останнього повернення)
                 const returnDate = parcelData.last_returned ? new Date(parcelData.last_returned) : new Date();
                 const endDate = new Date(returnDate);
                 endDate.setMonth(endDate.getMonth() + 3);
                 const dateStr = endDate.toLocaleDateString('uk-UA');
 
-                // Показуємо текст карантину з датою
                 if (qMsg) {
                     qMsg.innerHTML = `⚠️ Дільниця на карантині до <b>${dateStr}</b>`;
                     qMsg.style.display = 'block';
                 }
 
-                // Блокуємо кнопку відразу при відкритті
                 confirmBtn.disabled = true;
                 confirmBtn.style.opacity = '0.5';
                 confirmBtn.style.cursor = 'not-allowed';
@@ -1357,9 +1387,7 @@
                 if (window.isAdmin) {
                     if (adminBypass) adminBypass.style.display = 'block';
                     if (bypassCheckbox) {
-                        bypassCheckbox.checked = false; // Скидаємо чекбокс
-
-                        // Вішаємо подію: кнопка оживає тільки коли чекбокс активний
+                        bypassCheckbox.checked = false;
                         bypassCheckbox.onchange = function () {
                             confirmBtn.disabled = !this.checked;
                             confirmBtn.style.opacity = this.checked ? '1' : '0.5';
@@ -1368,12 +1396,11 @@
                     }
                 }
             }
-            // 5. Логіка для ЗВИЧАЙНОЇ дільниці (без карантину)
+            // 5. Логіка для ЗВИЧАЙНОЇ дільниці
             else {
                 if (qMsg) qMsg.style.display = 'none';
                 if (adminBypass) adminBypass.style.display = 'none';
 
-                // Активуємо кнопку, бо обмежень немає
                 confirmBtn.disabled = false;
                 confirmBtn.style.opacity = '1';
                 confirmBtn.style.cursor = 'pointer';
@@ -1396,8 +1423,6 @@
 
         // Сама логіка запису в БД
         window.confirmTake = async function (parcelId) {
-            // Якщо ID не передано через аргумент (наприклад, кнопка в HTML має onclick="window.confirmTake()"),
-            // це може спричинити помилку. Але ми призуємо його в startTakeProcess, тож усе ок.
             if (!parcelId) return alert("Помилка: ID дільниці не знайдено.");
 
             const select = document.getElementById('v-name-select');
@@ -1405,7 +1430,7 @@
             const qMsg = document.getElementById('quarantine-msg');
             const isQuarantineVisible = qMsg && qMsg.style.display === 'block';
 
-            // Перевірка на карантин + чекбокс
+            // 1. Перевірка на карантин
             if (isQuarantineVisible && bypassCheckbox && !bypassCheckbox.checked) {
                 alert("Дільниця на карантині! Потрібно поставити відмітку 'Дозволити видачу'.");
                 return;
@@ -1417,7 +1442,26 @@
 
             if (!pubId) return alert("Оберіть вісника!");
 
-            // Вимикаємо кнопку, щоб уникнути подвійного кліку
+            // --- ЛОГІКА ДАТИ ІЗ ЗАХИСТОМ (БЕЗ ДУБЛІКАТІВ) ---
+            let finalTakenAt = new Date();
+            const enableCheck = document.getElementById('enable-date-edit');
+            const customDateInput = document.getElementById('custom-take-date');
+
+            if (enableCheck && enableCheck.checked && customDateInput && customDateInput.value) {
+                let tempDate = new Date(customDateInput.value);
+
+                if (tempDate.getFullYear() < 100) {
+                    tempDate.setFullYear(tempDate.getFullYear() + 2000);
+                }
+
+                const now = new Date();
+                tempDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+                finalTakenAt = tempDate;
+            }
+
+            const isoDate = finalTakenAt.toISOString();
+            // ----------------------------------------------
+
             const confirmBtn = document.getElementById('confirm-take-btn');
             if (confirmBtn) confirmBtn.disabled = true;
 
@@ -1427,7 +1471,7 @@
                     status: 'taken',
                     taken_by_id: pubId,
                     taken_by: pubName,
-                    taken_at: new Date().toISOString()
+                    taken_at: isoDate
                 })
                 .eq('id', parcelId);
 
@@ -1435,11 +1479,10 @@
                 alert("Помилка БД: " + error.message);
                 if (confirmBtn) confirmBtn.disabled = false;
             } else {
-                // Замість location.reload можна зробити тихе оновлення, 
-                // але для простоти reload — найнадійніший варіант
                 location.reload();
             }
         };
+
         window.returnParcel = async (id) => {
             // 1. Знайти дані дільниці для повідомлення
             const item = window.allParcelLayers ? window.allParcelLayers.find(i => i.id === id) : null;

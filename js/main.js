@@ -86,7 +86,7 @@ export function initToolControl(mapInstance) {
                 const btn = L.DomUtil.create('button', '', container);
                 btn.innerHTML = html;
                 btn.title = title;
-                btn.style.cssText = 'width:34px; height:34px; background:white; cursor:pointer; font-size:18px; border:none; display:block; border-bottom:1px solid #ccc;';
+                btn.style.cssText = 'cursor:pointer; border:none; display:block; border-bottom:1px solid #ccc;';
 
                 L.DomEvent.on(btn, 'click', (e) => {
                     L.DomEvent.stopPropagation(e);

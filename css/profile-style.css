@@ -40,7 +40,6 @@
     background: white;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    margin: 10px;
     padding: 15px;
     
     /* КЛЮЧОВІ ПАРАМЕТРИ */
@@ -125,12 +124,6 @@
 .help-tooltip:active .tooltiptext {
     visibility: visible;
     opacity: 1;
-}
-
-.card {
-    overflow-x: auto; /* Дозволяє горизонтальну прокрутку таблиці */
-    overflow-y: visible; /* Намагається зберегти видимість по вертикалі */
-    position: relative;
 }
 
 /* Шапка для мобілок */
