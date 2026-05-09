@@ -678,6 +678,11 @@
 
         <button id="confirm-take-btn" onclick="window.confirmTake()"
             style="width:100%; background:#179133; color:white; border:none; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer;">ПІДТВЕРДИТИ</button>
+        
+        <button onclick="window.UI.toggleModal('takeModal', false)" 
+            style="position: absolute; top: 15px; right: 15px; width: 30px; height: 30px; background: transparent; color: black; border: none; border-radius: 50%; cursor: pointer; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">
+            ✕
+        </button>
     </div>
 
     <div class="legend" style="position: fixed; bottom: 20px; right: 20px; z-index: 10001;">
@@ -839,19 +844,10 @@
         ⬅️ Показати всі дільниці
     </button>
     <script src="js/ui-controller.js"></script>
-    <script type="module">
-        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-
-        const supabaseUrl = "https://modsgjjtwxbdnlycvifp.supabase.co";
-        const supabaseKey = "sb_publishable_dbMty7e93fQwcZWdu_xeqw_3PUPc_3D";
-
-        // ВОТ ЭТА СТРОКА: Привязываем клиент к объекту window
-        window.supabase = createClient(supabaseUrl, supabaseKey);
-
-        console.log("Supabase ініціалізовано як модуль і додано у window");
-    </script>
+    <script src="js/campaign-modal.js"></script>
     <script type="module" src="js/map-styles.js"></script>
     <script type="module">
+        import { supabase } from "./js/config.js";
         import { returnParcel, handleUrlParams } from './js/parcel-logic.js';
 
         import { isAdmin, currentUserId } from './js/main.js';
@@ -1450,12 +1446,15 @@
             if (enableCheck && enableCheck.checked && customDateInput && customDateInput.value) {
                 let tempDate = new Date(customDateInput.value);
 
+                // Виправлено: видалено зайвий тег <script і залишено лише логіку порівняння
                 if (tempDate.getFullYear() < 100) {
                     tempDate.setFullYear(tempDate.getFullYear() + 2000);
                 }
 
                 const now = new Date();
+                // Встановлюємо поточний час для обраної дати
                 tempDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+
                 finalTakenAt = tempDate;
             }
 
@@ -1503,8 +1502,9 @@
                 // 3. ПЕРЕЗАВАНТАЖЕННЯ СТОРІНКИ
                 // Додаємо невелику затримку 500мс, щоб користувач встиг побачити Toast
                 setTimeout(() => {
-                    location.reload();
+                   location.reload();
                 }, 500);
+                
             });
         };
 

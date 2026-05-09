@@ -557,6 +557,7 @@
         </div>
     </div>
 
+    <script src="js/campaign-modal.js"></script>
     <script type="module">
         import { supabase } from "./js/config.js";
         import { isAdmin, currentUserId } from "./js/main.js";
@@ -771,9 +772,10 @@
             }
         };
 
-        // Твій оригінальний saveManualLog (БЕЗ ЗМІН)
         // 1. Оновлена функція збереження (з доданим очищенням)
         window.saveManualLog = async () => {
+            console.log("window.saveManualLog: Початок виконання...");
+
             const pubSelect = document.getElementById('manualPublisherSelect');
             const noPubCheck = document.getElementById('noPublisherCheck');
 
@@ -782,20 +784,24 @@
             let dIn = document.getElementById('manualDateIn').value;
             let dOut = document.getElementById('manualDateOut').value;
 
+            console.log(`window.saveManualLog: Зчитані дані (Вісник: ${publisherName}, Взяття: ${dIn}, Здача: ${dOut})`);
+
             if (noPubCheck && noPubCheck.checked) {
+                console.log("window.saveManualLog: Режим 'Без вісника' активовано.");
                 publisherId = null;
                 publisherName = "--";
             } else if (!publisherId) {
+                console.warn("window.saveManualLog: Зупинка! Вісника не обрано.");
                 showToast("Виберіть вісника", true);
                 return;
             }
 
             if (!dIn || !dOut) {
+                console.warn("window.saveManualLog: Зупинка! Відсутні дати dIn або dOut.");
                 showToast("Заповніть обидві дати", true);
                 return;
             }
 
-            // Твоя оригінальна логіка виправлення року
             const fixYear = (s) => {
                 let [y, m, d] = s.split('-');
                 return parseInt(y) < 1000 ? `20${y.slice(-2)}-${m}-${d}` : s;
@@ -804,7 +810,9 @@
             dOut = fixYear(dOut);
 
             const durationText = getDurationText(dIn, dOut);
+            console.log(`window.saveManualLog: Тривалість — ${durationText}`);
 
+            console.log("window.saveManualLog: Спроба запису в territory_logs...");
             const { error: logError } = await supabase.from('territory_logs').insert([{
                 parcel_id: parcelId,
                 publisher_id: publisherId,
@@ -815,23 +823,26 @@
             }]);
 
             if (logError) {
+                console.error("window.saveManualLog: Помилка вставки в territory_logs:", logError);
                 showToast("Помилка логів", true);
                 return;
             }
 
-            // Твоя логіка оновлення статусу дільниці (БЕЗ ЗМІН)
+            console.log("window.saveManualLog: Перевірка оновлення статусу в parcels...");
             const { data: currentParcel } = await supabase.from('parcels').select('last_returned').eq('id', parcelId).single();
             const dbReturnDate = currentParcel?.last_returned ? new Date(currentParcel.last_returned.split('T')[0]) : null;
             const inputReturnDate = new Date(dOut);
             let needsReturnUpdate = (!dbReturnDate || inputReturnDate >= dbReturnDate);
 
             if (needsReturnUpdate) {
+                console.log("window.saveManualLog: Оновлення last_returned у таблиці parcels.");
                 await supabase.from('parcels').update({ last_returned: dOut, status: 'free' }).eq('id', parcelId);
+            } else {
+                console.log("window.saveManualLog: Оновлення parcels не потрібне.");
             }
 
             showToast("Запис додано до архіву");
 
-            // --- ОЧИЩЕННЯ ПОЛІВ ПІСЛЯ УСПІХУ ---
             document.getElementById('manualDateIn').value = '';
             document.getElementById('manualDateOut').value = '';
             if (noPubCheck) noPubCheck.checked = false;
@@ -841,6 +852,7 @@
             hideManualLogModal();
             await loadParcelInfo();
             await loadHistory();
+            console.log("window.saveManualLog: Виконання успішно завершено.");
         };
 
 
@@ -920,14 +932,22 @@
         async function loadParcelInfo() {
             const { data: p } = await supabase.from('parcels').select('*').eq('id', parcelId).single();
             if (!p) return;
-            document.getElementById('parcelTitle').innerText = `Дільниця №${p.name}`;
+
+            // ПРАВКА: Перевіряємо категорію. Якщо "Село" — не додаємо "№"
+            const prefix = p.category === 'Село' ? ': ' : ' №';
+            document.getElementById('parcelTitle').innerText = `Дільниця${prefix}${p.name}`;
+
             if (p.geom) initMiniMap(p.geom);
             document.getElementById('currentStatus').innerHTML = formatStatusHTML(p);
+
             const returnBtn = document.getElementById('adminReturnBtn');
             if (p.status === 'taken' && returnBtn && isAdmin) {
                 returnBtn.style.display = 'inline-block';
                 returnBtn.onclick = () => window.returnParcel(p.id, p.name);
-            } else if (returnBtn) returnBtn.style.display = 'none';
+            } else if (returnBtn) {
+                returnBtn.style.display = 'none';
+            }
+
             if (isAdmin) {
                 document.getElementById('lastProcessedDate').value = p.last_processed || '';
                 document.getElementById('sectorTypeSelect').value = p.category || 'Приватний сектор';
@@ -1208,9 +1228,15 @@
         };
 
         window.returnParcel = (id, name) => {
+            console.log(`window.returnParcel: Виклик для дільниці: ${name} (ID: ${id})`);
+
             returnParcel(id, name, supabase, async () => {
+                console.log(`window.returnParcel [callback]: Дільницю ${name} успішно повернено. Оновлення даних...`);
+
                 await loadParcelInfo();
                 await loadHistory();
+
+                console.log(`window.returnParcel: Оновлення для ${name} завершено.`);
             });
         };
 
@@ -1232,19 +1258,25 @@
             const dateOut = document.getElementById('manualDateOut');
 
             if (dateIn && dateOut) {
+                console.log("DOMContentLoaded: Елементи дат знайдені. Обробники подій активовані.");
+
                 dateIn.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') {
+                        console.log("DOMContentLoaded [dateIn]: Натиснуто Enter. Перехід до manualDateOut.");
                         e.preventDefault();
-                        dateOut.focus(); // Перехід на другу дату
+                        dateOut.focus();
                     }
                 });
 
                 dateOut.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') {
+                        console.log("DOMContentLoaded [dateOut]: Натиснуто Enter. Виклик saveManualLog().");
                         e.preventDefault();
-                        window.saveManualLog(); // Збереження
+                        window.saveManualLog();
                     }
                 });
+            } else {
+                console.warn("DOMContentLoaded: Попередження! Елементи manualDateIn або manualDateOut не знайдені в DOM.");
             }
         });
 

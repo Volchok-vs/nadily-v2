@@ -1,0 +1,4242 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Менеджер Територій</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --sidebar-width: 250px;
+            --primary: #007bff;
+            --bg: #f4f7f6;
+        }
+
+        /* Приховуємо h1 в мобільній версії, щоб уникнути дублювання з мобільною шапкою */
+        @media (max-width: 768px) {
+            .tab-content h1 {
+                display: none !important;
+            }
+        }
+
+        /* Стилі для звіту територій на руках (адаптовано з report.html) */
+        .on-hands-card {
+            transition: all 0.3s ease;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .on-hands-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .on-hands-card .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .on-hands-card .card-number {
+            background: #007bff;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: bold;
+        }
+
+        .on-hands-card .card-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .on-hands-card .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .on-hands-card .info-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .on-hands-card .info-value {
+            font-size: 0.875rem;
+            color: #1f2937;
+            font-weight: 500;
+        }
+
+        .on-hands-card .card-actions {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .on-hands-card .btn-details {
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: background 0.2s;
+            display: inline-block;
+        }
+
+        .on-hands-card .btn-details:hover {
+            background: #0056b3;
+        }
+
+        .on-hands-card .days-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .on-hands-card .days-low {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .on-hands-card .days-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .on-hands-card .days-high {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            margin: 0;
+            display: flex;
+            height: 100dvh;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        /* Бокове меню */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+        }
+
+        .sidebar h2 {
+            padding: 0 20px;
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            color: #ecf0f1;
+        }
+
+        .nav-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: #bdc3c7;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: #34495e;
+            color: white;
+        }
+
+        .nav-item i {
+            margin-right: 10px;
+        }
+
+        .logout-btn {
+            margin-top: 20px;
+            color: #e74c3c;
+            border-top: 1px solid #34495e;
+        }
+
+        /* Контентна область */
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        /* Таблиці та списки */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+            cursor: pointer;
+        }
+
+        .badge {
+            background: #eee;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .tab-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .tab-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .tab-header .btn-add {
+                align-self: flex-end;
+                margin-right: 15px;
+            }
+        }
+
+        .tab-header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .btn-add {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: background 0.2s;
+        }
+
+        .btn-add:hover {
+            background: #218838;
+        }
+
+        /* Таби */
+        .origin-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 0;
+            padding-left: 10px;
+        }
+
+        .origin-tab-btn {
+            padding: 10px 18px;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            background: #eaeeef;
+            border-radius: 10px 10px 0 0;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #555;
+            transition: all 0.2s;
+            position: relative;
+            z-index: 1;
+        }
+
+        .origin-tab-btn.active {
+            background: white;
+            color: #007bff;
+            font-weight: bold;
+            z-index: 3;
+            margin-bottom: -1px;
+            padding-bottom: 11px;
+            border-color: #ddd;
+        }
+
+
+
+        /* Картки територій */
+        .territory-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #e5e7eb;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .territory-card:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .territory-card h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+
+        .territory-card-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .territory-badge {
+            background: #007bff;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        /* Повноекранний лоадер */
+        #main-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .content-placeholder {
+            background: white;
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            color: #999;
+            font-size: 1.1rem;
+        }
+
+
+        .campaign-info {
+            flex: 1;
+        }
+
+        .campaign-info h4 {
+            margin: 0 0 8px 0;
+            color: #2c3e50;
+            font-size: 1rem;
+        }
+
+        .campaign-dates {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .campaign-dates strong {
+            color: #007bff;
+        }
+
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+
+        .btn-delete:hover {
+            background: #c82333;
+        }
+
+        .no-campaigns {
+            text-align: center;
+            color: #999;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px dashed #ddd;
+        }
+
+        /* СТИЛІ ДЛЯ ЗВІТУ (з report1.html) */
+        .report-section {
+            margin-bottom: 2.5rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .report-table th,
+        .report-table td {
+            border: 1px solid #e5e7eb;
+            padding: 10px;
+            text-align: left;
+            font-size: 0.875rem;
+        }
+
+        .report-table th {
+            background-color: #f3f4f6;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .report-table th.sort-asc::after {
+            content: '↑';
+            margin-left: 5px;
+        }
+
+        .report-table th.sort-desc::after {
+            content: '↓';
+            margin-left: 5px;
+        }
+
+        .report-table tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+
+        .report-table tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        .report-table-wrapper {
+            overflow-x: auto;
+            width: 100%;
+        }
+
+        .report-table-scrollable .report-table {
+            min-width: 650px;
+        }
+
+        .input-days,
+        .filter-select,
+        .input-date,
+        .input-text {
+            width: 150px;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+
+        .filter-row {
+            gap: 5rem;
+        }
+
+        .filter-row > div {
+            align-items: stretch;
+        }
+
+        .summary {
+            background-color: #e0f2fe;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.875rem;
+        }
+
+        /* Нові стилі для фільтрів */
+        .filter-row {
+            background: #f8fafc;
+            padding: 1.25rem;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .filter-actions {
+            display: flex;
+            justify-content: flex-end;
+            padding-top: 1.5rem;
+            border-top: 2px solid #e5e7eb;
+            margin-top: 0.5rem;
+        }
+
+        .filter-actions button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+        }
+
+        /* Візуальний роздільник для дат */
+        .date-separator {
+            color: #9ca3af;
+            font-weight: 300;
+            margin: 0 0.5rem;
+        }
+
+        /* Стилі для кампаній */
+        .campaign-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .campaign-card:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .campaign-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 1rem;
+        }
+
+        .campaign-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-edit-campaign {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: all 0.2s;
+            opacity: 0.7;
+        }
+
+        .btn-edit-campaign:hover {
+            background: #f3f4f6;
+        }
+
+        /* Стилі для таблиці історії кампаній */
+        .campaign-history-wrapper {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .campaign-history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .campaign-history-table th {
+            background: #f8fafc;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+            font-size: 14px;
+        }
+
+        .campaign-history-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 14px;
+            vertical-align: middle;
+        }
+
+        .campaign-history-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .campaign-history-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .btn-delete {
+            background: none !important;
+            color: red !important;
+            border: none !important;
+            padding: 0 !important;
+            width: auto !important;
+            cursor: pointer !important;
+            font-size: 16px !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .btn-delete:hover {
+            opacity: 0.7;
+            transform: scale(1.1);
+        }
+
+        /* Стилі для історії кампаній */
+        .campaign-history-header {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .campaign-history-header:hover {
+            background: #e9ecef;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .campaign-history-header h3 {
+            margin: 0;
+            color: #333;
+            font-size: 16px;
+        }
+
+        #historyToggleIcon {
+            font-size: 14px;
+            color: #666;
+            transition: transform 0.3s ease;
+        }
+
+        #historyToggleIcon.rotated {
+            transform: rotate(90deg);
+        }
+
+        #campaign-history-content {
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        /* Стилі для налаштувань відображення імені */
+        .name-settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .current-user-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            padding: 8px 12px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 450px) {
+            .name-settings-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        #historyLoadingIndicator {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast-notification {
+            position: fixed;
+            bottom: 50px;
+            left: 55px;
+            background: #28a746;
+            border: 1px solid #218838;
+            color: #333;
+            padding: 12px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 9999;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .toast-notification.error {
+            background: #dc3545;
+        }
+
+        /* Стилі для блоку налаштувань відображення імені */
+        .settings-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .settings-label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .radio-option:hover {
+            background: #e9ecef;
+            border-color: #dee2e6;
+        }
+
+        .radio-option input[type="radio"] {
+            margin-right: 10px;
+            accent-color: #007bff;
+        }
+
+        .radio-option span {
+            font-size: 14px;
+            color: #495057;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .campaign-header h4 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .campaign-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border: none;
+            background: inherit;
+            color: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .campaign-status:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .campaign-status:disabled {
+            cursor: default;
+            opacity: 0.7;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .campaign-status.active,
+        .campaign-status.активна {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .campaign-status.planned,
+        .campaign-status.плануеться {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .campaign-status.completed,
+        .campaign-status.завершена {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .campaign-status.not-created,
+        .campaign-status.не-створено {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .campaign-info p {
+            margin: 0.5rem 0;
+            color: #4b5563;
+            line-height: 1.5;
+        }
+
+        .campaign-controls {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 1.2rem;
+            height: 1.2rem;
+            cursor: pointer;
+        }
+
+        .checkbox-wrapper label {
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #374151;
+        }
+
+        .date-controls {
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .date-input-group {
+            margin-bottom: 1rem;
+        }
+
+        .date-input-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .date-input-group label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .date-input-group input,
+        .date-input-group textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+
+        .additional-campaigns {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid #e5e7eb;
+        }
+
+        .additional-campaigns h4 {
+            margin-bottom: 1rem;
+            color: #1f2937;
+        }
+
+        #custom-campaigns-list {
+            margin-bottom: 1rem;
+        }
+
+        /* Стилі для модального вікна */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 0.25rem;
+        }
+
+        .modal-close:hover {
+            color: #1f2937;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: stretch;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            padding: 1.5rem;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+
+        .btn-cancel {
+            background: #6b7280;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .btn-cancel:hover {
+            background: #4b5563;
+        }
+
+        .btn-activate {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+            margin-top: 0.5rem;
+        }
+
+        .btn-activate:hover {
+            background: #059669;
+        }
+
+        .btn-activate:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        /* Мобільні стилі для кампаній */
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 1rem;
+            }
+
+            .modal-footer {
+                flex-direction: column;
+            }
+
+            .modal-footer button {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 450px) {
+            .card {
+                text-align: center;
+            }
+
+            .campaign-card {
+                padding: 1rem;
+                margin-bottom: 1rem;
+            }
+
+            .campaign-header {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .campaign-info {
+                text-align: center;
+            }
+        }
+
+        #progress-container,
+        .progress-container {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 0.875rem;
+            border: 1px solid #e5e7eb;
+            display: none;
+        }
+
+        #progress-bar,
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        #progress-fill,
+        .progress-fill {
+            height: 100%;
+            background: #4caf50;
+            width: 0;
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 640px) {
+            .report-container {
+                padding: 1rem;
+            }
+
+            .report-section {
+                padding: 1rem;
+            }
+
+            .report-table th,
+            .report-table td {
+                font-size: 0.75rem;
+                padding: 8px;
+            }
+
+            .input-days,
+            .input-date,
+            .input-text {
+                        width: stretch;
+                font-size: 0.875rem;
+            }
+
+            .summary {
+                font-size: 0.875rem;
+                padding: 0.75rem;
+            }
+
+            #progress-container {
+                padding: 0.75rem;
+            }
+
+            #progress-bar {
+                height: 16px;
+            }
+
+            #progress-text {
+                font-size: 0.75rem;
+            }
+
+            /* Мобільні стилі для фільтрів */
+            .filter-row {
+                padding: 1rem;
+                margin-bottom: 1rem;
+            }
+
+            .filter-row .flex {
+                flex-direction: column;
+                gap: 1.25rem;
+            }
+
+            .filter-row .flex>div {
+                width: 100%;
+            }
+
+            .filter-actions {
+                justify-content: center;
+                padding-top: 1rem;
+            }
+
+            .filter-actions button {
+                width: 100%;
+                justify-content: center;
+                max-width: 300px;
+            }
+        }
+
+        /* Семантичні класи для фільтрів */
+        .filter-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .date-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .filter-container {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: stretch;
+            gap: 2rem;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .filter-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            white-space: nowrap;
+            min-width: fit-content;
+        }
+
+        .filter-separator {
+            color: #9ca3af;
+            margin-left: 0.5rem;
+            margin-right: 0.5rem;
+        }
+
+        /* Семантичні класи для розділу Опрацювання територій */
+        .section-title-lg {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-text {
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            color: #4b5563;
+        }
+
+        .summary-text {
+            color: #374151;
+        }
+
+        .section-title-xl {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 1rem;
+        }
+
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .filter-bar > * + * {
+            margin-left: 1rem;
+        }
+
+        .filter-label-sm {
+            font-size: 0.875rem;
+            color: #374151;
+        }
+
+        @media (max-width: 650px) {
+            .filter-bar {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .filter-bar > * + * {
+                margin-left: 0;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="css/profile-style.css" />
+    <link rel="stylesheet" href="css/responsive.css">
+</head>
+
+<body>
+    <div id="main-loader">
+        <div class="spinner"></div>
+    </div>
+    <div class="mobile-header">
+        <button class="mobile-nav-toggle-new" onclick="toggleSidebar()">☰</button>
+        <div class="mobile-title" id="mobile-title">🌍 Території</div>
+    </div>
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar">
+        <h2>🗺️ Адмін-панель</h2>
+        <div class="nav-item active" onclick="switchTab('territories')">🌍 Території</div>
+        <div class="nav-item" onclick="switchTab('processing')">📊 Опрацювання</div>
+        <div class="nav-item" onclick="switchTab('analysis')">📈 Аналіз Територій</div>
+        <div class="nav-item" onclick="switchTab('on-hands')">👐 На руках</div>
+        <div class="nav-item" onclick="switchTab('export-import')">💾 Експорт та Імпорт</div>
+        <div class="nav-item" onclick="switchTab('settings')">⚙️ Додаткові налаштування</div>
+        <a href="profile.html" class="nav-item">👤 Назад до Профілю</a>
+        <div class="nav-item logout-btn" onclick="logout()">🏃 Вийти</div>
+    </div>
+
+    <div class="main-content">
+        <!-- ТАБ: ТЕРИТОРІЇ -->
+        <div id="tab-territories" class="tab-content">
+            <div class="tab-header">
+                <h1>🌍 Території</h1>
+                <button onclick="openAddTerritoryModal()" class="btn-add">+ Додати</button>
+            </div>
+
+            <div class="origin-tabs">
+                <button onclick="switchTerritoryFilter('city')" class="origin-tab-btn active">🏙️ Місто</button>
+                <button onclick="switchTerritoryFilter('village')" class="origin-tab-btn">🏡 Села</button>
+            </div>
+
+            <div class="card">
+                <div id="territoriesList"></div>
+            </div>
+        </div>
+
+        <!-- ТАБ: ОПРАЦЮВАННЯ (ЗВІТ) -->
+        <div id="tab-processing" class="tab-content hidden">
+            <h1>📊 Опрацювання територій</h1>
+            <div id="progress-container" class="bg-white rounded-lg shadow-sm">
+                <h2 class="section-title-lg">Завантаження звіту...</h2>
+                <div id="progress-bar">
+                    <div id="progress-fill"></div>
+                </div>
+                <p id="progress-text" class="progress-text">0%</p>
+            </div>
+
+            <div class="report-section">
+                <div class="summary-block">
+                    <p class="summary-text">Територій без записів: <span id="no-records-count">0</span></p>
+                </div>
+                <h2 class="section-title-xl">Території без записів</h2>
+                <div class="filter-bar">
+                    <button id="no-records-search-btn"
+                        class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Пошук</button>
+                    <select id="no-records-type-filter" class="filter-select">
+                        <option value="">Усі типи</option>
+                        <option value="Приватний сектор">Приватний сектор</option>
+                        <option value="Поверхівки">Поверхівки</option>
+                        <option value="Змішані">Змішані</option>
+                        <option value="Село">Села</option>
+                    </select>
+                </div>
+                <div class="report-table-wrapper">
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="number">Номер території</th>
+                                <th data-sort="type">Тип території</th>
+                                <th>Дія</th>
+                            </tr>
+                        </thead>
+                        <tbody id="no-records-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="report-section">
+                <div class="summary-block">
+                    <p class="summary-text">Опрацьованих територій: <span id="processed-count">0</span></p>
+                </div>
+                <h2 class="section-title-xl">Опрацьовані території</h2>
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <label for="days-input" class="filter-label-sm">Мінімальна кількість днів з опрацювання:</label>
+                        <input type="number" id="days-input" class="input-days" min="0" value="0">
+                    </div>
+                    <div class="filter-group">
+                        <select id="processed-type-filter" class="filter-select">
+                            <option value="">Усі типи</option>
+                            <option value="Приватний сектор">Приватний сектор</option>
+                            <option value="Поверхівки">Поверхівки</option>
+                            <option value="Змішані">Змішані</option>
+                            <option value="Село">Села</option>
+                        </select>
+                        <button id="processed-search-btn"
+                            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Пошук</button>
+                    </div>
+                </div>
+                <div class="report-table-wrapper report-table-scrollable">
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="number">№ тер.</th>
+                                <th data-sort="type">Тип території</th>
+                                <th data-sort="date">Дата опрацювання</th>
+                                <th data-sort="days" class="sort-desc">Днів з опрацювання ↓</th>
+                                <th>Дія</th>
+                            </tr>
+                        </thead>
+                        <tbody id="processed-table"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ТАБ: АНАЛІЗ ТЕРИТОРІЙ -->
+        <div id="tab-analysis" class="tab-content hidden">
+            <h1>📈 Аналіз Територій за Період</h1>
+
+            <div class="report-section">
+                <!-- Рядок дат -->
+                <div class="filter-row filter-section">
+                    <div class="date-group">
+                        <label for="period-from" class="filter-label">Від:</label>
+                        <input type="date" id="period-from" class="input-date">
+                        <span class="filter-separator">—</span>
+                        <label for="period-to" class="filter-label">До:</label>
+                        <input type="date" id="period-to" class="input-date">
+                    </div>
+                </div>
+
+                <!-- Рядок фільтрів -->
+                <div class="filter-row filter-section">
+                    <div class="filter-container">
+                        <div class="filter-group">
+                            <label for="period-type-filter" class="filter-label">Тип території:</label>
+                            <select id="period-type-filter" class="filter-select">
+                                <option value="">Усі типи</option>
+                                <option value="Приватний сектор">Приватний сектор</option>
+                                <option value="Поверхівки">Поверхівки</option>
+                                <option value="Змішані">Змішані</option>
+                                <option value="Село">Село</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="period-count-filter" class="filter-label">Кількість разів:</label>
+                            <input type="number" id="period-count-filter" class="input-days" min="0" placeholder="Всі">
+                        </div>
+                        <div class="filter-group">
+                            <label for="period-notes-filter" class="filter-label">Пошук у нотатках:</label>
+                            <input type="text" id="period-notes-filter" class="input-text" placeholder="Введіть текст">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Кнопка пошуку -->
+                <div class="filter-actions pt-4">
+                    <button id="period-search-btn"
+                        class="bg-blue-500 text-white px-8 py-3 rounded-lg hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg">
+                        🔍 Пошук
+                    </button>
+                </div>
+            </div>
+
+            <div id="period-progress-container" class="progress-container">
+                <div class="mb-2">
+                    <div id="period-progress-bar" class="progress-bar">
+                        <div id="period-progress-fill" class="progress-fill"></div>
+                    </div>
+                </div>
+                <div id="period-progress-text" class="text-center font-semibold text-gray-700">Прогрес: 0%</div>
+            </div>
+
+            <div id="period-summary" class="summary-block">
+                <p class="text-gray-700">Знайдено територій: <span id="period-count">0</span></p>
+            </div>
+
+            <div id="period-report" class="report-section">
+                <div class="report-table-wrapper">
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                            <th data-sort="number">Номер території</th>
+                            <th data-sort="type">Тип території</th>
+                            <th data-sort="count" class="sort-desc">Кількість разів ↓</th>
+                            <th data-sort="notes">Додатково (нотатки)</th>
+                            <th>Дія</th>
+                        </tr>
+                    </thead>
+                    <tbody id="period-table">
+                        <tr>
+                            <td colspan="5" class="text-center text-gray-600">Очікування пошуку...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        </div>
+
+        <!-- ТАБ: ТЕРИТОРІЯ НА РУКАХ -->
+        <div id="tab-on-hands" class="tab-content hidden">
+            <h1>👐 Території на Руках</h1>
+
+            <div class="report-section">
+                <h3 class="text-lg font-semibold mb-4">Фільтр звіту</h3>
+                <div class="flex items-center mb-4 space-x-4">
+                    <div>
+                        <label class="text-sm text-gray-700">Території на руках більше (днів):</label>
+                        <input id="on-hands-days-threshold" type="number" min="0" placeholder="0" class="input-days">
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-700">Фільтр за Вісником:</label>
+                        <input id="on-hands-publisher-filter" type="text" placeholder="Ім'я вісника"
+                            class="filter-select" style="width: 150px;">
+                    </div>
+                    <button id="generate-on-hands-report"
+                        class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                        Пошук
+                    </button>
+                </div>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <button id="sort-on-hands-publisher"
+                        class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600">
+                        Сортувати за Вісником (А-Я)
+                    </button>
+                    <button id="sort-on-hands-number"
+                        class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600">
+                        Сортувати за Номером
+                    </button>
+                    <button id="sort-on-hands-days"
+                        class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600">
+                        Сортувати за Днями
+                    </button>
+                </div>
+            </div>
+
+            <div id="on-hands-progress-container" class="progress-container">
+                <div class="mb-2">
+                    <div id="on-hands-progress-bar">
+                        <div id="on-hands-progress-fill"></div>
+                    </div>
+                </div>
+                <div id="on-hands-progress-text">Прогрес: 0%</div>
+            </div>
+
+            <div id="on-hands-summary" class="summary-block">
+                <p class="text-gray-700">Загальна кількість територій на руках: <span id="on-hands-count">0</span></p>
+            </div>
+
+            <div id="on-hands-report" class="report-section">
+                <p class="text-gray-600">Очікування пошуку...</p>
+            </div>
+        </div>
+
+        <!-- ТАБ: ЕКСПОРТ ТА ІМПОРТ -->
+        <div id="tab-export-import" class="tab-content hidden">
+            <h1>💾 Експорт та Імпорт</h1>
+            <div class="content-placeholder">
+                💾 Розділ буде заповнено згодом...
+            </div>
+        </div>
+
+        <!-- ТАБ: ДОДАТКОВІ НАЛАШТУВАННЯ -->
+        <div id="tab-settings" class="tab-content hidden">
+            <div class="tab-header">
+                <h1>⚙️ Додаткові Налаштування</h1>
+            </div>
+
+            <div class="card">
+                <h3>📅 Управління Кампаніями</h3>
+
+                <!-- Контейнер для Спеціальної кампанії -->
+                <div class="campaign-card" id="special-campaign">
+                    <div class="campaign-header">
+                        <h4>🍂 Спеціальна кампанія</h4>
+                        <div class="campaign-header-actions">
+                            <button class="campaign-status" id="special-status"
+                                onclick="handleStatusClick('Спеціальна кампанія')">Планується</button>
+                        </div>
+                    </div>
+                    <div class="campaign-info" id="special-info">
+                        <!-- Динамічні дані будуть вставлені сюди -->
+                        <div id="special-dates"></div>
+                        <div id="special-period"></div>
+                        <div id="special-description"></div>
+                        <div class="campaign-controls">
+                            <button class="btn-activate" id="special-activate"
+                                onclick="activateCampaign('Спеціальна кампанія')">Активувати</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Контейнер для Запрошення на вечір спомину -->
+                <div class="campaign-card" id="memorial-campaign">
+                    <div class="campaign-header">
+                        <h4>🕯️ Запрошення на вечір спомину</h4>
+                        <div class="campaign-header-actions">
+                            <button class="campaign-status" id="memorial-status"
+                                onclick="handleStatusClick('Запрошення на вечір спомину')">Планується</button>
+                        </div>
+                    </div>
+                    <div class="campaign-info" id="memorial-info">
+                        <!-- Динамічні дані будуть вставлені сюди -->
+                        <div id="memorial-dates"></div>
+                        <div id="memorial-period"></div>
+                        <div id="memorial-description"></div>
+                        <div class="campaign-controls">
+                            <button class="btn-activate" id="memorial-activate"
+                                onclick="activateCampaign('Запрошення на вечір спомину')">Активувати</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Контейнер для Запрошення на конгрес -->
+                <div class="campaign-card" id="congress-campaign">
+                    <div class="campaign-header">
+                        <h4>🎉 Запрошення на конгрес</h4>
+                        <div class="campaign-header-actions">
+                            <button class="campaign-status" id="congress-status"
+                                onclick="handleStatusClick('Запрошення на конгрес')">Планується</button>
+                        </div>
+                    </div>
+                    <div class="campaign-info" id="congress-info">
+                        <!-- Динамічні дані будуть вставлені сюди -->
+                        <div id="congress-dates"></div>
+                        <div id="congress-period"></div>
+                        <div id="congress-description"></div>
+                        <div class="campaign-controls">
+                            <button class="btn-activate" id="congress-activate"
+                                onclick="activateCampaign('Запрошення на конгрес')">Активувати</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Таблиця історії кампаній -->
+                <div id="campaign-history-container" style="margin-top: 30px;">
+                    <div class="campaign-history-header" onclick="toggleCampaignHistory()">
+                        <h3>📋 Історія кампаній</h3>
+                        <span id="historyToggleIcon">▶</span>
+                    </div>
+                    <div id="campaign-history-content" style="display: none;">
+                        <div id="historyLoadingIndicator" style="display: none;">
+                            <div class="spinner"></div>
+                            <div>Завантаження...</div>
+                        </div>
+                        <div class="campaign-history-wrapper">
+                            <table class="campaign-history-table" id="campaignHistoryTable">
+                                <thead>
+                                    <tr>
+                                        <th>Назва кампанії</th>
+                                        <th>Період</th>
+                                        <th>Дія</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="campaignHistoryBody">
+                                    <!-- Дані будуть завантажені з Supabase -->
+                                </tbody>
+                            </table>
+                            <div id="noHistoryMessage" style="display: none;">
+                                Немає записів в історії кампаній
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Блок налаштувань відображення імені -->
+                <div class="card" style="margin-top: 30px;">
+                    <h3>👤 Відображення Імені</h3>
+                    
+                    <div class="name-settings-grid">
+                        <!-- Перший стовпчик: ім'я та порядок -->
+                        <div class="settings-section">
+                            <label class="settings-label">Ваше ім'я:</label>
+                            <div id="currentUserName" class="current-user-name">Завантаження...</div>
+                            
+                            <label class="settings-label">Порядок відображення:</label>
+                            <div class="radio-group">
+                                <label class="radio-option">
+                                    <input type="radio" name="nameOrder" value="firstNameLastName" checked>
+                                    <span>Ім'я Прізвище</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="nameOrder" value="lastNameFirstName">
+                                    <span>Прізвище Ім'я</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Другий стовпчик: скорочення -->
+                        <div class="settings-section">
+                            <label class="settings-label">Що скорочувати:</label>
+                            <div class="radio-group">
+                                <label class="radio-option">
+                                    <input type="radio" name="shorteningTarget" value="none" checked>
+                                    <span>Без скорочень</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="shorteningTarget" value="firstName">
+                                    <span>Скорочувати Ім'я</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="shorteningTarget" value="lastName">
+                                    <span>Скорочувати Прізвище</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальне вікно підтвердження видалення -->
+    <div id="deleteConfirmModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Підтвердження видалення</h3>
+                <button class="modal-close" onclick="closeDeleteModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>Ви впевнені, що хочете видалити запис "<span id="deleteCampaignName"></span>"?</p>
+                <p style="color: #e74c3c; font-weight: bold;">Цю дію неможливо скасувати!</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-danger" onclick="confirmDelete()">Видалити</button>
+                <button class="btn-secondary" onclick="closeDeleteModal()">Скасувати</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальне вікно для редагування/додавання кампаній -->
+    <div id="campaignModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Редагування кампанії</h3>
+                <button class="modal-close" onclick="closeCampaignModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <!-- Динамічні поля залежно від типу кампанії -->
+                <div id="modalFields"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="saveCampaign()">Зберегти</button>
+                <button class="btn-secondary" onclick="closeCampaignModal()">Скасувати</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { supabase } from "./js/config.js";
+
+        const userId = localStorage.getItem('userId');
+        const userRole = localStorage.getItem('userRole');
+
+        if (!userId || (userRole !== 'admin' && userRole !== 'super_admin')) {
+            window.location.href = 'profile.html';
+        }
+
+        // Глобальна змінна для фільтру територій
+        let currentTerritoryFilter = 'city';
+
+        // Глобальні змінні для звіту територій на руках
+        let onHandsResults = [];
+        let onHandsPublishers = new Map();
+
+        // Функція оновлення мобільного заголовка
+        function updateMobileTitle(tabName) {
+            const mobileTitle = document.getElementById('mobile-title');
+            const titles = {
+                'territories': '🌍 Території',
+                'processing': '📊 Опрацювання',
+                'analysis': '📈 Аналіз Територій',
+                'on-hands': '👐 Території на Руках',
+                'export-import': '💾 Експорт та Імпорт',
+                'settings': '⚙️ Додаткові Налаштування'
+            };
+
+            if (mobileTitle && titles[tabName]) {
+                mobileTitle.textContent = titles[tabName];
+            }
+        }
+
+        // Перемикання вкладок
+        window.switchTab = (tabName) => {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+            const activeTab = document.getElementById('tab-' + tabName);
+            if (activeTab) {
+                activeTab.classList.remove('hidden');
+            }
+
+            // Активуємо відповідний пункт меню
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                if (item.getAttribute('onclick') && item.getAttribute('onclick').includes(`'${tabName}'`)) {
+                    item.classList.add('active');
+                }
+            });
+
+            // Оновлюємо мобільний заголовок
+            updateMobileTitle(tabName);
+
+            // Зберігаємо поточний таб в localStorage
+            localStorage.setItem('currentAdminTab', tabName);
+
+            // Закриваємо бокову панель на мобільних
+            if (window.innerWidth <= 768) {
+                const sidebar = document.querySelector('.sidebar');
+                const overlay = document.querySelector('.sidebar-overlay');
+                if (sidebar && sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                    if (overlay) overlay.classList.remove('active');
+                }
+            }
+
+            // Завантажуємо дані для конкретної вкладки
+            if (tabName === 'territories') {
+                loadTerritories();
+            } else if (tabName === 'settings') {
+                loadCampaigns();
+            }
+            else if (tabName === 'processing') {
+                // НЕ ЗАВАНТАЖУЄМО АВТОМАТИЧНО, ЛИШЕ ПО КЛІКУ
+            }
+        };
+
+        // Перемикання фільтру територій
+        window.switchTerritoryFilter = (filter) => {
+            currentTerritoryFilter = filter;
+
+            // Оновлюємо активний таб
+            document.querySelectorAll('.origin-tabs .origin-tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            // Перезавантажуємо території з новим фільтром
+            loadTerritories();
+        };
+
+        window.logout = () => {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        };
+
+        // Функція перемикання бокової панелі для мобільних
+        window.toggleSidebar = () => {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            if (sidebar && overlay) {
+                sidebar.classList.toggle('active');
+                overlay.classList.toggle('active');
+            }
+        };
+
+        // Функція для аналізу територій на руках
+        async function generateOnHandsReport() {
+            const reportContainer = document.getElementById('on-hands-report');
+            const summaryContainer = document.getElementById('on-hands-summary');
+            const progressContainer = document.getElementById('on-hands-progress-container');
+            const progressFill = document.getElementById('on-hands-progress-fill');
+            const progressText = document.getElementById('on-hands-progress-text');
+            const daysThreshold = document.getElementById('on-hands-days-threshold');
+            const publisherFilter = document.getElementById('on-hands-publisher-filter');
+
+            reportContainer.innerHTML = '<p class="text-gray-600">Очікування пошуку...</p>';
+            summaryContainer.innerHTML = "";
+            progressContainer.style.display = 'block';
+            progressFill.style.width = '0%';
+            progressText.innerText = 'Прогрес: 0%';
+
+            onHandsResults = [];
+            onHandsPublishers.clear();
+
+            try {
+                // Отримуємо всі території з Supabase
+                const { data: territories, error } = await supabase
+                    .from('parcels')
+                    .select('*');
+
+                if (error) throw error;
+
+                console.log('📊 Отримано територій з бази:', territories.length);
+                console.log('🔍 Аналіз структури даних:');
+                console.log('Перші 3 території для діагностики:');
+                territories.slice(0, 3).forEach((t, i) => {
+                    console.log(`${i + 1}.`, {
+                        id: t.id,
+                        name: t.name,
+                        status: t.status,
+                        taken_by: t.taken_by,
+                        taken_by_name: t.taken_by_name,
+                        last_taken: t.last_taken,
+                        last_returned: t.last_returned,
+                        last_processed: t.last_processed
+                    });
+                });
+
+                // Рахуємо території з різними статусами
+                const statusCounts = {};
+                territories.forEach(t => {
+                    statusCounts[t.status] = (statusCounts[t.status] || 0) + 1;
+                });
+                console.log('📈 Розподіл статусів територій:', statusCounts);
+
+                const totalTerritories = territories.length;
+                let processedCount = 0;
+                let takenCount = 0;
+                let skippedCount = 0;
+
+                // Обробляємо кожну територію
+                for (const territory of territories) {
+                    processedCount++;
+                    const progress = Math.round((processedCount / totalTerritories) * 100);
+                    progressFill.style.width = `${progress}%`;
+                    progressText.innerText = `Прогрес: ${progress}%`;
+
+                    // Детальна діагностика для територій зі статусом 'taken'
+                    if (territory.status === 'taken') {
+                        takenCount++;
+                        console.log(`🔍 Територія #${territory.name} (status=taken):`, {
+                            taken_by_id: territory.taken_by_id,
+                            taken_by: territory.taken_by,
+                            taken_at: territory.taken_at,
+                            daysHeld: territory.taken_at ?
+                                Math.ceil((new Date() - new Date(territory.taken_at)) / (1000 * 60 * 60 * 24)) : 'N/A'
+                        });
+
+                        // Перевіряємо, чи є всі необхідні дані
+                        if (!territory.taken_by_id) {
+                            console.warn(`⚠️ Територія ${territory.name}: відсутнє поле taken_by_id`);
+                            skippedCount++;
+                            continue;
+                        }
+
+                        // Перевіряємо, чи територія на руках (умова вже перевірена вище)
+                        if (territory.status === 'taken') {
+                            const daysHeld = territory.taken_at ?
+                                Math.ceil((new Date() - new Date(territory.taken_at)) / (1000 * 60 * 60 * 24)) : 0;
+
+                            const publisherName = territory.taken_by || 'Невідомо';
+                            const threshold = parseInt(daysThreshold.value) || 0;
+
+                            console.log(`✅ Територія ${territory.name}: ${publisherName}, ${daysHeld} днів`);
+
+                            if (daysHeld >= threshold &&
+                                (!publisherFilter.value || publisherName.toLowerCase().includes(publisherFilter.value.toLowerCase()))) {
+
+                                onHandsResults.push({
+                                    publisher: publisherName,
+                                    number: territory.name,
+                                    dateTaken: territory.taken_at,
+                                    daysHeld: daysHeld,
+                                    id: territory.id
+                                });
+
+                                onHandsPublishers.set(publisherName, (onHandsPublishers.get(publisherName) || 0) + 1);
+                            }
+                        }
+                    }
+
+                    // Невелика затримка для візуалізації прогресу
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                }
+
+                console.log(`📊 Результати аналізу:`);
+                console.log(`- Всього територій: ${totalTerritories}`);
+                console.log(`- Зі статусом 'taken': ${takenCount}`);
+                console.log(`- Пропущено (без taken_by): ${skippedCount}`);
+                console.log(`- В результаті після фільтрації: ${onHandsResults.length}`);
+                console.log(`- Унікальні вісники:`, Array.from(onHandsPublishers.keys()));
+
+                // Сортуємо за кількістю територій у вісника
+                sortOnHandsByPublisher();
+                progressContainer.style.display = 'none';
+
+            } catch (err) {
+                console.error('Помилка в generateOnHandsReport:', err);
+                alert('Виникла помилка під час завантаження даних. Спробуйте ще раз.');
+                progressContainer.style.display = 'none';
+            }
+        }
+
+        // Функція для рендерингу звіту
+        function renderOnHandsReport() {
+            const reportContainer = document.getElementById('on-hands-report');
+            const summaryContainer = document.getElementById('on-hands-summary');
+            const countElement = document.getElementById('on-hands-count');
+
+            reportContainer.innerHTML = "";
+            summaryContainer.innerHTML = `<p class="text-gray-700">Загальна кількість територій на руках: <span id="on-hands-count">${onHandsResults.length}</span></p>`;
+
+            if (onHandsResults.length === 0) {
+                reportContainer.innerHTML = '<p class="text-gray-600 text-center">Немає територій на руках.</p>';
+                return;
+            }
+
+            // Створюємо красиві картки для результатів
+            const fragment = document.createDocumentFragment();
+            onHandsResults.forEach((result, index) => {
+                const entry = document.createElement("div");
+                entry.className = "on-hands-card";
+
+                // Визначаємо клас для бейджа днів
+                let daysClass = 'days-low';
+                if (result.daysHeld > 30) daysClass = 'days-high';
+                else if (result.daysHeld > 14) daysClass = 'days-medium';
+
+                entry.innerHTML = `
+                    <div class="card-header">
+                        <h3 style="margin: 0; color: #2c3e50; font-size: 1.1rem;">📍 Територія ${result.number}</h3>
+                        <span class="card-number">#${index + 1}</span>
+                    </div>
+                    <div class="card-info">
+                        <div class="info-item">
+                            <span class="info-label">👤 Вісник</span>
+                            <span class="info-value">${result.publisher}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">📅 Дата отримання</span>
+                            <span class="info-value">${result.dateTaken ? new Date(result.dateTaken).toLocaleDateString('uk-UA') : '-'}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">⏱️ Днів на руках</span>
+                            <span class="info-value">
+                                <span class="days-badge ${daysClass}">${result.daysHeld} днів</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <a href="parcel-details.html?id=${result.id}&from=admin" class="btn-details">
+                            🔍 Переглянути деталі
+                        </a>
+                    </div>
+                `;
+                fragment.appendChild(entry);
+            });
+            reportContainer.appendChild(fragment);
+        }
+
+        // Функції сортування
+        function sortOnHandsByPublisher() {
+            onHandsResults.sort((a, b) => {
+                const countA = onHandsPublishers.get(a.publisher) || 0;
+                const countB = onHandsPublishers.get(b.publisher) || 0;
+                return countB !== countA ? countB - countA : a.publisher.localeCompare(b.publisher, "uk");
+            });
+            renderOnHandsReport();
+        }
+
+        function sortOnHandsResults(key, order) {
+            onHandsResults.sort((a, b) => {
+                if (key === "publisher") return order * a.publisher.localeCompare(b.publisher, "uk");
+                if (key === "number") return order * (parseInt(a.number.replace(/\D/g, '')) || 0 - (parseInt(b.number.replace(/\D/g, '')) || 0));
+                if (key === "daysHeld") return order * (a.daysHeld - b.daysHeld);
+                return 0;
+            });
+            renderOnHandsReport();
+        }
+
+        // Глобальний кеш територій
+        let cachedTerritories = [];
+
+        // Глобальні змінні для кампаній
+        let campaigns = [];
+        let customCampaigns = [];
+
+        // Ініціалізація кампаній при завантаженні
+        async function initializeCampaigns() {
+            try {
+                // Завантажуємо кампанії з бази даних
+                await loadCampaignsFromDB();
+
+                // Оновлюємо статуси кампаній
+                updateCampaignStatuses();
+
+                // Завантажуємо збережені кастомні кампанії
+                loadCustomCampaigns();
+            } catch (error) {
+                console.error('Помилка ініціалізації кампаній:', error);
+            }
+        }
+
+        // Функція для визначення статусу кампанії
+        function getCampaignStatus(campaign) {
+            // Використовуємо імітований час якщо доступний, інакше реальний
+            const now = window.timeEmulator ? 
+                window.timeEmulator.getCurrentDate() : new Date();
+            const campaignStart = new Date(campaign.campaign_start);
+            const campaignEnd = new Date(campaign.campaign_end);
+
+            if (now < campaignStart) return 'planned';
+            if (now >= campaignStart && now <= campaignEnd) return 'active';
+            if (now > campaignEnd) return 'completed';
+            return 'unknown';
+        }
+
+        // Робимо функцію доступною глобально для імітатора
+        window.getCampaignStatus = getCampaignStatus;
+
+        // Функція форматування дати
+        function formatDateDisplay(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('uk-UA', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+        }
+
+        // Функція форматування діапазону дат для конгресу
+        function formatDateRangeDisplay(startDateStr, endDateStr) {
+            if (!startDateStr || !endDateStr) return '';
+
+            const startDate = new Date(startDateStr);
+            const endDate = new Date(endDateStr);
+
+            const startDay = startDate.getDate();
+            const endDay = endDate.getDate();
+            const month = endDate.toLocaleDateString('uk-UA', { month: 'long' });
+            const year = endDate.getFullYear();
+
+            if (startDay === endDay) {
+                return `${startDay} ${month} ${year}р.`;
+            } else {
+                return `${startDay} - ${endDay} ${month} ${year}р.`;
+            }
+        }
+
+        // Функція форматування періоду кампанії
+        function formatCampaignPeriod(startDate, endDate, campaignName) {
+            if (!startDate || !endDate) return '';
+
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+
+            // Якщо це Спеціальна кампанія і триває весь місяць
+            if (campaignName === 'Спеціальна кампанія') {
+                const monthName = start.toLocaleDateString('uk-UA', { month: 'long' });
+                const year = start.getFullYear();
+                return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}р.`;
+            }
+
+            // Якщо кампанія в межах одного місяця
+            if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+                const monthName = start.toLocaleDateString('uk-UA', { month: 'short' });
+                return `${start.getDate()}-${end.getDate()} ${monthName}`;
+            }
+
+            // Якщо кампанія в різних місяцях
+            const startMonth = start.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
+            const endMonth = end.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
+            return `${startMonth} - ${endMonth}`;
+        }
+
+        // Функція завантаження даних для конкретної кампанії
+        async function loadCampaignData(campaignName, containerId) {
+            try {
+                const { data: campaigns, error } = await supabase
+                    .from('campaigns')
+                    .select('*')
+                    .eq('name', campaignName)
+                    .order('campaign_start', { ascending: false })
+                    .limit(1);
+
+                if (error) {
+                    console.error(`Помилка завантаження кампанії "${campaignName}":`, error);
+                    return;
+                }
+
+                const campaign = campaigns && campaigns.length > 0 ? campaigns[0] : null;
+
+                if (campaign) {
+                    // Визначаємо статус
+                    const status = getCampaignStatus(campaign);
+                    const statusElement = document.getElementById(`${containerId}-status`);
+                    if (statusElement) {
+                        // Встановлюємо текст українською, а клас англійською
+                        let statusText = status;
+                        let statusClass = status.toLowerCase().replace(' ', '-');
+
+                        if (status === 'planned') statusText = 'Планується';
+                        if (status === 'active') statusText = 'Активна';
+                        if (status === 'completed') statusText = 'Завершена';
+
+                        statusElement.textContent = statusText;
+                        statusElement.className = `campaign-status ${statusClass}`;
+                    }
+
+                    // Приховуємо/показуємо весь campaign-info контейнер
+                    const campaignInfo = document.getElementById(`${containerId}-info`);
+                    if (campaignInfo) {
+                        if (status === 'completed') {
+                            campaignInfo.style.display = 'none';
+                        } else {
+                            campaignInfo.style.display = 'block';
+                        }
+                    }
+
+                    // Генеруємо campaign-info тільки для активних та планових кампаній
+                    if (status !== 'completed') {
+                        // Формуємо дату події (якщо є)
+                        const datesContainer = document.getElementById(`${containerId}-dates`);
+                        if (campaign.date_start && campaign.date_end) {
+                            let dateDisplay = '';
+                            
+                            // Для конгресу використовуємо спеціальний формат
+                            if (campaign.name === 'Запрошення на конгрес') {
+                                dateDisplay = formatDateRangeDisplay(campaign.date_start, campaign.date_end);
+                            } else {
+                                // Для інших кампаній використовуємо стандартний формат
+                                const startDate = formatDateDisplay(campaign.date_start);
+                                const endDate = formatDateDisplay(campaign.date_end);
+                                
+                                if (campaign.date_start === campaign.date_end) {
+                                    dateDisplay = startDate;
+                                } else {
+                                    dateDisplay = `${startDate} - ${endDate}`;
+                                }
+                            }
+
+                            if (campaign.date_start === campaign.date_end) {
+                                datesContainer.innerHTML = `<p><strong>Дата події:</strong> ${dateDisplay}</p>`;
+                            } else {
+                                datesContainer.innerHTML = `<p><strong>Дати події:</strong> ${dateDisplay}</p>`;
+                            }
+                        } else {
+                            datesContainer.innerHTML = '';
+                        }
+
+                        // Формуємо період кампанії
+                        const periodContainer = document.getElementById(`${containerId}-period`);
+                        const periodText = formatCampaignPeriod(campaign.campaign_start, campaign.campaign_end, campaignName);
+                        periodContainer.innerHTML = `<p><strong>Період кампанії:</strong> ${periodText}</p>`;
+
+                        // Формуємо опис (тільки не для Спомину)
+                        const descriptionContainer = document.getElementById(`${containerId}-description`);
+                        if (campaignName !== 'Запрошення на вечір спомину' && campaign.description) {
+                            descriptionContainer.innerHTML = `<p><strong>Опис:</strong> ${campaign.description}</p>`;
+                        } else {
+                            descriptionContainer.innerHTML = '';
+                        }
+                    } else {
+                        // Для завершених кампаній очищаємо всі контейнери
+                        document.getElementById(`${containerId}-dates`).innerHTML = '';
+                        document.getElementById(`${containerId}-period`).innerHTML = '';
+                        document.getElementById(`${containerId}-description`).innerHTML = '';
+                    }
+
+                    // Оновлюємо кнопку
+                    const activateButton = document.getElementById(`${containerId}-activate`);
+                    if (activateButton) {
+                        if (status === 'Планується') {
+                            activateButton.textContent = 'Активувати';
+                            activateButton.onclick = () => activateCampaign(campaignName);
+                            activateButton.style.display = 'block';
+                        } else if (status === 'Активна') {
+                            activateButton.textContent = 'Деактивувати';
+                            activateButton.onclick = () => deactivateCampaign(campaignName);
+                            activateButton.style.display = 'block';
+                        } else {
+                            activateButton.style.display = 'none';
+                        }
+                    }
+
+                    // Оновлюємо кнопку редагування
+                    const editButton = document.getElementById(`${containerId}-edit`);
+                    if (editButton) {
+                        if (status === 'planned' || status === 'completed') {
+                            editButton.style.display = 'block';
+                        } else {
+                            editButton.style.display = 'none';
+                        }
+                    }
+
+                    console.log(`✅ Завантажено дані для "${campaignName}":`, status);
+                } else {
+                    // Якщо кампанії немає, показуємо порожній стан
+                    const statusElement = document.getElementById(`${containerId}-status`);
+                    if (statusElement) {
+                        statusElement.textContent = 'Не створено';
+                        statusElement.className = 'campaign-status status-not-created';
+                    }
+
+                    // Очищуємо всі контейнери
+                    document.getElementById(`${containerId}-dates`).innerHTML = '';
+                    document.getElementById(`${containerId}-period`).innerHTML = '';
+                    document.getElementById(`${containerId}-description`).innerHTML = '';
+
+                    // Показуємо кнопку створення
+                    const activateButton = document.getElementById(`${containerId}-activate`);
+                    if (activateButton) {
+                        activateButton.textContent = 'Створити кампанію';
+                        activateButton.onclick = () => createCampaign(campaignName);
+                        activateButton.style.display = 'block';
+                    }
+
+                    // Ховаємо кнопку редагування для нествореної кампанії
+                    const editButton = document.getElementById(`${containerId}-edit`);
+                    if (editButton) {
+                        editButton.style.display = 'none';
+                    }
+
+                    console.log(`ℹ️ Кампанія "${campaignName}" не знайдена`);
+                }
+            } catch (error) {
+                console.error(`❌ Помилка завантаження кампанії "${campaignName}":`, error);
+            }
+        }
+
+        // Головна функція завантаження всіх кампаній
+        async function loadCampaignsFromDB() {
+            console.log('🔄 Початок завантаження кампаній...');
+
+            // Завантажуємо дані для кожної кампанії
+            await Promise.all([
+                loadCampaignData('Спеціальна кампанія', 'special'),
+                loadCampaignData('Запрошення на вечір спомину', 'memorial'),
+                loadCampaignData('Запрошення на конгрес', 'congress')
+            ]);
+
+            console.log('✅ Завантаження кампаній завершено');
+        }
+
+        // Функція активації кампанії
+        async function activateCampaign(campaignName) {
+            try {
+                const { data: campaigns } = await supabase
+                    .from('campaigns')
+                    .select('*')
+                    .eq('name', campaignName)
+                    .order('campaign_start', { ascending: false })
+                    .limit(1);
+
+                if (campaigns && campaigns.length > 0) {
+                    const campaign = campaigns[0];
+                    const { error } = await supabase
+                        .from('campaigns')
+                        .update({ active: true })
+                        .eq('id', campaign.id);
+
+                    if (error) throw error;
+
+                    await loadCampaignsFromDB();
+                }
+            } catch (error) {
+                console.error('❌ Помилка активації кампанії:', error);
+            }
+        }
+
+        // Функція деактивації кампанії
+        async function deactivateCampaign(campaignName) {
+            try {
+                const { data: campaigns } = await supabase
+                    .from('campaigns')
+                    .select('*')
+                    .eq('name', campaignName)
+                    .order('campaign_start', { ascending: false })
+                    .limit(1);
+
+                if (campaigns && campaigns.length > 0) {
+                    const campaign = campaigns[0];
+                    const { error } = await supabase
+                        .from('campaigns')
+                        .update({ active: false })
+                        .eq('id', campaign.id);
+
+                    if (error) throw error;
+
+                    await loadCampaignsFromDB();
+                }
+            } catch (error) {
+                console.error('❌ Помилка деактивації кампанії:', error);
+            }
+        }
+
+        // Функція створення нової кампанії
+        async function createCampaign(campaignName) {
+            console.log(`🔄 Створення кампанії "${campaignName}"...`);
+
+            // Відкриваємо модальне вікно з відповідним типом кампанії
+            if (campaignName === 'Спеціальна кампанія') {
+                // Викликаємо функцію з simple-browser-script.js
+                if (typeof window.addSeptemberCampaign === 'function') {
+                    await window.addSeptemberCampaign();
+                    await loadCampaignsFromDB(); // Перезавантажуємо дані
+                } else {
+                    alert('Функція створення спеціальної кампанії недоступна');
+                }
+            } else if (campaignName === 'Запрошення на вечір спомину') {
+                if (typeof window.addMemorialCampaign === 'function') {
+                    await window.addMemorialCampaign();
+                    await loadCampaignsFromDB(); // Перезавантажуємо дані
+                } else {
+                    alert('Функція створення кампанії на Спомин недоступна');
+                }
+            } else if (campaignName === 'Запрошення на конгрес') {
+                showCreateCampaignModal(campaignName);
+                return; // Виходимо, бо модальне вікно відкривається
+            }
+        }
+
+        // Функції з simple-browser-script.js для роботи з кампаніями
+        function calculateCampaignPeriod(eventDate) {
+            const event = new Date(eventDate);
+            const campaignStart = new Date(event);
+            campaignStart.setDate(event.getDate() - 21);
+            while (campaignStart.getDay() !== 6) campaignStart.setDate(campaignStart.getDate() + 1);
+            return campaignStart;
+        }
+
+        function formatDate(date) {
+            if (typeof date === 'string') {
+                return date; // Якщо це вже рядок у форматі YYYY-MM-DD
+            }
+            return date.toISOString().split('T')[0];
+        }
+
+        function parseDate(dateStr) {
+            const rangePattern = /^(\d{2})-(\d{2})\.(\d{2})\.(\d{4})$/;
+            const singlePattern = /^(\d{2})\.(\d{2})\.(\d{4})$/;
+            const standardPattern = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+            if (rangePattern.test(dateStr)) {
+                const m = dateStr.match(rangePattern);
+                return { start: new Date(`${m[4]}-${m[3]}-${m[1]}`), end: new Date(`${m[4]}-${m[3]}-${m[2]}`), isRange: true };
+            }
+            if (singlePattern.test(dateStr)) {
+                const m = dateStr.match(singlePattern);
+                return { start: new Date(`${m[3]}-${m[2]}-${m[1]}`), end: new Date(`${m[3]}-${m[2]}-${m[1]}`), isRange: false };
+            }
+            if (standardPattern.test(dateStr)) {
+                const m = dateStr.match(standardPattern);
+                return { start: new Date(`${m[1]}-${m[2]}-${m[3]}`), end: new Date(`${m[1]}-${m[2]}-${m[3]}`), isRange: false };
+            }
+            return null;
+        }
+
+
+        // Глобальні змінні для модального вікна
+        let currentCampaignName = '';
+        let currentCampaignData = null;
+        let clickProtectionCount = {};
+        let isEditMode = false;
+
+        // Функція обробки кліків на статуси
+        window.handleStatusClick = function handleStatusClick(campaignName) {
+            const statusElement = document.getElementById(`${getCampaignId(campaignName)}-status`);
+            const currentStatus = statusElement.textContent.trim();
+
+            if (currentStatus === 'Завершена' || currentStatus === 'Не створено') {
+                showCreateCampaignModal(campaignName);
+            } else if (currentStatus === 'Планується') {
+                showEditCampaignWithProtection(campaignName);
+            }
+            // Активний статус - без дії
+        }
+
+        function getCampaignId(campaignName) {
+            const idMap = {
+                'Спеціальна кампанія': 'special',
+                'Запрошення на вечір спомину': 'memorial',
+                'Запрошення на конгрес': 'congress'
+            };
+            return idMap[campaignName] || campaignName.toLowerCase().replace(/\s+/g, '-');
+        }
+
+        // Захист від випадкового редагування
+        function showEditCampaignWithProtection(campaignName) {
+            if (!clickProtectionCount[campaignName]) {
+                clickProtectionCount[campaignName] = 0;
+            }
+
+            clickProtectionCount[campaignName]++;
+
+            if (clickProtectionCount[campaignName] < 3) {
+                const remaining = 3 - clickProtectionCount[campaignName];
+                showToast(`Для редагування кампанії "${campaignName}" клікніть ще ${remaining} раз${remaining === 1 ? '' : 'и'}`);
+                return;
+            }
+
+            // Скидаємо лічильник після успішного редагування
+            clickProtectionCount[campaignName] = 0;
+            showEditCampaignModal(campaignName);
+        }
+
+        // Показати модальне вікно створення кампанії
+        function showCreateCampaignModal(campaignName) {
+            currentCampaignName = campaignName;
+            currentCampaignData = null;
+            isEditMode = false;
+
+            const modal = document.getElementById('campaignModal');
+            const title = document.getElementById('modalTitle');
+            const fields = document.getElementById('modalFields');
+
+            title.textContent = `Створення нової кампанії: ${campaignName}`;
+
+            // Генеруємо поля залежно від типу кампанії
+            if (campaignName === 'Запрошення на конгрес') {
+                fields.innerHTML = `
+                    <div class="form-group">
+                        <label>Назва конгресу:</label>
+                        <input type="text" id="congressName" placeholder="Введіть назву конгресу">
+                    </div>
+                    <div class="form-group">
+                        <label>Період конгресу:</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="date" id="congressStartDate" min="2024-01-01" max="2030-12-31">
+                            <span>-</span>
+                            <input type="date" id="congressEndDate" min="2024-01-01" max="2030-12-31">
+                        </div>
+                    </div>
+                `;
+            } else if (campaignName === 'Спеціальна кампанія') {
+                fields.innerHTML = `
+                    <div class="form-group">
+                        <label>Період кампанії:</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="date" id="campaignStartDate" min="2024-01-01" max="2030-12-31">
+                            <span>-</span>
+                            <input type="date" id="campaignEndDate" min="2024-01-01" max="2030-12-31">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Опис:</label>
+                        <textarea id="campaignDescription" placeholder="Опис спеціальної кампанії"></textarea>
+                    </div>
+                `;
+            } else if (campaignName === 'Запрошення на вечір спомину') {
+                fields.innerHTML = `
+                    <div class="form-group">
+                        <label>Дата проведення:</label>
+                        <input type="date" id="eventDate" min="2024-01-01" max="2030-12-31">
+                    </div>
+                `;
+            }
+
+            modal.style.display = 'flex';
+
+            // Додаємо обробники для зв'язування дат
+            setTimeout(() => linkDatePickers(campaignName), 0);
+        }
+
+        // Функція зв'язування дат: коли обрана початкова дата,
+        // календар кінцевої дати відкривається з цієї дати
+        function linkDatePickers(campaignName) {
+            const startId = campaignName === 'Запрошення на конгрес' ? 'congressStartDate' :
+                           campaignName === 'Спеціальна кампанія' ? 'campaignStartDate' : null;
+            const endId = campaignName === 'Запрошення на конгрес' ? 'congressEndDate' :
+                         campaignName === 'Спеціальна кампанія' ? 'campaignEndDate' : null;
+
+            if (!startId || !endId) return;
+
+            const startInput = document.getElementById(startId);
+            const endInput = document.getElementById(endId);
+
+            if (!startInput || !endInput) return;
+
+            startInput.addEventListener('change', function() {
+                if (this.value) {
+                    // Встановлюємо мінімальну дату для кінцевої
+                    endInput.min = this.value;
+                    // Якщо кінцева дата ще не обрана, підставляємо початкову
+                    if (!endInput.value) {
+                        endInput.value = this.value;
+                    }
+                }
+            });
+        }
+
+        // Показати модальне вікно редагування кампанії
+        function showEditCampaignModal(campaignName) {
+            currentCampaignName = campaignName;
+            isEditMode = true;
+
+            // Завантажуємо поточні дані кампанії
+            loadCampaignForEdit(campaignName);
+        }
+
+        // Завантаження даних для редагування
+        async function loadCampaignForEdit(campaignName) {
+            try {
+                const { data: campaigns } = await supabase
+                    .from('campaigns')
+                    .select('*')
+                    .eq('name', campaignName)
+                    .order('campaign_start', { ascending: false })
+                    .limit(1);
+
+                if (campaigns && campaigns.length > 0) {
+                    currentCampaignData = campaigns[0];
+                    showEditModalWithData(campaignName, currentCampaignData);
+                } else {
+                    alert(`Кампанію "${campaignName}" не знайдено для редагування`);
+                }
+            } catch (error) {
+                console.error('Помилка завантаження кампанії для редагування:', error);
+                alert('Помилка завантаження даних кампанії');
+            }
+        }
+
+        // Показати модальне вікно з даними для редагування
+        function showEditModalWithData(campaignName, campaignData) {
+            const modal = document.getElementById('campaignModal');
+            const title = document.getElementById('modalTitle');
+            const fields = document.getElementById('modalFields');
+
+            title.textContent = `Редагування кампанії: ${campaignName}`;
+
+            // Генеруємо поля з поточними даними
+            if (campaignName === 'Запрошення на конгрес') {
+                const description = campaignData.description || '';
+                const congressName = description.replace('Запрошення на регіональний конгрес "', '').replace('"', '');
+                const startDate = formatDate(campaignData.date_start);
+                const endDate = formatDate(campaignData.date_end);
+
+                fields.innerHTML = `
+                    <div class="form-group">
+                        <label>Назва конгресу:</label>
+                        <input type="text" id="congressName" value="${congressName}">
+                    </div>
+                    <div class="form-group">
+                        <label>Період конгресу:</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="date" id="congressStartDate" value="${startDate}" min="2024-01-01" max="2030-12-31">
+                            <span>-</span>
+                            <input type="date" id="congressEndDate" value="${endDate}" min="${startDate}" max="2030-12-31">
+                        </div>
+                    </div>
+                `;
+            } else if (campaignName === 'Спеціальна кампанія') {
+                const startDate = new Date(campaignData.campaign_start);
+                const endDate = new Date(campaignData.campaign_end);
+                const formattedStartDate = formatDate(startDate);
+                const formattedEndDate = formatDate(endDate);
+
+                fields.innerHTML = `
+                    <div class="form-group">
+                        <label>Період кампанії:</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="date" id="campaignStartDate" value="${formattedStartDate}" min="2024-01-01" max="2030-12-31">
+                            <span>-</span>
+                            <input type="date" id="campaignEndDate" value="${formattedEndDate}" min="${formattedStartDate}" max="2030-12-31">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Опис:</label>ALTER TABLE parcels DISABLE TRIGGER trigger_on_parcel_return;
+                        <textarea id="campaignDescription">${campaignData.description || ''}</textarea>
+                    </div>
+                `;
+            } else if (campaignName === 'Запрошення на вечір спомину') {
+                const eventDate = formatDate(campaignData.date_start);
+
+                fields.innerHTML = `
+                    <div class="form-group">
+                        <label>Дата проведення:</label>
+                        <input type="date" id="eventDate" value="${eventDate}" min="2024-01-01" max="2030-12-31">
+                    </div>
+                `;
+            }
+
+            modal.style.display = 'flex';
+
+            // Додаємо обробники для зв'язування дат
+            setTimeout(() => linkDatePickers(campaignName), 0);
+        }
+
+        // Закрити модальне вікно
+        window.closeCampaignModal = function closeCampaignModal() {
+            const modal = document.getElementById('campaignModal');
+            modal.style.display = 'none';
+            currentCampaignName = '';
+            currentCampaignData = null;
+        }
+
+        // Зберегти кампанію
+        window.saveCampaign = async function saveCampaign() {
+            try {
+                let campaignData = {};
+
+                if (currentCampaignName === 'Запрошення на конгрес') {
+                    const congressName = document.getElementById('congressName').value.trim();
+                    const startDate = document.getElementById('congressStartDate').value;
+                    const endDate = document.getElementById('congressEndDate').value;
+
+                    if (!congressName || !startDate || !endDate) {
+                        alert('Заповніть всі поля');
+                        return;
+                    }
+
+                    if (new Date(startDate) > new Date(endDate)) {
+                        alert('Дата початку не може бути пізніше за дату кінця');
+                        return;
+                    }
+
+                    const campaignStart = calculateCampaignPeriod(startDate);
+
+                    campaignData = {
+                        name: 'Запрошення на конгрес',
+                        date_start: formatDate(new Date(startDate)),
+                        date_end: formatDate(new Date(endDate)),
+                        description: `Запрошення на регіональний конгрес "${congressName}"`,
+                        campaign_start: formatDate(campaignStart),
+                        campaign_end: formatDate(new Date(endDate))
+                    };
+                } else if (currentCampaignName === 'Спеціальна кампанія') {
+                    const startDate = document.getElementById('campaignStartDate').value;
+                    const endDate = document.getElementById('campaignEndDate').value;
+                    const description = document.getElementById('campaignDescription').value.trim();
+
+                    if (!startDate || !endDate) {
+                        alert('Оберіть початок і кінець періоду кампанії');
+                        return;
+                    }
+
+                    if (new Date(startDate) > new Date(endDate)) {
+                        alert('Дата початку не може бути пізніше за дату кінця');
+                        return;
+                    }
+
+                    campaignData = {
+                        name: 'Спеціальна кампанія',
+                        date_start: null,
+                        date_end: null,
+                        description: description || 'Спеціальна кампанія',
+                        campaign_start: formatDate(new Date(startDate)),
+                        campaign_end: formatDate(new Date(endDate))
+                    };
+                } else if (currentCampaignName === 'Запрошення на вечір спомину') {
+                    const eventDate = document.getElementById('eventDate').value;
+
+                    if (!eventDate) {
+                        alert('Оберіть дату проведення');
+                        return;
+                    }
+
+                    const date = new Date(eventDate);
+                    const campaignStart = calculateCampaignPeriod(eventDate);
+
+                    campaignData = {
+                        name: 'Запрошення на вечір спомину',
+                        date_start: formatDate(date),
+                        date_end: formatDate(date),
+                        description: 'Запрошення на вечір спомину',
+                        campaign_start: formatDate(campaignStart),
+                        campaign_end: formatDate(date)
+                    };
+                }
+
+                let data, error;
+
+                if (isEditMode && currentCampaignData) {
+                    // Режим редагування - оновлюємо існуючий запис
+                    ({ data, error } = await supabase
+                        .from('campaigns')
+                        .update(campaignData)
+                        .eq('id', currentCampaignData.id)
+                        .select()
+                        .single());
+
+                    if (!error) {
+                        console.log('✅ Кампанію успішно оновлено:', data);
+                        alert(`Кампанію "${currentCampaignName}" успішно оновлено!`);
+                    }
+                } else {
+                    // Режим створення - перевірка на дублікати
+                    const { data: existingCampaigns } = await supabase
+                        .from('campaigns')
+                        .select('*')
+                        .eq('name', campaignData.name)
+                        .eq('date_start', campaignData.date_start)
+                        .eq('date_end', campaignData.date_end);
+
+                    if (existingCampaigns && existingCampaigns.length > 0) {
+                        alert('Кампанія з такими даними вже існує!');
+                        return;
+                    }
+
+                    // Створюємо новий запис
+                    ({ data, error } = await supabase
+                        .from('campaigns')
+                        .insert([campaignData])
+                        .select()
+                        .single());
+
+                    if (!error) {
+                        console.log('✅ Кампанію успішно створено:', data);
+                        alert(`Кампанію "${currentCampaignName}" успішно створено!`);
+                    }
+                }
+
+                if (error) {
+                    throw error;
+                }
+
+                // Закриваємо модальне вікно
+                closeCampaignModal();
+
+                // Оновлюємо відображення
+                await loadCampaignsFromDB();
+
+            } catch (error) {
+                console.error('❌ Помилка збереження кампанії:', error);
+                alert(`Помилка: ${error.message}`);
+            }
+        }
+
+        // Функція редагування кампанії (поки порожня)
+        function editCampaign(campaignName) {
+            console.log(`🖊️ Редагування кампанії "${campaignName}"`);
+            // TODO: Реалізувати логіку редагування кампанії
+            alert(`Редагування кампанії "${campaignName}" - функціонал буде реалізовано пізніше`);
+        }
+
+        // Отримання поточного теократичного року
+        function getTheocraticYear() {
+            const currentDate = new Date();
+            const currentMonth = currentDate.getMonth() + 1; // 1-12
+            const currentYear = currentDate.getFullYear();
+
+            // Теократичний рік починається з вересня
+            return currentMonth >= 9 ? currentYear + 1 : currentYear;
+        }
+
+
+
+        // Оновлення статусів всіх кампаній
+        function updateCampaignStatuses() {
+            // Статуси оновлюються автоматично в функціях updateCampaignCards
+            // Ця функція залишається для можливого розширення
+        }
+
+        // Допоміжні функції для розрахунків
+        function getDayOfWeek(date) {
+            const days = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота'];
+            return days[date.getDay()];
+        }
+
+        function calculateDaysBetween(startDate, endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const diffTime = Math.abs(end - start);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // Включає обидві дати
+            return diffDays;
+        }
+
+        // Розрахунок дат кампанії (починається з суботи, включає 3 суботи + 3 неділі)
+        function calculateCampaignDates(eventDate) {
+            // Відходимо на 21 день назад від дати події
+            const campaignStart = new Date(eventDate);
+            campaignStart.setDate(eventDate.getDate() - 21);
+
+            // Знаходимо суботу в тому ж тижні (рухаємось вперед)
+            while (campaignStart.getDay() !== 6) { // 6 = субота
+                campaignStart.setDate(campaignStart.getDate() + 1);
+            }
+
+            // Кінець кампанії - це день події
+            const campaignEnd = new Date(eventDate);
+
+            return {
+                start: campaignStart,
+                end: campaignEnd
+            };
+        }
+
+
+
+        // Перемикання редагування спомину
+        function toggleMemorialEdit() {
+            const checkbox = document.getElementById('memorial-editable');
+            const controls = document.getElementById('memorial-date-controls');
+
+            if (checkbox.checked) {
+                controls.style.display = 'block';
+            } else {
+                controls.style.display = 'none';
+                // Повертаємо автоматичні дати
+                const memorialDate = new Date(2026, 3, 2);
+                const memorialCampaignDates = calculateCampaignDates(memorialDate);
+
+                document.getElementById('memorial-event-date').value = formatDate(memorialDate);
+                document.getElementById('memorial-start-date').value = formatDate(memorialCampaignDates.start);
+                document.getElementById('memorial-end-date').value = formatDate(memorialCampaignDates.end);
+
+                updateMemorialDisplay();
+            }
+        }
+
+        // Перемикання редагування конгресу
+        function toggleCongressEdit() {
+            const checkbox = document.getElementById('congress-editable');
+            const controls = document.getElementById('congress-date-controls');
+
+            if (checkbox.checked) {
+                controls.style.display = 'block';
+            } else {
+                controls.style.display = 'none';
+                // Повертаємо автоматичні дати
+                const congressStart = new Date(2026, 6, 10); // Перший день
+                const congressEnd = new Date(2026, 6, 12);
+                const congressCampaignDates = calculateCampaignDates(congressStart); // Розрахунок від першого дня
+
+                document.getElementById('congress-start-date').value = formatDate(congressStart);
+                document.getElementById('congress-end-date').value = formatDate(congressEnd);
+                document.getElementById('congress-campaign-start').value = formatDate(congressCampaignDates.start);
+                document.getElementById('congress-campaign-end').value = formatDate(congressCampaignDates.end);
+
+                updateCongressDisplay();
+            }
+        }
+
+        // Оновлення дат спомину
+        function updateMemorialDates() {
+            const eventDate = document.getElementById('memorial-event-date').value;
+            if (eventDate) {
+                const date = new Date(eventDate);
+                const campaignDates = calculateCampaignDates(date);
+
+                document.getElementById('memorial-start-date').value = formatDate(campaignDates.start);
+                document.getElementById('memorial-end-date').value = formatDate(campaignDates.end);
+
+                updateMemorialDisplay();
+            }
+        }
+
+        // Оновлення періоду спомину
+        function updateMemorialPeriod() {
+            updateMemorialDisplay();
+        }
+
+        // Оновлення відображення спомину
+        function updateMemorialDisplay() {
+            const eventDate = document.getElementById('memorial-event-date').value;
+            const startDate = document.getElementById('memorial-start-date').value;
+            const endDate = document.getElementById('memorial-end-date').value;
+
+            if (eventDate && startDate && endDate) {
+                document.getElementById('memorial-date').textContent = formatDateDisplay(eventDate);
+                document.getElementById('memorial-period').textContent =
+                    `${formatDateDisplay(startDate)} - ${formatDateDisplay(endDate)}`;
+
+                // Оновлюємо статус
+                updateCampaignStatus('memorial');
+            }
+        }
+
+        // Оновлення дат конгресу
+        function updateCongressDates() {
+            const startDate = document.getElementById('congress-start-date').value;
+            const endDate = document.getElementById('congress-end-date').value;
+
+            if (startDate && endDate) {
+                const start = new Date(startDate); // Використовуємо перший день конгресу
+
+                // Розраховуємо період кампанії від першого дня конгресу
+                const campaignDates = calculateCampaignDates(start);
+
+                document.getElementById('congress-campaign-start').value = formatDate(campaignDates.start);
+                document.getElementById('congress-campaign-end').value = formatDate(campaignDates.end);
+
+                updateCongressDisplay();
+            }
+        }
+
+        // Оновлення періоду конгресу
+        function updateCongressPeriod() {
+            updateCongressDisplay();
+        }
+
+        // Оновлення відображення конгресу
+        function updateCongressDisplay() {
+            const startDate = document.getElementById('congress-start-date').value;
+            const endDate = document.getElementById('congress-end-date').value;
+            const campaignStartDate = document.getElementById('congress-campaign-start').value;
+            const campaignEndDate = document.getElementById('congress-campaign-end').value;
+
+            if (startDate && endDate && campaignStartDate && campaignEndDate) {
+                document.getElementById('congress-dates').textContent =
+                    `${formatDateDisplay(startDate)} - ${formatDateDisplay(endDate)}`;
+                document.getElementById('congress-period').textContent =
+                    `${formatDateDisplay(campaignStartDate)} - ${formatDateDisplay(campaignEndDate)}`;
+
+                // Оновлюємо статус
+                updateCampaignStatus('congress');
+            }
+        }
+
+        // Оновлення статусу кампанії
+        function updateCampaignStatus(type) {
+            const today = new Date();
+            let startDate, endDate, statusElement;
+
+            if (type === 'memorial') {
+                startDate = new Date(document.getElementById('memorial-start-date').value);
+                endDate = new Date(document.getElementById('memorial-end-date').value);
+                statusElement = document.getElementById('memorial-status');
+            } else if (type === 'congress') {
+                startDate = new Date(document.getElementById('congress-campaign-start').value);
+                endDate = new Date(document.getElementById('congress-campaign-end').value);
+                statusElement = document.getElementById('congress-status');
+            }
+
+            if (startDate && endDate && statusElement) {
+                if (today < startDate) {
+                    statusElement.textContent = 'Планується';
+                    statusElement.className = 'campaign-status planned';
+                } else if (today >= startDate && today <= endDate) {
+                    statusElement.textContent = 'Активна';
+                    statusElement.className = 'campaign-status active';
+                } else {
+                    statusElement.textContent = 'Завершено';
+                    statusElement.className = 'campaign-status completed';
+                }
+            }
+        }
+
+        // Модальне вікно для кастомних кампаній
+        function openCustomCampaignModal() {
+            document.getElementById('campaign-modal').style.display = 'flex';
+        }
+
+        function closeCustomCampaignModal() {
+            document.getElementById('campaign-modal').style.display = 'none';
+            // Очищуємо форму
+            document.getElementById('custom-campaign-name').value = '';
+            document.getElementById('custom-campaign-start').value = '';
+            document.getElementById('custom-campaign-end').value = '';
+            document.getElementById('custom-campaign-description').value = '';
+        }
+
+        // Додавання кастомної кампанії
+        function addCustomCampaign() {
+            const name = document.getElementById('custom-campaign-name').value.trim();
+            const startDate = document.getElementById('custom-campaign-start').value;
+            const endDate = document.getElementById('custom-campaign-end').value;
+            const description = document.getElementById('custom-campaign-description').value.trim();
+
+            if (!name || !startDate || !endDate) {
+                alert('Будь ласка, заповніть всі обов\'язкові поля');
+                return;
+            }
+
+            const campaign = {
+                id: Date.now(),
+                name,
+                startDate,
+                endDate,
+                description,
+                createdAt: new Date().toISOString()
+            };
+
+            customCampaigns.push(campaign);
+            saveCustomCampaigns();
+            renderCustomCampaigns();
+            closeCustomCampaignModal();
+        }
+
+        // Збереження кастомних кампаній в localStorage
+        function saveCustomCampaigns() {
+            localStorage.setItem('customCampaigns', JSON.stringify(customCampaigns));
+        }
+
+        // Завантаження кастомних кампаній з localStorage
+        function loadCustomCampaigns() {
+            const saved = localStorage.getItem('customCampaigns');
+            if (saved) {
+                customCampaigns = JSON.parse(saved);
+                renderCustomCampaigns();
+            }
+        }
+
+        // Відображення кастомних кампаній
+        function renderCustomCampaigns() {
+            const container = document.getElementById('custom-campaigns-list');
+            container.innerHTML = '';
+
+            customCampaigns.forEach(campaign => {
+                const campaignCard = document.createElement('div');
+                campaignCard.className = 'campaign-card';
+                campaignCard.innerHTML = `
+                    <div class="campaign-header">
+                        <h4>📋 ${campaign.name}</h4>
+                        <div class="campaign-actions">
+                            <span class="campaign-status ${getCampaignStatus(campaign.startDate, campaign.endDate)}">
+                                ${getCampaignStatusText(campaign.startDate, campaign.endDate)}
+                            </span>
+                            <button class="btn-delete" onclick="deleteCustomCampaign(${campaign.id})" style="margin-left: 0.5rem; background: #ef4444; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer;">
+                                ×
+                            </button>
+                        </div>
+                    </div>
+                    <div class="campaign-info">
+                        <p><strong>Період:</strong> ${formatDateDisplay(campaign.startDate)} - ${formatDateDisplay(campaign.endDate)}</p>
+                        ${campaign.description ? `<p><strong>Опис:</strong> ${campaign.description}</p>` : ''}
+                    </div>
+                `;
+                container.appendChild(campaignCard);
+            });
+        }
+
+        // Видалення кастомної кампанії
+        function deleteCustomCampaign(id) {
+            if (confirm('Ви впевнені, що хочете видалити цю кампанію?')) {
+                customCampaigns = customCampaigns.filter(c => c.id !== id);
+                saveCustomCampaigns();
+                renderCustomCampaigns();
+            }
+        }
+
+
+        // Функція завантаження територій
+        async function loadTerritories() {
+            // Якщо кеш порожній, завантажуємо з бази
+            if (cachedTerritories.length === 0) {
+                const { data: territories, error } = await supabase
+                    .from('parcels')
+                    .select('*');
+
+                if (error) {
+                    console.error("Помилка завантаження:", error);
+                    return;
+                }
+
+                // Сортуємо за числовим значенням у назві
+                territories.sort((a, b) => {
+                    const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
+                    const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
+                    return numA - numB;
+                });
+
+                cachedTerritories = territories;
+            }
+
+            renderTerritories(cachedTerritories);
+        }
+
+        // Функція рендеринга територій
+        function renderTerritories(territories) {
+            const container = document.getElementById('territoriesList');
+            if (!container) return;
+
+            // Фільтруємо території за категорією
+            let filteredTerritories = territories;
+            if (currentTerritoryFilter === 'city') {
+                filteredTerritories = territories.filter(t => t.category !== 'Село');
+            } else if (currentTerritoryFilter === 'village') {
+                filteredTerritories = territories.filter(t => t.category === 'Село');
+                // Для сіл - сортуємо алфавітно
+                filteredTerritories.sort((a, b) => {
+                    return a.name.localeCompare(b.name, 'uk');
+                });
+            }
+
+            if (!filteredTerritories || filteredTerritories.length === 0) {
+                container.innerHTML = '<p style="color:gray;">Немає територій.</p>';
+                return;
+            }
+
+            container.innerHTML = filteredTerritories.map(t => {
+                const status = t.status === 'taken' ? '✓ Видана' : '○ Вільна';
+                const statusColor = t.status === 'taken' ? '#28a745' : '#6c757d';
+                const publisher = t.taken_by || '—';
+                
+                let daysHeld;
+                if (t.status === 'taken') {
+                    daysHeld = Math.floor((new Date() - new Date(t.taken_at)) / (1000 * 60 * 60 * 24));
+                } else if (t.last_returned) {
+                    daysHeld = Math.floor((new Date() - new Date(t.last_returned)) / (1000 * 60 * 60 * 24));
+                } else {
+                    daysHeld = '—';
+                }
+
+                return `
+                    <div class="territory-card" onclick="window.location.href='parcel-details.html?id=${t.id}&from=admin'">
+                        <h3>Дільниця № ${t.name}</h3>
+                        <div class="territory-card-info">
+                            <div>
+                                <p><strong>Категорія:</strong> ${t.category || 'Не вказано'}</p>
+                                ${t.status === 'taken' ? `<p><strong>У вісника:</strong> ${publisher}</p>` : ''}
+                                ${t.status === 'taken' && daysHeld !== '—' ? `<p><strong>Днів на руках:</strong> ${daysHeld}</p>` : ''}
+                                ${t.status !== 'taken' && daysHeld !== '—' ? `<p><strong>Вільна:</strong> ${daysHeld}</p>` : ''}
+                            </div>
+                            <div>
+                                <span class="territory-badge" style="background: ${statusColor};">${status}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Модальне вікно для додавання території
+        window.openAddTerritoryModal = () => {
+            alert('Функція буде реалізована пізніше');
+        };
+
+        // === УПРАВЛІННЯ КАМПАНІЯМИ ===
+
+        // Функція завантаження кампаній
+        async function loadCampaigns() {
+            const { data: campaigns, error } = await supabase
+                .from('campaigns')
+                .select('*')
+                .order('date_start', { ascending: true });
+
+            if (error) {
+                console.error("Помилка завантаження кампаній:", error);
+                return;
+            }
+
+            renderCampaigns(campaigns || []);
+        }
+
+        // Функція рендеринга кампаній
+        function renderCampaigns(campaigns) {
+            const container = document.getElementById('campaignsList');
+            if (!container) return;
+
+            if (!campaigns || campaigns.length === 0) {
+                container.innerHTML = '<div class="no-campaigns">📭 Кампанії не створені</div>';
+                return;
+            }
+
+            container.innerHTML = campaigns.map(c => {
+                const startDate = new Date(c.date_start).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                const endDate = new Date(c.date_end).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+                return `
+                    <div class="campaign-card">
+                        <div class="campaign-info">
+                            <h4>📅 ${c.name}</h4>
+                            <div class="campaign-dates">
+                                <strong>Період:</strong> ${startDate} — ${endDate}
+                            </div>
+                        </div>
+                        <button onclick="deleteCampaign('${c.id}')" class="btn-delete">🗑️ Видалити</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Функція додавання кампанії
+        window.addCampaign = async () => {
+            const name = document.getElementById('campaignName').value.trim();
+            const dateStart = document.getElementById('campaignStart').value;
+            const dateEnd = document.getElementById('campaignEnd').value;
+
+            if (!name) {
+                alert('⚠️ Введіть назву кампанії');
+                return;
+            }
+
+            if (!dateStart || !dateEnd) {
+                alert('⚠️ Виберіть обидві дати');
+                return;
+            }
+
+            if (new Date(dateStart) > new Date(dateEnd)) {
+                alert('⚠️ Дата початку не може бути пізніше дати закінчення');
+                return;
+            }
+
+            const { error } = await supabase
+                .from('campaigns')
+                .insert([{
+                    name: name,
+                    date_start: dateStart,
+                    date_end: dateEnd
+                }]);
+
+            if (!error) {
+                // Очищуємо форму
+                document.getElementById('campaignName').value = '';
+                document.getElementById('campaignStart').value = '';
+                document.getElementById('campaignEnd').value = '';
+
+                // Перезавантажуємо список
+                await loadCampaigns();
+                alert('✅ Кампанія додана успішно!');
+            } else {
+                alert('❌ Помилка при додаванні: ' + error.message);
+            }
+        };
+
+        // Функція видалення кампанії
+        window.deleteCampaign = async (campaignId) => {
+            if (!confirm('Ви впевнені, що хочете видалити цю кампанію?')) {
+                return;
+            }
+
+            const { error } = await supabase
+                .from('campaigns')
+                .delete()
+                .eq('id', campaignId);
+
+            if (!error) {
+                await loadCampaigns();
+                alert('✅ Кампанія видалена!');
+            } else {
+                alert('❌ Помилка при видаленні: ' + error.message);
+            }
+        };
+
+        // Ховаємо лоадер
+        function hideLoader() {
+            const loader = document.getElementById('main-loader');
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 300);
+            }
+        }
+
+        // === ЛОГІКА ЗВІТУ З report1.html АДАПТОВАНА ПІД SUPABASE ===
+        const noRecordsTable = document.getElementById('no-records-table');
+        const processedTable = document.getElementById('processed-table');
+        const noRecordsSearchBtn = document.getElementById('no-records-search-btn');
+        const processedSearchBtn = document.getElementById('processed-search-btn');
+        const daysInput = document.getElementById('days-input');
+        const noRecordsTypeFilter = document.getElementById('no-records-type-filter');
+        const processedTypeFilter = document.getElementById('processed-type-filter');
+        const progressContainer = document.getElementById('progress-container');
+        const progressFill = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
+        const noRecordsCount = document.getElementById('no-records-count');
+        const processedCount = document.getElementById('processed-count');
+
+        let noRecordsData = [];
+        let processedData = [];
+        let sortConfig = { table: null, column: null, direction: 'asc' }; // Для сортування
+
+        const today = new Date(); // Перевизначено тут для звіту
+
+        function updateProgress(percentage) {
+            if (percentage < 100) {
+                progressContainer.style.display = 'block';
+                progressFill.style.width = `${percentage}%`;
+                progressText.textContent = `${Math.round(percentage)}%`;
+            } else {
+                progressContainer.style.display = 'none';
+            }
+        }
+
+        // Debounce function (як було в report1.html)
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Завантаження територій без записів
+        async function fetchNoRecords(typeFilter = '') {
+            try {
+                updateProgress(0);
+                noRecordsTable.innerHTML = '';
+                noRecordsData = [];
+
+                // Запит до Supabase: вибираємо всі дільниці, які ніколи не опрацьовувались
+                let queryBuilder = supabase.from('parcels').select('id, name, category, last_returned');
+
+                // Фільтр за типом категорії
+                if (typeFilter) {
+                    queryBuilder = queryBuilder.eq('category', typeFilter);
+                }
+
+                queryBuilder = queryBuilder.is('last_returned', null);
+
+                const { data: parcels, error } = await queryBuilder;
+
+                if (error) throw error;
+
+                noRecordsData = parcels.map(p => ({ number: p.name, type: p.category, id: p.id }));
+
+                noRecordsData = sortData('no-records-table', 'number', noRecordsData, true);
+                renderNoRecordsTable();
+                noRecordsCount.textContent = noRecordsData.length;
+
+            } catch (err) {
+                console.error('Помилка в fetchNoRecords:', err);
+                alert('Виникла помилка під час завантаження даних. Спробуйте ще раз.');
+            } finally {
+                updateProgress(100);
+            }
+        }
+
+        function renderNoRecordsTable() {
+            noRecordsTable.innerHTML = '';
+            if (noRecordsData.length === 0) {
+                noRecordsTable.innerHTML = '<tr><td colspan="3" class="text-center text-gray-500">Записів не знайдено.</td></tr>';
+                return;
+            }
+            noRecordsData.forEach(({ number, type, id }) => {
+                noRecordsTable.innerHTML += `
+                    <tr>
+                        <td>${number}</td>
+                        <td>${type || 'Не вказано'}</td>
+                        <td><a href="parcel-details.html?id=${id}&from=admin" class="text-blue-600 hover:underline">Відкрити</a></td>
+                    </tr>`;
+            });
+        }
+
+        // Завантаження опрацьованих територій
+        async function fetchProcessed(daysFilter = 0, typeFilter = '') {
+            try {
+                updateProgress(0);
+                processedTable.innerHTML = '';
+                processedData = [];
+
+                // Запит до Supabase: вибираємо дільниці, які опрацьовувались
+                let queryBuilder = supabase.from('parcels').select('id, name, category, last_returned');
+
+                // Фільтр за типом категорії
+                if (typeFilter) {
+                    queryBuilder = queryBuilder.eq('category', typeFilter);
+                }
+
+                queryBuilder = queryBuilder.not('last_returned', 'is', null); // Тільки ті, що мають дату опрацювання
+
+                const { data: parcels, error } = await queryBuilder;
+
+                if (error) throw error;
+
+                parcels.forEach(p => {
+                    // Обробляємо тільки ті, що мають дату опрацювання (last_returned)
+                    if (p.last_returned) {
+                        const processDate = new Date(p.last_returned);
+                        const daysSinceProcessed = Math.floor((today - processDate) / (1000 * 60 * 60 * 24));
+                        if (daysSinceProcessed >= daysFilter) {
+                            processedData.push({
+                                number: p.name,
+                                type: p.category,
+                                processDate,
+                                daysSinceProcessed,
+                                id: p.id
+                            });
+                        }
+                    }
+                });
+
+                // Сортування за замовчуванням від більшого до меншого
+                sortConfig = { table: 'processed-table', column: 'days', direction: 'desc' };
+                processedData = sortData('processed-table', 'days', processedData, true);
+
+                // Встановлюємо правильну іконку сортування для стовпця "Днів з опрацювання"
+                const processedHeaders = document.querySelectorAll('#processed-table th');
+                processedHeaders.forEach(header => {
+                    header.classList.remove('sort-asc', 'sort-desc');
+                    if (header.dataset.sort === 'days') {
+                        header.classList.add('sort-desc');
+                    }
+                });
+                renderProcessedTable();
+                processedCount.textContent = processedData.length;
+
+            } catch (err) {
+                console.error('Помилка в fetchProcessed:', err);
+                alert('Виникла помилка під час завантаження даних. Спробуйте ще раз.');
+            } finally {
+                updateProgress(100);
+            }
+        }
+
+        function renderProcessedTable() {
+            processedTable.innerHTML = '';
+            if (processedData.length === 0) {
+                processedTable.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500">Записів не знайдено.</td></tr>';
+                return;
+            }
+            processedData.forEach(({ number, type, processDate, daysSinceProcessed, id }) => {
+                processedTable.innerHTML += `
+                    <tr>
+                        <td>${number}</td>
+                        <td>${type || 'Не вказано'}</td>
+                        <td>${processDate.toLocaleDateString('uk-UA')}</td>
+                        <td>${daysSinceProcessed}</td>
+                        <td><a href="parcel-details.html?id=${id}&from=admin" class="text-blue-600 hover:underline">Відкрити</a></td>
+                    </tr>`;
+            });
+        }
+
+        function sortData(tableId, column, data, preserveDirection = false) {
+            // Оновлюємо конфігурацію сортування
+            let newDirection;
+            if (preserveDirection && sortConfig.table === tableId && sortConfig.column === column) {
+                // Якщо preserveDirection=true, використовуємо поточний напрямок (для першого сортування)
+                newDirection = sortConfig.direction;
+            } else if (sortConfig.table === tableId && sortConfig.column === column) {
+                // Якщо клікаємо на той самий стовпець - перемикаємо напрямок
+                newDirection = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                // Якщо це новий стовпець - використовуємо 'asc' за замовчуванням
+                newDirection = 'asc';
+            }
+            sortConfig = { table: tableId, column, direction: newDirection };
+
+            // Оновлюємо іконки сортування в заголовках таблиці
+            const headers = document.querySelectorAll(`#${tableId} th`);
+            headers.forEach(header => {
+                header.classList.remove('sort-asc', 'sort-desc');
+                if (header.dataset.sort === column) {
+                    header.classList.add(`sort-${newDirection}`);
+                }
+            });
+
+            // Сортування даних
+            const sortedData = [...data].sort((a, b) => {
+                let valA, valB;
+                if (column === 'number') {
+                    // Для назв територій "Берестівка" або "15", сортуємо правильно
+                    valA = a.number;
+                    valB = b.number;
+                    // Спрощена логіка для змішаних чисел/тексту
+                    const numA = parseInt(valA.replace(/\D/g, '')) || 0;
+                    const numB = parseInt(valB.replace(/\D/g, '')) || 0;
+                    if (numA !== numB) return newDirection === 'asc' ? numA - numB : numB - numA;
+                    return newDirection === 'asc' ? valA.localeCompare(valB, 'uk') : valB.localeCompare(valA, 'uk');
+                } else if (column === 'type') {
+                    valA = a.type || '';
+                    valB = b.type || '';
+                } else if (column === 'date') {
+                    valA = a.processDate ? a.processDate.getTime() : 0;
+                    valB = b.processDate ? b.processDate.getTime() : 0;
+                } else if (column === 'days') {
+                    valA = a.daysSinceProcessed;
+                    valB = b.daysSinceProcessed;
+                }
+
+                if (valA < valB) return newDirection === 'asc' ? -1 : 1;
+                if (valA > valB) return newDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            return sortedData;
+        }
+
+        function addTableSorting() {
+            const tables = ['no-records-table', 'processed-table'];
+            tables.forEach(tableId => {
+                const headers = document.querySelectorAll(`#${tableId} th[data-sort]`);
+                headers.forEach(header => {
+                    header.addEventListener('click', () => {
+                        const column = header.dataset.sort;
+                        if (tableId === 'no-records-table') {
+                            noRecordsData = sortData(tableId, column, noRecordsData);
+                            renderNoRecordsTable();
+                        } else {
+                            processedData = sortData(tableId, column, processedData);
+                            renderProcessedTable();
+                        }
+                    });
+                });
+            });
+        }
+
+        // Обробники подій
+        noRecordsSearchBtn.addEventListener('click', () => fetchNoRecords(noRecordsTypeFilter.value));
+        processedSearchBtn.addEventListener('click', () => {
+            const days = parseInt(daysInput.value) || 0;
+            if (days >= 0) {
+                fetchProcessed(days, processedTypeFilter.value);
+            } else {
+                alert('Введіть невід\'ємне число днів.');
+            }
+        });
+
+        // Обробники подій для звіту територій на руках
+        document.getElementById('generate-on-hands-report').addEventListener('click', generateOnHandsReport);
+        document.getElementById('sort-on-hands-publisher').addEventListener('click', () => sortOnHandsResults('publisher', 1));
+        document.getElementById('sort-on-hands-number').addEventListener('click', () => sortOnHandsResults('number', 1));
+        document.getElementById('sort-on-hands-days').addEventListener('click', () => sortOnHandsResults('daysHeld', -1));
+
+        // Event listener для аналізу територій за період
+        document.getElementById('period-search-btn').addEventListener('click', generatePeriodAnalysis);
+
+        // Debounce для фільтрів, щоб уникнути частих запитів при зміні
+        noRecordsTypeFilter.addEventListener('change', debounce(() => fetchNoRecords(noRecordsTypeFilter.value), 300));
+        processedTypeFilter.addEventListener('change', debounce(() => fetchProcessed(parseInt(daysInput.value) || 0, processedTypeFilter.value), 300));
+        daysInput.addEventListener('input', debounce(() => fetchProcessed(parseInt(daysInput.value) || 0, processedTypeFilter.value), 500));
+
+        // Функція для аналізу територій за період
+        async function generatePeriodAnalysis() {
+            const fromInput = document.getElementById('period-from');
+            const toInput = document.getElementById('period-to');
+            const typeFilter = document.getElementById('period-type-filter');
+            const countFilter = document.getElementById('period-count-filter');
+            const notesFilter = document.getElementById('period-notes-filter');
+            const progressContainer = document.getElementById('period-progress-container');
+            const progressFill = document.getElementById('period-progress-fill');
+            const progressText = document.getElementById('period-progress-text');
+            const reportTable = document.getElementById('period-table');
+            const summaryCount = document.getElementById('period-count');
+
+            if (!fromInput.value || !toInput.value) {
+                alert('Будь ласка, виберіть період дат');
+                return;
+            }
+
+            const fromDate = new Date(fromInput.value);
+            const toDate = new Date(toInput.value);
+
+            if (fromDate > toDate) {
+                alert('Дата "Від" не може бути пізнішою за дату "До"');
+                return;
+            }
+
+            progressContainer.style.display = 'block';
+            progressFill.style.width = '0%';
+            progressText.innerText = 'Прогрес: 0%';
+            reportTable.innerHTML = '<tr><td colspan="5" class="text-center text-gray-600">Пошук...</td></tr>';
+
+            try {
+                // Отримуємо всі території
+                const { data: territories, error } = await supabase
+                    .from('parcels')
+                    .select('*');
+
+                if (error) throw error;
+
+                const results = [];
+                const total = territories.length;
+
+                for (let i = 0; i < territories.length; i++) {
+                    const territory = territories[i];
+
+                    // Оновлюємо прогрес
+                    const progress = Math.round((i / total) * 100);
+                    progressFill.style.width = progress + '%';
+                    progressText.innerText = `Прогрес: ${progress}%`;
+
+                    // Перевіряємо чи територія була активна в періоді
+                    // Спочатку шукаємо в таблиці territory_logs
+                    let isActiveInPeriod = false;
+                    let activityCount = 0;
+                    let notes = [];
+
+                    try {
+                        // Шукаємо записи в territory_logs для цієї території в періоді
+                        const { data: logs, error: logsError } = await supabase
+                            .from('territory_logs')
+                            .select('*')
+                            .eq('parcel_id', territory.id)
+                            .gte('returned_at', fromDate.toISOString())
+                            .lte('returned_at', toDate.toISOString());
+
+                        if (!logsError && logs && logs.length > 0) {
+                            // Є записи в логах - аналізуємо їх
+                            logs.forEach(log => {
+                                if (log.returned_at) {
+                                    isActiveInPeriod = true;
+                                    activityCount++;
+                                    const returnedDate = new Date(log.returned_at).toLocaleDateString('uk-UA');
+                                    notes.push(`Опрацьовано: ${returnedDate}`);
+                                }
+                            });
+                        } else {
+                            // Немає записів в логах - перевіряємо parcels.last_returned
+                            if (territory.last_returned) {
+                                const returnedDate = new Date(territory.last_returned);
+                                if (returnedDate >= fromDate && returnedDate <= toDate) {
+                                    isActiveInPeriod = true;
+                                    activityCount++;
+                                    notes.push(`Опрацьовано: ${returnedDate.toLocaleDateString('uk-UA')}`);
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Помилка при перевірці логів:', error);
+                        // Якщо помилка з логами, перевіряємо parcels.last_returned
+                        if (territory.last_returned) {
+                            const returnedDate = new Date(territory.last_returned);
+                            if (returnedDate >= fromDate && returnedDate <= toDate) {
+                                isActiveInPeriod = true;
+                                activityCount++;
+                                notes.push(`Опрацьовано: ${returnedDate.toLocaleDateString('uk-UA')}`);
+                            }
+                        }
+                    }
+
+                    if (isActiveInPeriod) {
+                        // Фільтруємо за типом (category)
+                        if (typeFilter.value && territory.category !== typeFilter.value) continue;
+
+                        // Фільтруємо за кількістю разів
+                        if (countFilter.value && activityCount < parseInt(countFilter.value)) continue;
+
+                        // Фільтруємо за нотатками
+                        if (notesFilter.value) {
+                            const hasNote = notes.some(n =>
+                                n.toLowerCase().includes(notesFilter.value.toLowerCase())
+                            );
+                            if (!hasNote) continue;
+                        }
+
+                        results.push({
+                            territory: territory,
+                            history: notes, // Використовуємо notes замість history
+                            count: activityCount
+                        });
+                    }
+                }
+
+                // Сортуємо за кількістю разів
+                results.sort((a, b) => b.count - a.count);
+
+                // Відображаємо результати
+                displayPeriodResults(results);
+                summaryCount.innerText = results.length;
+
+                progressFill.style.width = '100%';
+                progressText.innerText = 'Завершено!';
+
+            } catch (error) {
+                console.error('Помилка аналізу:', error);
+                reportTable.innerHTML = '<tr><td colspan="5" class="text-center text-red-600">Помилка завантаження даних</td></tr>';
+            }
+        }
+
+        // Функція відображення результатів аналізу
+        function displayPeriodResults(results) {
+            const tableBody = document.getElementById('period-table');
+
+            if (results.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-600">Територій не знайдено</td></tr>';
+                return;
+            }
+
+            tableBody.innerHTML = results.map(result => `
+                <tr>
+                    <td>${result.territory.name}</td>
+                    <td>${result.territory.category}</td>
+                    <td>${result.count}</td>
+                    <td>${result.history.join(', ') || '-'}</td>
+                    <td>
+                        <button onclick="viewTerritoryDetails('${result.territory.id}')" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
+                            Деталі
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Функція для переходу до картки території
+        window.viewTerritoryDetails = function (territoryId) {
+            // Зберігаємо ID території в localStorage
+            localStorage.setItem('selectedTerritoryId', territoryId);
+
+            // Переходимо на сторінку територій
+            window.location.href = 'territories.html';
+        }
+
+        // Функція для скорочення назв кампаній
+        function formatCampaignName(name) {
+            const nameMap = {
+                'Спеціальна кампанія': 'Спец. кампанія',
+                'Запрошення на вечір спомину': 'Спомин',
+                'Запрошення на конгрес': 'Конгрес'
+            };
+            return nameMap[name] || name;
+        }
+
+        // Глобальні змінні для модального вікна видалення
+        let deleteCampaignId = null;
+        let deleteCampaignName = null;
+
+        // Глобальні змінні для історії кампаній
+        let historyData = null;
+        let isHistoryLoaded = false;
+
+        // Функція перемикання історії кампаній
+        window.toggleCampaignHistory = function() {
+            const content = document.getElementById('campaign-history-content');
+            const icon = document.getElementById('historyToggleIcon');
+            
+            if (content.style.display === 'none') {
+                // Розгортаємо - завантажуємо дані якщо ще не завантажені
+                content.style.display = 'block';
+                icon.classList.add('rotated');
+                
+                if (!isHistoryLoaded) {
+                    loadCampaignHistoryLazy();
+                }
+            } else {
+                // Згортаємо
+                content.style.display = 'none';
+                icon.classList.remove('rotated');
+            }
+        };
+
+        // Функція лінивого завантаження історії кампаній
+        async function loadCampaignHistoryLazy() {
+            try {
+                const loadingIndicator = document.getElementById('historyLoadingIndicator');
+                
+                loadingIndicator.style.display = 'block';
+                
+                if (historyData) {
+                    displayHistoryData(historyData);
+                    loadingIndicator.style.display = 'none';
+                    return;
+                }
+                
+                const { data, error } = await supabase
+                    .from('campaigns')
+                    .select('*');
+
+                if (error) throw error;
+
+                historyData = data;
+                isHistoryLoaded = true;
+                
+                displayHistoryData(data);
+            } catch (error) {
+                console.error('❌ Помилка завантаження історії кампаній:', error);
+                const loadingIndicator = document.getElementById('historyLoadingIndicator');
+                if (loadingIndicator) {
+                    loadingIndicator.innerHTML = '<div style="color: #e74c3c;">❌ Помилка завантаження</div>';
+                }
+            }
+        }
+
+        // Функція відображення даних історії
+        function displayHistoryData(data) {
+            const historyBody = document.getElementById('campaignHistoryBody');
+            const noHistoryMessage = document.getElementById('noHistoryMessage');
+            const loadingIndicator = document.getElementById('historyLoadingIndicator');
+            
+            loadingIndicator.style.display = 'none';
+            
+            if (!data || data.length === 0) {
+                historyBody.innerHTML = '';
+                noHistoryMessage.style.display = 'block';
+                return;
+            }
+
+            noHistoryMessage.style.display = 'none';
+            historyBody.innerHTML = '';
+
+            data.sort((a, b) => new Date(b.campaign_start) - new Date(a.campaign_start));
+            
+            data.forEach(campaign => {
+                const row = document.createElement('tr');
+                const shortName = formatCampaignName(campaign.name);
+                
+                const startDate = new Date(campaign.campaign_start);
+                const endDate = new Date(campaign.campaign_end);
+                const period = `${startDate.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })} - ${endDate.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn-delete';
+                deleteBtn.textContent = '🗑️';
+                deleteBtn.setAttribute('data-campaign-name', campaign.name);
+                deleteBtn.setAttribute('data-campaign-id', campaign.id);
+                deleteBtn.onclick = function() {
+                    showDeleteConfirm(this.getAttribute('data-campaign-name'), this.getAttribute('data-campaign-id'));
+                };
+                
+                row.innerHTML = `
+                    <td>${shortName}</td>
+                    <td>${period}</td>
+                    <td></td>
+                `;
+                
+                row.querySelector('td:last-child').appendChild(deleteBtn);
+                historyBody.appendChild(row);
+            });
+        }
+
+        // Функція показу модального вікна підтвердження видалення
+        function showDeleteConfirm(campaignName, campaignId) {
+            deleteCampaignId = campaignId;
+            deleteCampaignName = campaignName;
+            
+            document.getElementById('deleteCampaignName').textContent = campaignName;
+            document.getElementById('deleteConfirmModal').style.display = 'block';
+        }
+
+        // Функція закриття модального вікна видалення
+        window.closeDeleteModal = function() {
+            document.getElementById('deleteConfirmModal').style.display = 'none';
+            deleteCampaignId = null;
+            deleteCampaignName = null;
+        };
+
+        // Функція показу toast-повідомлень
+        function showToast(message, isError = false) {
+            const toast = document.createElement('div');
+            toast.className = `toast-notification ${isError ? 'error' : ''}`;
+            toast.innerHTML = `<span>${isError ? '❌' : '⚠️'}</span> ${message}`;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 500);
+            }, 2000);
+        }
+
+        // Змінні для зберігання даних користувача
+        let currentUserData = null;
+
+        // Функція завантаження даних користувача та відображення імені
+        async function loadAndDisplayUserName() {
+            try {
+                const userId = localStorage.getItem('userId');
+                if (!userId) {
+                    document.getElementById('currentUserName').textContent = 'Користувач не автентифікований';
+                    return;
+                }
+                
+                const { data: userData, error } = await supabase
+                    .from('publishers')
+                    .select('*')
+                    .eq('id', userId)
+                    .single();
+
+                if (error) {
+                    console.error('❌ Помилка отримання даних користувача:', error);
+                    document.getElementById('currentUserName').textContent = 'Помилка завантаження';
+                    return;
+                }
+
+                if (!userData) {
+                    document.getElementById('currentUserName').textContent = 'Дані не знайдені';
+                    return;
+                }
+
+                currentUserData = userData;
+                updateNameDisplay();
+            } catch (error) {
+                console.error('❌ Помилка завантаження:', error);
+                document.getElementById('currentUserName').textContent = 'Помилка завантаження';
+            }
+        }
+
+        // Функція оновлення відображення імені
+        function updateNameDisplay() {
+            if (!currentUserData) return;
+            
+            const firstName = currentUserData.name || currentUserData.first_name || '';
+            const lastName = currentUserData.surname || currentUserData.last_name || '';
+            const nameOrder = document.querySelector('input[name="nameOrder"]:checked')?.value || 'firstNameLastName';
+            const shorteningTarget = document.querySelector('input[name="shorteningTarget"]:checked')?.value || 'none';
+            
+            const formattedName = formatDisplayName(firstName, lastName, nameOrder, shorteningTarget);
+            document.getElementById('currentUserName').textContent = formattedName;
+        }
+
+        // Додаємо event listeners для радіо кнопок
+        document.addEventListener('DOMContentLoaded', () => {
+            // Event listeners для nameOrder
+            document.querySelectorAll('input[name="nameOrder"]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    updateNameDisplay();
+                    saveNameSettings();
+                });
+            });
+            
+            // Event listeners для shorteningTarget
+            document.querySelectorAll('input[name="shorteningTarget"]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    updateNameDisplay();
+                    saveNameSettings();
+                });
+            });
+            
+            // Завантажуємо налаштування з Supabase
+            loadNameSettings().then(() => {
+                // Завантажуємо дані користувача після завантаження налаштувань
+                loadAndDisplayUserName();
+            });
+        });
+
+        
+        // Функція форматування імені
+        function formatDisplayName(firstName, lastName, nameOrder, shorteningTarget) {
+            if (!firstName && !lastName) return 'Невідомий користувач';
+            
+            let formattedName = '';
+            
+            // Форматуємо відповідно до вибраного порядку
+            switch (nameOrder) {
+                case 'firstNameLastName':
+                    formattedName = `${firstName} ${lastName}`;
+                    break;
+                case 'lastNameFirstName':
+                    formattedName = `${lastName} ${firstName}`;
+                    break;
+                default:
+                    formattedName = `${firstName} ${lastName}`;
+            }
+            
+            // Застосовуємо скорочення відповідно до налаштувань
+            if (shorteningTarget !== 'none') {
+                formattedName = applyShortening(formattedName, shorteningTarget, firstName, lastName, nameOrder);
+            }
+            
+            return formattedName.trim();
+        }
+
+        // Функція скорочення довгих імен
+        function applyShortening(fullName, shorteningTarget, firstName, lastName, nameOrder) {
+            const shortenedFirstName = firstName.charAt(0) + '.';
+            const shortenedLastName = lastName.charAt(0) + '.';
+            
+            switch (shorteningTarget) {
+                case 'none':
+                    return fullName;
+                case 'firstName':
+                    // Скорочуємо ім'я до ініціалів, залишаємо прізвище
+                    if (nameOrder === 'lastNameFirstName') {
+                        return `${lastName} ${shortenedFirstName}`;
+                    }
+                    return `${shortenedFirstName} ${lastName}`;
+                case 'lastName':
+                    // Скорочуємо прізвище до ініціалів, залишаємо ім'я
+                    if (nameOrder === 'lastNameFirstName') {
+                        return `${shortenedLastName} ${firstName}`;
+                    }
+                    return `${firstName} ${shortenedLastName}`;
+                default:
+                    return fullName;
+            }
+        }
+
+        // Функція завантаження налаштувань з Supabase
+        async function loadNameSettings() {
+            try {
+                const { data, error } = await supabase
+                    .from('settings')
+                    .select('data')
+                    .eq('id', 'name_display')
+                    .single();
+
+                if (error) {
+                    console.error('❌ Помилка завантаження налаштувань:', error);
+                    return;
+                }
+
+                if (data && data.data) {
+                    const { nameOrder, shorteningTarget } = data.data;
+                    
+                    // Встановлюємо радіо кнопки
+                    if (nameOrder) {
+                        const nameOrderRadio = document.querySelector(`input[name="nameOrder"][value="${nameOrder}"]`);
+                        if (nameOrderRadio) nameOrderRadio.checked = true;
+                    }
+                    
+                    if (shorteningTarget) {
+                        const shorteningTargetRadio = document.querySelector(`input[name="shorteningTarget"][value="${shorteningTarget}"]`);
+                        if (shorteningTargetRadio) shorteningTargetRadio.checked = true;
+                    }
+                    
+                    console.log('✅ Налаштування завантажено з бази даних');
+                }
+            } catch (error) {
+                console.error('❌ Помилка завантаження налаштувань:', error);
+            }
+        }
+
+        // Функція збереження налаштувань в Supabase
+        window.saveNameSettings = async function() {
+            try {
+                const nameOrder = document.querySelector('input[name="nameOrder"]:checked')?.value;
+                const shorteningTarget = document.querySelector('input[name="shorteningTarget"]:checked')?.value;
+                
+                if (!nameOrder || !shorteningTarget) {
+                    console.log('❌ Не всі налаштування вибрані');
+                    return;
+                }
+                
+                // Зберігаємо в Supabase
+                const settingsData = {
+                    nameOrder: nameOrder,
+                    shorteningTarget: shorteningTarget
+                };
+                
+                const { error } = await supabase
+                    .from('settings')
+                    .upsert({ 
+                        id: 'name_display',
+                        data: settingsData
+                    }, { onConflict: 'id' });
+                
+                if (error) {
+                    console.error('❌ Помилка збереження налаштувань:', error);
+                    return;
+                }
+                
+                console.log('✅ Налаштування збережено в базу даних');
+                
+            } catch (error) {
+                console.error('❌ Помилка збереження налаштувань:', error);
+            }
+        };
+
+        // Функція підтвердження видалення
+        window.confirmDelete = async function() {
+            if (!deleteCampaignId) return;
+            
+            try {
+                console.log(`🔄 Видалення кампанії "${deleteCampaignName}" (ID: ${deleteCampaignId})...`);
+                console.log('🔍 Тип ID для видалення:', typeof deleteCampaignId);
+                
+                const { error } = await supabase
+                    .from('campaigns')
+                    .delete()
+                    .eq('id', deleteCampaignId);
+
+                if (error) throw error;
+
+                console.log(`✅ Кампанію "${deleteCampaignName}" видалено`);
+                
+                // Закриваємо модальне вікно
+                closeDeleteModal();
+                
+                // Очищуємо кеш і перезавантажуємо історію
+                historyData = null;
+                isHistoryLoaded = false;
+                await loadCampaignHistoryLazy();
+                
+                // Перезавантажуємо активні кампанії
+                await loadCampaignsFromDB();
+                
+            } catch (error) {
+                console.error('❌ Помилка видалення кампанії:', error);
+                alert('Помилка видалення кампанії: ' + error.message);
+            }
+        };
+
+        // Ініціалізація при завантаженні сторінки
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Ініціалізуємо кампанії
+            initializeCampaigns();
+
+            // НЕ завантажуємо історію кампаній автоматично - тільки при розгортанні
+
+            // Відновлюємо попередній таб з localStorage
+            const savedTab = localStorage.getItem('currentAdminTab');
+            if (savedTab) {
+                // Активуємо збережений таб
+                switchTab(savedTab);
+                if (savedTab === 'territories') {
+                    await loadTerritories();
+                } else if (savedTab === 'settings') {
+                    await loadCampaigns();
+                }
+            } else {
+                // Якщо збереженого табу немає, завантажуємо території за замовчуванням
+                switchTab('territories');
+                await loadTerritories();
+                updateMobileTitle('territories');
+            }
+
+            addTableSorting(); // Додаємо сортування після завантаження
+            // При першому відкритті вкладки "Опрацювання" дані НЕ ЗАВАНТАЖУЮТЬСЯ
+            // Користувач має натиснути кнопки "Пошук"
+
+            // Ховаємо лоадер після завантаження
+            hideLoader();
+        });
+    </script>
+
+</body>
+
+</html>

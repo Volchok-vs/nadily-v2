@@ -110,6 +110,119 @@
             color: #000; 
         }
 
+        /* МОДАЛЬНЕ ВІКНО */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            width: 400px;
+            max-width: 90%;
+        }
+
+        .modal-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+        }
+
+        .checkbox-group select {
+            flex-grow: 1;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .btn-modal-save {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-modal-save:hover {
+            background: #218838;
+        }
+
+        .btn-modal-cancel {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-modal-cancel:hover {
+            background: #5a6268;
+        }
+
         /* Робимо контейнер гнучким, щоб кнопки були в ряд */
 .menu-container {
     position: absolute;
@@ -191,6 +304,38 @@
     </div>
 </div>
 
+<!-- МОДАЛЬНЕ ВІКНО ДЛЯ ДОДАВАННЯ/РЕДАГУВАННЯ ДІЛЯНКИ -->
+<div id="parcelModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">Інформація про ділянку</div>
+        
+        <div class="form-group">
+            <label for="parcelName">Назва/Номер ділянки:</label>
+            <input type="text" id="parcelName" placeholder="Наприклад: №1, Ділянка А">
+        </div>
+
+        <div class="form-group">
+            <label>Категорія ділянки:</label>
+            <div class="checkbox-group">
+                <input type="checkbox" id="editSectorCheck" title="Дозволити зміну типу">
+                <label for="sectorTypeSelect" style="font-size: 14px; flex-shrink: 0;">Тип:</label>
+                <select id="sectorTypeSelect" disabled style="flex-grow: 1; padding: 5px; border-radius: 5px;">
+                    <option value="Приватний сектор">Приватний сектор</option>
+                    <option value="Поверхівки">Поверхівки</option>
+                    <option value="Змішані">Змішані</option>
+                    <option value="Ділова">Ділова</option>
+                    <option value="Село">Село</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="modal-buttons">
+            <button class="btn-modal-cancel" onclick="window.closeParcelModal()">Скасувати</button>
+            <button class="btn-modal-save" onclick="window.saveParcelInfo()">Зберегти</button>
+        </div>
+    </div>
+</div>
+
 <div id="map"></div>
 <div id="output">Статус бази...</div>
 
@@ -200,16 +345,134 @@
 <script type="module">
     import { supabase } from "./js/config.js"; // Просто імпортуємо готову "розетку"
 
+    // Глобальна змінна для зберігання поточного шару в модалі
+    window.currentModalLayer = null;
+    window.isEditingMode = false;
+
     // Функція гамбургера
     window.toggleMenu = function() {
         document.getElementById('menuControls').classList.toggle('active');
     }
 
-    // Карта
-    var map = L.map('map').setView([49.2321, 29.0577], 15);
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles © Esri'
+    // Функції для модального вікна
+    window.openParcelModal = function(layer = null, isEdit = false) {
+        const modal = document.getElementById('parcelModal');
+        const nameInput = document.getElementById('parcelName');
+        const categorySelect = document.getElementById('sectorTypeSelect');
+        const editCheckbox = document.getElementById('editSectorCheck');
+        
+        window.currentModalLayer = layer;
+        window.isEditingMode = isEdit;
+
+        if (layer && layer.feature && layer.feature.properties) {
+            nameInput.value = layer.feature.properties.name || '';
+            categorySelect.value = layer.feature.properties.category || 'Приватний сектор';
+        } else {
+            nameInput.value = '';
+            categorySelect.value = 'Приватний сектор';
+        }
+
+        // У режимі редагування дозволяємо змінювати категорію
+        editCheckbox.checked = isEdit;
+        categorySelect.disabled = !isEdit;
+
+        // Слухач для чекбокса
+        editCheckbox.onchange = function() {
+            categorySelect.disabled = !this.checked;
+        };
+
+        modal.classList.add('show');
+        nameInput.focus();
+    }
+
+    window.closeParcelModal = function() {
+        const modal = document.getElementById('parcelModal');
+        modal.classList.remove('show');
+        window.currentModalLayer = null;
+    }
+
+    window.saveParcelInfo = function() {
+        const nameInput = document.getElementById('parcelName');
+        const categorySelect = document.getElementById('sectorTypeSelect');
+        const name = nameInput.value.trim();
+
+        if (!name) {
+            alert('⚠️ Введіть назву ділянки');
+            return;
+        }
+
+        if (!window.currentModalLayer) {
+            window.closeParcelModal();
+            return;
+        }
+
+        const layer = window.currentModalLayer;
+        const category = categorySelect.value;
+
+        // Оновлюємо властивості шару
+        if (!layer.feature) {
+            layer.feature = { type: "Feature", properties: {} };
+        }
+        layer.feature.properties.name = name;
+        layer.feature.properties.category = category;
+
+        // Оновлюємо тултіп (показуємо тільки назву)
+        const tooltipText = `${name}`;
+        layer.setTooltipContent(tooltipText);
+        layer.openTooltip(layer.getTooltip().getLatLng());
+
+        // Зберігаємо в базу
+        saveToSupabase();
+        window.closeParcelModal();
+    }
+
+    // Карта з різними шарами
+    // 1. ОПИС БАЗОВИХ ШАРІВ
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+        attribution: '© OpenStreetMap contributors' 
+    });
+    const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { 
+        attribution: '© OpenTopoMap (SRTM)' 
+    });
+    const satelliteOnly = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+    const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { 
+        pane: 'shadowPane' 
+    });
+    const satelliteHybrid = L.layerGroup([satelliteOnly, labels]);
+
+    // 2. Об'єднуємо в словник базових шарів
+    const baseMaps = {
+        "🛰️ Гібрид": satelliteHybrid,
+        "🗺️ Схема (OSM)": osm,
+        "⛰️ Рельєф (Topo)": topo
+    };
+
+    // Перевіряємо localStorage для збереженого вибору
+    const savedLayerName = localStorage.getItem('selectedBaseLayer');
+    const initialLayer = (savedLayerName && baseMaps[savedLayerName])
+        ? baseMaps[savedLayerName]
+        : satelliteHybrid;
+
+    // 3. ІНІЦІАЛІЗАЦІЯ КАРТИ
+    var map = L.map('map', {
+        preferCanvas: false,
+        center: [49.2321, 29.0577],
+        zoom: 15,
+        layers: [initialLayer],
+        zoomControl: false
+    });
+
+    // Додаємо перемикач шарів
+    L.control.layers(baseMaps, null, {
+        position: 'bottomleft',
+        collapsed: true
     }).addTo(map);
+
+    // Зберігаємо вибір шару в localStorage
+    map.on('baselayerchange', function (e) {
+        localStorage.setItem('selectedBaseLayer', e.name);
+        console.log("💾 Шар збережено:", e.name);
+    });
 
     var drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
@@ -218,6 +481,7 @@
     window.setupLayer = function(layer, feature) {
         var props = feature.properties || {};
         var name = props.name || "Без назви";
+        var category = props.category || "Приватний сектор";
         
         // Перевірка формату координат (масив чи об'єкт)
         var labelPos;
@@ -227,7 +491,8 @@
             labelPos = layer.getBounds().getCenter();
         }
         
-        layer.bindTooltip(name, { 
+        const tooltipText = `${name}`;
+        layer.bindTooltip(tooltipText, { 
             permanent: true, 
             direction: 'center' 
         });
@@ -235,15 +500,20 @@
 
         layer.on('click', function (e) {
             L.DomEvent.stopPropagation(e);
-            if (!document.getElementById('enableLabelMove').checked) return;
+            if (!document.getElementById('enableLabelMove').checked) {
+                // Якщо режим редагування вимкнено, відкриємо модалю для перегляду/редагування
+                window.openParcelModal(layer, false);
+                return;
+            }
 
             var newPos = e.latlng;
             // Оновлюємо тултіп на нову позицію
-            layer.setTooltipContent(name); 
+            layer.setTooltipContent(tooltipText); 
             layer.openTooltip(newPos);
             
             if (!layer.feature) layer.feature = { type: "Feature", properties: {} };
             layer.feature.properties.name = name;
+            layer.feature.properties.category = category;
             layer.feature.properties.labelPos = [newPos.lat, newPos.lng];
             
             saveToSupabase();
@@ -255,7 +525,12 @@
     const parcels = [];
     drawnItems.eachLayer(layer => {
         let name = "Без назви";
-        if (layer.getTooltip()) name = layer.getTooltip().getContent().toString();
+        let category = "Приватний сектор";
+        
+        if (layer.feature && layer.feature.properties) {
+            name = layer.feature.properties.name || "Без назви";
+            category = layer.feature.properties.category || "Приватний сектор";
+        }
         
         let labelPos = null;
         if (layer.getTooltip()) {
@@ -265,13 +540,12 @@
 
         parcels.push({
             name: name,
+            category: category,
             geom: layer.toGeoJSON().geometry,
             label_pos: labelPos
-            // Ми НЕ надсилаємо статус, ID чи хто взяв, щоб не перезаписати їх дефолтними значеннями
         });
     });
 
-    // ВИДАЛЯЄМО РЯДОК З DELETE!
     // Використовуємо upsert. Він знайде запис за 'name' і оновить тільки geom та label_pos
     const { error } = await supabase
         .from('parcels')
@@ -294,6 +568,7 @@
         const geojson = JSON.parse(text);
         const parcels = geojson.features.map(f => ({
             name: f.properties?.name || f.properties?.Name || "№?",
+            category: f.properties?.category || "Приватний сектор",
             geom: f.geometry,
             label_pos: f.properties?.labelPos || null
         }));
@@ -317,7 +592,11 @@
         data.forEach(p => {
             L.geoJSON(p.geom, {
                 onEachFeature: function (f, layer) {
-                    f.properties = { name: p.name, labelPos: p.label_pos };
+                    f.properties = { 
+                        name: p.name, 
+                        category: p.category || "Приватний сектор",
+                        labelPos: p.label_pos 
+                    };
                     layer.feature = f;
                     drawnItems.addLayer(layer);
                     window.setupLayer(layer, f);
@@ -336,20 +615,24 @@
 
     map.on('draw:created', function (e) {
         var layer = e.layer;
-        var name = prompt("Номер ділянки:", "№" + (drawnItems.getLayers().length + 1));
-        if (name) {
-            layer.feature = { type: "Feature", properties: { name: name } };
-            drawnItems.addLayer(layer);
-            window.setupLayer(layer, layer.feature);
-            saveToSupabase();
-        }
+        layer.feature = { 
+            type: "Feature", 
+            properties: { 
+                name: "Нова ділянка",
+                category: "Приватний сектор"
+            } 
+        };
+        drawnItems.addLayer(layer);
+        window.setupLayer(layer, layer.feature);
+        // Відкриваємо модалю для введення інформації
+        window.openParcelModal(layer, true);
     });
 
     map.on('draw:edited', saveToSupabase);
     map.on('draw:deleted', async function (e) {
         const layers = e.layers;
         layers.eachLayer(async (layer) => {
-            const name = layer.getTooltip()?.getContent().toString();
+            const name = layer.feature?.properties?.name;
             if (name) {
                 // Видаляємо конкретно цю дільницю за назвою
                 const { error } = await supabase.from('parcels').delete().eq('name', name);
@@ -360,7 +643,7 @@
                 }
             }
         });
-        // Після видалення оновлюємо інші дільниці (якщо вони були змінені паралельно)
+        // Після видалення оновлюємо інші дільниці
         saveToSupabase(); 
     });;
 

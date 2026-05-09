@@ -633,6 +633,10 @@
         <div id="adminMenu" class="hidden">
             <div class="nav-item" onclick="switchTab('group-cards')">👥 Картки групи</div>
             <div class="nav-item" onclick="switchTab('all-territories')">📋 S-13</div>
+            <a href="territories-manager.html" class="nav-item"
+                style="border-left: 3px solid #ff6b6b; color: #ff6b6b;">
+                ⚙️ Адміка
+            </a>
             <a href="dev-settings.html" id="devLink" class="nav-item"
                 style="display: none; border-left: 3px solid #ff9800; color: #ff9800;">
                 🛠 Режим розробки
@@ -840,8 +844,14 @@
         </div>
 
         <div id="tab-all-territories" class="tab-content hidden">
-            <h1 class="table-title">📋 Записи про опрацювання території (${getTheocraticYearRange()})</h1>
-            <div class="card" style="overflow-x: auto;">
+            <h1 class="table-title">📋 Реєстр опрацювання</h1>
+
+            <div class="origin-tabs">
+                <button onclick="switchTerritoryTab('city')" class="origin-tab-btn active">🏙️ Місто</button>
+                <button onclick="switchTerritoryTab('village')" class="origin-tab-btn">🏡 Села</button>
+            </div>
+
+            <div class="card" style="overflow-x: auto; border-radius: 0 10px 10px 10px;">
                 <table id="territoryTable">
                     <thead id="tHead"></thead>
                     <tbody id="tBody"></tbody>
@@ -883,6 +893,7 @@
         </style>
     </div>
 
+    <script src="js/campaign-modal.js"></script>
     <script type="module">
         import { supabase } from "./js/config.js"; // Просто імпортуємо готову "розетку"
         import { returnParcel } from './js/parcel-logic.js';
@@ -990,6 +1001,8 @@
 
         let currentSortCol = 'name'; // Початкове сортування за назвою
         let sortAsc = true;         // Напрямок за зростанням
+        
+        let currentTerritoryTab = 'city'; // Початковий режим для реєстру S-13
 
         // Функція перемикання сортування
         window.toggleSort = (column) => {
@@ -1046,6 +1059,18 @@
 
         // Робимо функцію доступною для HTML-атрибутів oninput
         window.validateUniqueName = validateUniqueName;
+        
+        // Функція перемикання табів у реєстрі S-13
+        window.switchTerritoryTab = function(type) {
+            currentTerritoryTab = type;
+            
+            // Візуал кнопок
+            document.querySelectorAll('.origin-tabs .origin-tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            // Перемальовуємо таблицю
+            loadAllTerritoriesGrid();
+        };
 
         // --- 2. ОСНОВНА ЛОГІКА ТА ІНІЦІАЛІЗАЦІЯ ---
         async function init() {
@@ -1139,8 +1164,10 @@
             if (!tHead || !tBody) return;
 
             const rangeStart = getTheocraticStart();
-            const titleElement = document.querySelector('#tab-all-territories h1');
-            if (titleElement) titleElement.innerText = `📋 Записи про опрацювання території ${getTheocraticYearText()}`;
+            const titleText = currentTerritoryTab === 'city' ? 'опрацювання міста' : 'опрацювання сіл';
+            
+            const titleElement = document.querySelector('#tab-all-territories .table-title');
+            if (titleElement) titleElement.innerText = `📋 Записи про ${titleText} ${getTheocraticYearText()}`;
 
             // Завантаження даних
             const rangeStartISO = rangeStart.toISOString();
@@ -1158,7 +1185,14 @@
                 return;
             }
 
-            const parcels = parcelsRes.data.sort((a, b) => {
+            // ФІЛЬТРАЦІЯ: Відокремлюємо місто від сіл
+            let parcels = parcelsRes.data.filter(p => {
+                if (currentTerritoryTab === 'city') return p.category !== 'Село';
+                return p.category === 'Село';
+            });
+
+            // Сортування
+            parcels.sort((a, b) => {
                 const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
                 const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
                 return numA - numB;
@@ -1168,27 +1202,13 @@
             const combinedData = {};
 
             parcels.forEach(p => {
-                // 1. Беремо всі закриті записи з логів (з заїздом у цей службовий рік)
                 const pLogs = allLogs.filter(log => log.parcel_id === p.id).map(log => ({
                     name: log.publisher_name,
                     in: log.taken_at,
                     out: log.returned_at
                 }));
-
-                // 2. ПЕРЕВІРКА ПОТОЧНОГО СТАНУ (дільниця на руках)
-                // Прибираємо перевірку (>= rangeStart), залишаємо тільки перевірку статусу
                 if (p.status === 'taken' && p.taken_by) {
-                    // Перевіряємо, чи цей активний запис ще не потрапив у pLogs 
-                    // (наприклад, якщо його вже здали сьогодні, він може бути в обох місцях)
-                    const alreadyInLogs = pLogs.some(l => !l.out && l.name === p.taken_by);
-
-                    if (!alreadyInLogs) {
-                        pLogs.push({
-                            name: p.taken_by,
-                            in: p.taken_at, // Дата може бути хоч за 2024 рік
-                            out: null       // Поле опрацювання буде порожнім або "пр"
-                        });
-                    }
+                    pLogs.push({ name: p.taken_by, in: p.taken_at, out: null });
                 }
                 combinedData[p.id] = pLogs;
             });
@@ -1196,7 +1216,6 @@
             let maxCols = 1;
             Object.values(combinedData).forEach(list => { if (list.length > maxCols) maxCols = list.length; });
 
-            // --- ЗМІНИ ТУТ: ФІКСОВАНА ШИРИНА В ЗАГОЛОВКУ ---
             tHead.innerHTML = `
         <tr>
             <th rowspan="2" style="width: 40px; min-width: 40px; border:1px solid #444;">№</th>
@@ -1215,27 +1234,10 @@
             tBody.innerHTML = '';
             parcels.forEach(p => {
                 const pSessions = combinedData[p.id] || [];
-
-                // 1. ДЖЕРЕЛО ДАНИХ: використовуємо поле last_processed з таблиці parcels
-                // Це значення оновлюється в базі, коли дільниця позначається як "опрацьована"
                 const lastProcDate = p.last_processed ? new Date(p.last_processed) : null;
-
-                // 2. МЕЖА СЛУЖБОВОГО РОКУ: отримуємо 1 вересня (наприклад, 01.09.2025)
-                // Функція getTheocraticStart() розраховує це автоматично
-                const rangeStart = getTheocraticStart();
-
-                let lastDoneDate = "-"; // Значення за замовчуванням
-
-                // 3. ЛОГІКА ВІДОБРАЖЕННЯ:
-                // Якщо дата опрацювання була ДО 1 вересня поточного року — виводимо її в червоний стовпчик.
-                // Якщо ПІСЛЯ — стовпчик залишається порожнім, бо це опрацювання вже є в основній частині таблиці.
-                if (lastProcDate && lastProcDate < rangeStart) {
-                    lastDoneDate = lastProcDate.toLocaleDateString('uk-UA', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: '2-digit'
-                    });
-                }
+                let lastDoneDate = (lastProcDate && lastProcDate < rangeStart) 
+                    ? lastProcDate.toLocaleDateString('uk-UA', {day:'2-digit', month:'2-digit', year:'2-digit'}) 
+                    : "-";
 
                 const tr1 = document.createElement('tr');
                 const tr2 = document.createElement('tr');
@@ -1244,41 +1246,26 @@
                 const lastDoneStyle = lastDoneDate !== "-" ? "color: #d32f2f; font-weight: bold;" : "";
 
                 let tr1Html = `
-        <td rowspan="2" class="num-col" style="width: 50px; text-align: center; border:1px solid #444;">
+        <td rowspan="2" class="num-col" style="width: 40px; text-align: center; border:1px solid #444;">
             <a href="parcel-details.html?id=${p.id}&from=all" style="text-decoration:none; color:#007bff; font-weight:bold;">
-                №${p.name}
+                ${p.name}
             </a>
         </td>
-        <td rowspan="2" class="last-done-col" style="width: 100px; text-align: center; border:1px solid #444; ${lastDoneStyle}">
+        <td rowspan="2" class="last-done-col" style="width: 110px; text-align: center; border:1px solid #444; ${lastDoneStyle}">
             ${lastDoneDate}
         </td>
     `;
 
                 let tr2Html = '';
-
-                // Знаходимо цикл у функції loadAllTerritoriesGrid, де формується tr2Html
                 for (let i = 0; i < maxCols; i++) {
                     const s = pSessions[i];
                     const pName = s ? s.name : '';
-
-                    // Форматування дати отримання
                     const dIn = s ? new Date(s.in).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' }) : '';
-
-                    // ЛОГІКА ВИПРАВЛЕНА: прибираємо "пр", залишаємо порожньо
-                    let dOut = '';
-                    if (s && s.out) {
-                        // Якщо є дата повернення (returned_at), виводимо її
-                        dOut = new Date(s.out).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' });
-                    }
-                    // Якщо s.out немає (дільниця на руках) — dOut залишиться порожнім рядком ''
-
-                    // Візуальне виділення для старих замовлень (взятих до 1 вересня)
-                    const isOldOrder = s && new Date(s.in) < rangeStart;
-                    const dInStyle = isOldOrder ? "color: #1976d2; font-weight: bold;" : "";
+                    const dOut = (s && s.out) ? new Date(s.out).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' }) : '';
 
                     tr1Html += `<td colspan="2" class="name-row" style="width: 200px; border:1px solid #444; padding: 4px; overflow: hidden; white-space: nowrap; font-size: 0.9em;">${pName}</td>`;
                     tr2Html += `
-        <td class="date-cell" style="width: 100px; background:#e8f5e9; border:1px solid #444; text-align: center; ${dInStyle}">${dIn}</td>
+        <td class="date-cell" style="width: 100px; background:#e8f5e9; border:1px solid #444; text-align: center;">${dIn}</td>
         <td class="date-cell" style="width: 100px; background:#fff3e0; border:1px solid #444; text-align: center;">${dOut}</td>
     `;
                 }
@@ -1398,29 +1385,28 @@
             }
 
             container.innerHTML = parcels.map(p => {
-                const days = Math.floor((new Date() - new Date(p.taken_at)) / (1000 * 60 * 60 * 24));
+    const days = Math.floor((new Date() - new Date(p.taken_at)) / (1000 * 60 * 60 * 24));
+    const showReturnBtn = isMyCard || isAdmin;
 
-                // Показуємо кнопку, якщо це власна картка АБО якщо переглядає Адмін
-                const showReturnBtn = isMyCard || isAdmin;
+    // ПРАВКА: Перевіряємо категорію дільниці
+    const prefix = p.category === 'Село' ? ': ' : ' №';
 
-                // ... ваш існуючий код renderParcelList ...
-
-                return `
-            <div style="border:1px solid #eee; padding:15px; margin-bottom:10px; border-radius:8px; cursor:pointer;" 
-                 onclick="window.location.href='parcel-details.html?id=${p.id}&from=${isMyCard ? 'my' : 'all'}'">
-                <div style="display:flex; justify-content:space-between;">
-                    <strong>Дільниця №${p.name}</strong>
-                    <span class="badge">${days} дн.</span>
-                </div>
-                <p style="font-size:0.9rem; color:#666; margin:10px 0;">${p.notes || '—'}</p>
-                ${showReturnBtn ? `
-                    <button onclick="event.stopPropagation(); window.returnParcel('${p.id}', '${p.name}')" 
-                        style="background:#ff4757; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-weight:bold;">
-                        Здати
-                    </button>` : ''}
-            </div>`;
-                // ... решта коду ...
-            }).join('');
+    return `
+        <div style="border:1px solid #eee; padding:15px; margin-bottom:10px; border-radius:8px; cursor:pointer;" 
+             onclick="window.location.href='parcel-details.html?id=${p.id}&from=${isMyCard ? 'my' : 'all'}'">
+            <div style="display:flex; justify-content:space-between;">
+                <strong>Дільниця${prefix}${p.name}</strong>
+                <span class="badge">${days} дн.</span>
+            </div>
+            <p style="font-size:0.9rem; color:#666; margin:10px 0;">${p.notes || '—'}</p>
+            ${showReturnBtn ? `
+                <button onclick="event.stopPropagation(); window.returnParcel('${p.id}', '${p.name}')" 
+                    style="background:#ff4757; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-weight:bold;">
+                    Здати
+                </button>` : ''}
+        </div>
+    `;
+}).join('');
         }
 
         // Функція генерації пароля (6 цифр + 2 букви)
