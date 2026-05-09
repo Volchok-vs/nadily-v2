@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <style>
+    /* Оригінальні стилі модалок */
+    .custom-modal-overlay {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); z-index: 2500;
+    }
+    .modal-window {
+        display: none; position: fixed; z-index: 3000;
+        top: 50%; left: 50%; transform: translate(-50%, -50%);
+        background: white; padding: 25px; border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3); width: 320px;
+    }
+    /* Стиль меню фільтра (зліва) */
+    #filterMenu {
+        display: none; position: fixed; left: 48px; top: 116px; 
+        background: white; z-index: 1001; padding: 15px; border-radius: 8px; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 200px;
+    }
+    /* Логіка кольорів */
+    .logic-item { margin-bottom: 12px; font-size: 14px; }
+    .logic-color { display: inline-block; width: 20px; height: 10px; border-radius: 3px; margin-right: 8px; border: 1px solid #ccc; }
+    
+    /* Палітра супер-адміна */
+    #superadmin-palette {
+        display: none; position: fixed; right: 20px; top: 80px; 
+        background: white; padding: 15px; border-radius: 10px; 
+        z-index: 2000; box-shadow: 0 4px 15px rgba(0,0,0,0.3); width: 240px;
+    }
+</style>
+
+
+</head>
+<body>
+    <div id="modalOverlay" class="custom-modal-overlay" onclick="window.closeAllModals()"></div>
+
+<div id="filterMenu">
+    <h4 style="margin: 0 0 10px 0;">Фільтрація</h4>
+    <input type="text" id="searchNumber" placeholder="Номер дільниці..." style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+    <label style="display: block; margin-bottom: 5px; font-size: 14px; cursor: pointer;">
+        <input type="radio" name="statusFilter" value="all" checked> Всі
+    </label>
+    <label style="display: block; margin-bottom: 5px; font-size: 14px; cursor: pointer;">
+        <input type="radio" name="statusFilter" value="free"> Вільні
+    </label>
+    <label style="display: block; margin-bottom: 10px; font-size: 14px; cursor: pointer;">
+        <input type="radio" name="statusFilter" value="taken"> На руках
+    </label>
+    <button id="closeFilter" onclick="document.getElementById('filterMenu').style.display='none'" style="width: 100%; padding: 5px; background: #eee; border: none; border-radius: 4px; cursor: pointer;">Закрити</button>
+</div>
+
+<div id="logicModal" class="modal-window">
+    <h3 style="margin-top:0;">Логіка кольорів</h3>
+    <div class="logic-item"><div class="logic-color" style="background:#e74c3c;"></div><b>Червоний:</b> Зайнята</div>
+    <div class="logic-item"><div class="logic-color" style="background:#808080;"></div><b>Сірий:</b> Карантин (3 міс.)</div>
+    <div class="logic-item"><div class="logic-color" style="background:#008000;"></div><b>Зелений:</b> Вільна</div>
+    <div class="logic-item"><div class="logic-color" style="background:#0000FF;"></div><b>Синій:</b> Ділова</div>
+    <div class="logic-item"><div class="logic-color" style="background:#FFA500;"></div><b>Помаранчевий:</b> Багатоповерхівки</div>
+    <button onclick="window.closeAllModals()" style="width:100%; padding:10px; border-radius:8px; cursor:pointer; margin-top:10px;">Зрозуміло</button>
+</div>
+
+<div id="takeModal" class="modal-window">
+    <h3>Призначити дільницю <span id="p-name" style="color:#007bff;"></span></h3>
+    <select id="v-name-select" style="width:100%; padding:8px; margin-bottom:15px;"></select>
+    <button onclick="window.confirmTake()" style="width:100%; padding:12px; background:#28a745; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">ПІДТВЕРДИТИ</button>
+</div>
+
+<div id="superadmin-palette">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h4 style="margin:0;">🎨 Кольори</h4>
+        <span onclick="document.getElementById('superadmin-palette').style.display='none'" style="cursor:pointer; font-size:20px;">×</span>
+    </div>
+    <div id="palette-inputs"></div>
+    <button onclick="window.saveColorsToDB()" style="width:100%; margin-top:10px; background:#2ecc71; border:none; color:white; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold;">💾 Зберегти для всіх</button>
+</div>
+</body>
+</html>
