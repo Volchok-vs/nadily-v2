@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Кабінет Адміністратора</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -435,9 +438,9 @@
             margin-bottom: 20px;
         }
 
-        .tab-header h1 {
+        h1, h2, h3 {
             margin: 0;
-            font-size: 1.5rem;
+            font-family: 'Caveat', cursive;
         }
 
         /* Кнопка Додати */
@@ -624,7 +627,7 @@
     </div>
     <div class="mobile-header">
         <button class="mobile-nav-toggle-new" onclick="toggleSidebar()">☰</button>
-        <div class="mobile-title">Адмін-панель</div>
+        <div class="mobile-title" id="mobile-title">👤 Моя картка</div>
     </div>
     <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div class="sidebar">
@@ -652,6 +655,11 @@
             <div class="card">
                 <h3>Дільниці у мене на руках</h3>
                 <div id="myParcels">Пошук дільниць...</div>
+            </div>
+
+            <div class="card">
+                <h3>📜 Історія опрацювань</h3>
+                <div id="myHistory">Завантаження історії...</div>
             </div>
         </div>
 
@@ -844,7 +852,7 @@
         </div>
 
         <div id="tab-all-territories" class="tab-content hidden">
-            <h1 class="table-title">📋 Реєстр опрацювання</h1>
+            <h1 class="table-title">📋 Записи про опрацювання</h1>
 
             <div class="origin-tabs">
                 <button onclick="switchTerritoryTab('city')" class="origin-tab-btn active">🏙️ Місто</button>
@@ -893,6 +901,7 @@
         </style>
     </div>
 
+    <script src="js/campaign-modal.js"></script>
     <script type="module">
         import { supabase } from "./js/config.js"; // Просто імпортуємо готову "розетку"
         import { returnParcel } from './js/parcel-logic.js';
@@ -910,7 +919,7 @@
         const userId = localStorage.getItem('userId');
         const userRole = localStorage.getItem('userRole');
 
-        if (!userId) window.location.href = 'login.html';
+        if (!userId) window.location.href = 'index.html';
 
         // Функція перемикання меню
         window.toggleSidebar = () => {
@@ -929,6 +938,21 @@
                 overlay.classList.toggle('active');
             }
         };
+
+        // Функція оновлення мобільного заголовка
+        function updateMobileTitle(tabName) {
+            const mobileTitle = document.getElementById('mobile-title');
+            const titles = {
+                'my-card': '👤 Моя картка',
+                'group-cards': '👥 Картки групи',
+                'all-territories': '📋 S-13',
+                'user-details': '👤 Картка вісника'
+            };
+
+            if (mobileTitle && titles[tabName]) {
+                mobileTitle.textContent = titles[tabName];
+            }
+        }
 
         // 2. Єдина функція для перемикання вкладок
         window.switchTab = (tabName) => {
@@ -972,6 +996,9 @@
                     if (overlay) overlay.classList.remove('active');
                 }
             }
+
+            // --- 5. Оновлення мобільного заголовка ---
+            updateMobileTitle(tabName);
         };
 
         window.logout = () => {
@@ -1045,6 +1072,24 @@
             renderPublishersList(filter);
         };
 
+        // Функція для оновлення видимості табів на основі наявності вісників
+        function updateTabsVisibility() {
+            const groups = ['Липовець', 'Іллінці', 'Гості'];
+            
+            groups.forEach(group => {
+                const hasPublishers = allUsers.some(user => user.group_tag === group);
+                const tabBtn = document.querySelector(`.origin-tab-btn[onclick*="'${group}'"]`);
+                
+                if (tabBtn) {
+                    if (hasPublishers) {
+                        tabBtn.style.display = 'inline-block';
+                    } else {
+                        tabBtn.style.display = 'none';
+                    }
+                }
+            });
+        }
+
         // Оновіть вашу функцію filterByOrigin, щоб вона враховувала сортування
         window.filterByOrigin = (origin) => {
             document.querySelectorAll('.origin-tab-btn').forEach(btn => {
@@ -1073,6 +1118,24 @@
 
         // --- 2. ОСНОВНА ЛОГІКА ТА ІНІЦІАЛІЗАЦІЯ ---
         async function init() {
+            if (!userId) return (window.location.href = 'index.html');
+
+            // Ховаємо лоадер після завантаження сторінки
+            hideLoader();
+            
+            // Якщо завантажуємо сторінку з параметром tab=all-territories, створюємо легенду
+            setTimeout(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const tab = urlParams.get('tab');
+                
+                if (tab === 'all-territories') {
+                    console.log('🔄 Сторінка завантажена на вкладці S-13, створюємо легенду...');
+                    setTimeout(() => {
+                        createColorLegend();
+                    }, 1000);
+                }
+            }, 500);
+
             // === 1. ДОДАЙТЕ ЦЕЙ БЛОК ДЛЯ ФІЛЬТРІВ ТУТ ===
             document.querySelectorAll('.tab-filter').forEach(btn => {
                 btn.onclick = () => {
@@ -1088,7 +1151,10 @@
             });
             // ===========================================
 
-            document.getElementById('userName').innerText = localStorage.getItem('userName') || 'Користувач';
+            // Отримуємо повне ім'я з бази даних
+            const { data: userData } = await supabase.from('publishers').select('name, last_name').eq('id', userId).single();
+            const fullName = userData ? `${userData.name || ''} ${userData.last_name || ''}`.trim() : (localStorage.getItem('userName') || 'Користувач');
+            document.getElementById('userName').innerText = fullName;
             document.getElementById('displayRole').innerText = userRole === 'super_admin' ? 'Супер Адмін' : (userRole === 'admin' ? 'Адміністратор' : 'Вісник');
 
             if (userRole === 'admin' || userRole === 'super_admin') {
@@ -1098,9 +1164,17 @@
                     document.getElementById('devLink').style.display = 'flex';
                 }
                 loadGroupStats();
+                
+                // Оновлюємо видимість табів після завантаження даних
+                setTimeout(() => {
+                    if (typeof updateTabsVisibility === 'function') {
+                        updateTabsVisibility();
+                    }
+                }, 100);
             }
 
             loadMyParcels();
+            loadMyHistory();
 
             // ОБРОБКА ПАРАМЕТРІВ URL
             const urlParams = new URLSearchParams(window.location.search);
@@ -1156,6 +1230,7 @@
             return (now.getMonth() >= 8) ? new Date(currentYear, 8, 1) : new Date(currentYear - 1, 8, 1);
         }
 
+        
         // Ця функція формує бланк S-13. Вона групує дані з логів по ID дільниці.
         async function loadAllTerritoriesGrid() {
             const tHead = document.getElementById('tHead');
@@ -1204,10 +1279,12 @@
                 const pLogs = allLogs.filter(log => log.parcel_id === p.id).map(log => ({
                     name: log.publisher_name,
                     in: log.taken_at,
-                    out: log.returned_at
+                    out: log.returned_at,
+                    campaign_id: log.campaign_id,
+                    campaign_name: log.campaign_name
                 }));
                 if (p.status === 'taken' && p.taken_by) {
-                    pLogs.push({ name: p.taken_by, in: p.taken_at, out: null });
+                    pLogs.push({ name: p.taken_by, in: p.taken_at, out: null, campaign_id: null, campaign_name: null });
                 }
                 combinedData[p.id] = pLogs;
             });
@@ -1259,12 +1336,36 @@
                 for (let i = 0; i < maxCols; i++) {
                     const s = pSessions[i];
                     const pName = s ? s.name : '';
-                    const dIn = s ? new Date(s.in).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' }) : '';
-                    const dOut = (s && s.out) ? new Date(s.out).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' }) : '';
+                    const dIn = s ? new Date(s.in).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '.') : '';
+                    const dOut = (s && s.out) ? new Date(s.out).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '.') : '';
 
-                    tr1Html += `<td colspan="2" class="name-row" style="width: 200px; border:1px solid #444; padding: 4px; overflow: hidden; white-space: nowrap; font-size: 0.9em;">${pName}</td>`;
+                    // Визначаємо колір фону для кампанії
+                    let campaignStyle = '';
+                    if (s && s.campaign_id) {
+                        // Визначаємо тип кампанії за назвою
+                        if (s.campaign_name && s.campaign_name.toLowerCase().includes('конгрес')) {
+                            campaignStyle = 'background-color: rgba(233, 196, 106, 0.5); color: #5C4B1B;';
+                        } else if (s.campaign_name && (s.campaign_name.toLowerCase().includes('спец. кампанія') || s.campaign_name.toLowerCase().includes('спеціальна'))) {
+                            campaignStyle = 'background-color: rgba(255, 205, 178, 0.5); color: #6D4C41;';
+                        } else if (s.campaign_name && s.campaign_name.toLowerCase().includes('спомин')) {
+                            campaignStyle = 'background-color: rgba(178, 185, 173, 0.5); color: #2F3E30;';
+                        }
+                    }
+
+                    // Перевірка для синього кольору: взято до початку теократичного року, а здано після
+                    let inDateStyle = '';
+                    if (s && s.in) {
+                        const takenDate = new Date(s.in);
+                        const returnedDate = s.out ? new Date(s.out) : null;
+                        
+                        if (takenDate < rangeStart && (!returnedDate || returnedDate >= rangeStart)) {
+                            inDateStyle = 'color: #1976d2; font-weight: bold;';
+                        }
+                    }
+
+                    tr1Html += `<td colspan="2" class="name-row" style="width: 200px; border:1px solid #444; padding:4px; overflow: hidden; white-space: nowrap; font-size: 0.9em; ${campaignStyle}">${pName}</td>`;
                     tr2Html += `
-        <td class="date-cell" style="width: 100px; background:#e8f5e9; border:1px solid #444; text-align: center;">${dIn}</td>
+        <td class="date-cell" style="width: 100px; background:#e8f5e9; border:1px solid #444; text-align: center; ${inDateStyle}">${dIn}</td>
         <td class="date-cell" style="width: 100px; background:#fff3e0; border:1px solid #444; text-align: center;">${dOut}</td>
     `;
                 }
@@ -1277,9 +1378,169 @@
         }
         window.loadAllTerritoriesGrid = loadAllTerritoriesGrid;
 
+        // --- ЗАФАРБОВУВАННЯ КЛІТИНОК КАМПАНІЙ (вбудоване в таблицю) ---
+        
+        // Створюємо легенду кольорів над таблицею
+        function createColorLegend() {
+            // Перевіряємо, чи вже існує легенда
+            if (document.getElementById('campaign-color-legend')) {
+                return;
+            }
+
+            // Знаходимо таблицю S-13
+            const tBody = document.getElementById('tBody');
+            if (!tBody) {
+                console.error('❌ Таблиця S-13 не знайдена');
+                return;
+            }
+
+            // Створюємо контейнер для легенди
+            const legendContainer = document.createElement('div');
+            legendContainer.id = 'campaign-color-legend';
+            legendContainer.style.cssText = `
+                padding:15px;
+                margin-bottom: 10px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                font-family: Arial, sans-serif;
+                display: flex;
+                gap: 30px;
+                flex-wrap: wrap;
+                width: fit-content;
+            `;
+
+            // Створюємо елементи легенди
+            const legendItems = [
+                { color: '#E9C46A', text: 'Конгрес' },
+                { color: '#FFCDB2', text: 'Спеціальна кампанія' },
+                { color: '#B2B9AD', text: 'Спомин' }
+            ];
+
+            legendItems.forEach(item => {
+                const legendItem = document.createElement('div');
+                legendItem.style.cssText = `
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 14px;
+                `;
+
+                const colorBox = document.createElement('div');
+                colorBox.style.cssText = `
+                    width: 20px;
+                    height: 20px;
+                    background-color: ${item.color};
+                    border-radius: 4px;
+                    border: 1px solid #ddd;
+                `;
+
+                const text = document.createElement('span');
+                text.textContent = item.text;
+
+                legendItem.appendChild(colorBox);
+                legendItem.appendChild(text);
+                legendContainer.appendChild(legendItem);
+            });
+
+            // Вставляємо легенду перед таблицею
+            const table = tBody.closest('table');
+            if (table) {
+                table.parentNode.insertBefore(legendContainer, table);
+            }
+        }
+
+        // Автоматичний запуск зафарбовування після завантаження таблиці (тільки для вкладки S-13)
+        const originalLoadAllTerritoriesGrid = loadAllTerritoriesGrid;
+        window.loadAllTerritoriesGrid = async function(...args) {
+            await originalLoadAllTerritoriesGrid.apply(this, args);
+            
+            // Перевіряємо чи ми на вкладці S-13 перед запуском зафарбовування
+            const activeTab = document.querySelector('.nav-item.active');
+            if (activeTab && activeTab.textContent.includes('S-13')) {
+                console.log('🔄 Таблицю S-13 завантажено, запускаємо зафарбовування...');
+                
+                // Запускаємо зафарбовування з невеликою затримкою
+                setTimeout(() => {
+                    createColorLegend();
+                    highlightCampaignCells();
+                }, 500);
+            }
+        };
+
         async function loadMyParcels() {
             const { data } = await supabase.from('parcels').select('*').eq('taken_by_id', userId).eq('status', 'taken');
             renderParcelList(data, 'myParcels', true);
+        }
+
+        // --- ІСТОРІЯ ОПРАЦЮВАНЬ КОРИСТУВАЧА ---
+        async function loadMyHistory() {
+            const historyDiv = document.getElementById('myHistory');
+            if (!historyDiv) return;
+
+            try {
+                // Отримуємо всі логи де користувач був вісником
+                const { data: logs, error } = await supabase
+                    .from('territory_logs')
+                    .select('*, parcels(name, category)')
+                    .eq('publisher_id', userId)
+                    .order('returned_at', { ascending: false });
+
+                if (error) {
+                    console.error('Помилка завантаження історії:', error);
+                    historyDiv.innerHTML = '<p style="color: gray;">Помилка завантаження історії</p>';
+                    return;
+                }
+
+                if (!logs || logs.length === 0) {
+                    historyDiv.innerHTML = '<p style="color: gray; text-align: center; padding: 20px;">Історія опрацювань порожня</p>';
+                    return;
+                }
+
+                // Створюємо таблицю
+                let html = `
+                    <div class="table-wrapper">
+                        <table class="history-table" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #ddd;">
+                                    <th style="padding: 10px; text-align: left;">Дільниця</th>
+                                    <th style="padding: 10px; text-align: center;">Отримано</th>
+                                    <th style="padding: 10px; text-align: center;">Здано</th>
+                                    <th style="padding: 10px; text-align: center;">Час</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                logs.forEach(log => {
+                    const parcelName = log.parcels?.name || 'Невідомо';
+                    const isVillage = log.parcels?.category === 'Село';
+                    const displayName = isVillage ? `Дільниця: ${parcelName}` : `Дільниця № ${parcelName}`;
+                    
+                    const dateIn = log.taken_at ? new Date(log.taken_at).toLocaleDateString('uk-UA') : '--';
+                    const dateOut = log.returned_at ? new Date(log.returned_at).toLocaleDateString('uk-UA') : '--';
+                    const duration = log.duration_text || '-';
+
+                    html += `
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding: 10px;"><b>${displayName}</b></td>
+                            <td style="padding: 10px; text-align: center;">${dateIn}</td>
+                            <td style="padding: 10px; text-align: center;">${dateOut}</td>
+                            <td style="padding: 10px; text-align: center;"><span class="badge" style="background: #e3f2fd; padding: 4px 8px; border-radius: 12px; font-size: 12px;">${duration}</span></td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                historyDiv.innerHTML = html;
+            } catch (error) {
+                console.error('Помилка:', error);
+                historyDiv.innerHTML = '<p style="color: gray;">Помилка завантаження історії</p>';
+            }
         }
 
         // --- СПИСОК ГРУПИ (ВИПРАВЛЕНО: Прізвища на першому місці + захист від апострофів) ---
@@ -1329,6 +1590,9 @@
                 // Фільтрація за містом (Липовець, Іллінці, Гості)
                 return user.group_tag === currentFilter;
             });
+
+            // Оновлюємо видимість табів на основі наявності вісників
+            updateTabsVisibility();
 
             filteredUsers.forEach(user => {
                 const tr = document.createElement('tr');
@@ -1710,8 +1974,10 @@
             }
         };
 
+        
     </script>
 
+    <script src="js/dev-tools.js"></script>
 </body>
 
 </html>

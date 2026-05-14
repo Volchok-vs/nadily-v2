@@ -1056,7 +1056,7 @@
                     ✋ Взяти (Карантин)
                 </button>`;
                     } else {
-                        popupHtml += `<p style="font-size:11px; color:#888; text-align:center;">На обробці до ${qDateStr}</p>`;
+                        // Нічого не показуємо для звичайних користувачів
                     }
                 } else {
                     if (isAuth) {
@@ -1167,16 +1167,21 @@
                     });
                 }
 
-                // 9. СТВОРЕННЯ ЯРЛИКА
-                const label = L.marker(anchorPoint, {
-                    icon: L.divIcon({
-                        className: 'parcel-label',
-                        html: `<b style="color:white; text-shadow: 2px 2px 3px black;">${preparedData.name}</b>`,
-                        iconSize: [40, 20],
-                        iconAnchor: [20, 10]
-                    }),
-                    interactive: false
-                }).addTo(window.map);
+                // 9. СТВОРЕННЯ ЯРЛИКА (тільки для авторизованих користувачів)
+                let label = null;
+                const isAuth = !!localStorage.getItem('userId');
+                
+                if (isAuth) {
+                    label = L.marker(anchorPoint, {
+                        icon: L.divIcon({
+                            className: 'parcel-label',
+                            html: `<b style="color:white; text-shadow: 2px 2px 3px black;">${preparedData.name}</b>`,
+                            iconSize: [40, 20],
+                            iconAnchor: [20, 10]
+                        }),
+                        interactive: false
+                    }).addTo(window.map);
+                }
 
                 // 10. ВІДОБРАЖЕННЯ ТА РЕЄСТРАЦІЯ
                 parcelGroup.addTo(window.map);

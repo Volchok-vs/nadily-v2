@@ -47,28 +47,41 @@ export async function shareParcel(name, link) {
     } catch (err) { console.log("Скасовано", err); }
 }
 
-// Функція отримання активної кампанії
-async function getActiveCampaign(supabase) {
-    const now = window.getCurrentDate ? window.getCurrentDate() : new Date();
-    const nowISO = now.toISOString(); // Форматуємо дату в ISO для Supabase
+// Функція пошуку кампаній за періодом роботи території
+async function findRelevantCampaigns(supabase, takenAt, returnedAt) {
+    const takenISO = new Date(takenAt).toISOString();
+    const returnedISO = new Date(returnedAt).toISOString();
     
-    console.log(`   🕐 Дата для запиту: ${nowISO}`);
+    console.log(`   🔍 Пошук кампаній за періодом роботи:`);
+    console.log(`      📅 Взято: ${takenISO}`);
+    console.log(`      📤 Здається: ${returnedISO}`);
     
+    // Шукаємо кампанії, що перетинаються з періодом роботи
+    // campaign_start <= returnedAt AND campaign_end >= takenAt
     const { data: campaigns, error } = await supabase
         .from('campaigns')
         .select('*')
-        .lte('campaign_start', nowISO)
-        .gte('campaign_end', nowISO)
-        .order('id', { ascending: false });
+        .lte('campaign_start', returnedISO)
+        .gte('campaign_end', takenISO)
+        .order('campaign_start', { ascending: false });
     
     if (error) {
-        console.error('❌ Помилка отримання кампанії:', error);
-        return null;
+        console.error('❌ Помилка пошуку кампаній:', error);
+        return [];
     }
     
-    console.log(`   📊 Знайдено кампаній: ${campaigns?.length || 0}`);
+    console.log(`   📊 Знайдено релевантних кампаній: ${campaigns?.length || 0}`);
     
-    return campaigns?.length > 0 ? campaigns[0] : null;
+    if (campaigns && campaigns.length > 0) {
+        console.log('   📋 Релевантні кампанії:');
+        campaigns.forEach((campaign, index) => {
+            console.log(`   ${index + 1}. ${campaign.name}`);
+            console.log(`      📅 Період: ${campaign.campaign_start} - ${campaign.campaign_end}`);
+            console.log(`      🆔 ID: ${campaign.id}`);
+        });
+    }
+    
+    return campaigns || [];
 }
 
 // Функція перевірки періодів кампанії
@@ -86,14 +99,34 @@ function checkCampaignPeriods(takenAt, returnedAt, campaign) {
     const campaignStart = new Date(campaign.campaign_start);
     const campaignEnd = new Date(campaign.campaign_end);
     
+    // Детальне логування дат для діагностики
+    console.log('   📊 Аналіз періодів:');
+    console.log(`      📅 Взято: ${takenAt} (${taken.toISOString()})`);
+    console.log(`      📤 Здається: ${returnedAt} (${returned.toISOString()})`);
+    console.log(`      📅 Кампанія: ${campaign.campaign_start} - ${campaign.campaign_end}`);
+    console.log(`      🆔 Назва кампанії: ${campaign.name}`);
+    
     const takenDuringCampaign = taken >= campaignStart && taken <= campaignEnd;
     const returnedDuringCampaign = returned >= campaignStart && returned <= campaignEnd;
+    
+    // Перевіряємо чи кампанія перекриває період роботи
+    const campaignOverlapsWorkPeriod = campaignStart >= taken && campaignEnd <= returned;
+    
+    console.log(`   📥 Результати порівняння:`);
+    console.log(`      📥 Взято під час кампанії: ${takenDuringCampaign}`);
+    console.log(`      📤 Здається під час кампанії: ${returnedDuringCampaign}`);
+    console.log(`      🔄 Кампанія перекриває період роботи: ${campaignOverlapsWorkPeriod}`);
+    
+    const needToAsk = (!takenDuringCampaign && returnedDuringCampaign) || 
+                      (takenDuringCampaign && !returnedDuringCampaign) ||
+                      campaignOverlapsWorkPeriod;
+    
+    console.log(`      ❓ Потрібно запитати: ${needToAsk}`);
     
     return {
         takenDuringCampaign,
         returnedDuringCampaign,
-        needToAsk: (!takenDuringCampaign && returnedDuringCampaign) || 
-                   (takenDuringCampaign && !returnedDuringCampaign)
+        needToAsk
     };
 }
 
@@ -155,7 +188,6 @@ async function createTerritoryLog(supabase, parcelId, publisherId, publisherName
     const durationText = calculateDuration(takenAt, returnedAt);
     
     // Перевіряємо чи вже є такий запис (дублікат)
-    console.log('🔍 Перевіряємо на дублікати...');
     const { data: existingLogs, error: checkError } = await supabase
         .from('territory_logs')
         .select('id')
@@ -165,6 +197,7 @@ async function createTerritoryLog(supabase, parcelId, publisherId, publisherName
     
     if (checkError) {
         console.error('❌ Помилка перевірки дублікатів:', checkError);
+        return false;
     } else if (existingLogs && existingLogs.length > 0) {
         console.log('⚠️ Дублікат виявлено! Запис з такою датою здачі вже існує.');
         return true; // Повертаємо true щоб не переривати процес здачі
@@ -186,7 +219,7 @@ async function createTerritoryLog(supabase, parcelId, publisherId, publisherName
         .insert(logData);
     
     if (error) {
-        console.error('Помилка створення запису в логах:', error);
+        console.error('❌ Помилка створення запису в логах:', error);
         return false;
     }
     
@@ -269,18 +302,25 @@ export async function returnParcel(id, name, supabase, callback) {
             
         if (parcelError) {
             console.error('❌ Помилка отримання даних території:', parcelError);
-        } else {
-            console.log('✅ Дані території отримано:');
-            console.log(`   👤 Вісник: ${parcel?.taken_by || 'Невідомо'}`);
-            console.log(`   📅 Взято: ${parcel?.taken_at || 'Немає дати'}`);
+            return;
         }
-
-        // Отримуємо активну кампанію
-        console.log('🔍 Перевіряємо активну кампанію...');
-        console.log(`   📱 Supabase доступний: ${!!supabase}`);
-        console.log(`   🕐 Поточна дата: ${window.getCurrentDate ? window.getCurrentDate().toISOString() : new Date().toISOString()}`);
         
-        const activeCampaign = await getActiveCampaign(supabase);
+        console.log('✅ Дані території отримано:');
+        console.log(`   👤 Вісник: ${parcel.taken_by || 'Nulls Василь'}`);
+        console.log(`   📅 Взято: ${parcel.taken_at}`);
+        
+        // Поточна дата для здачі
+        const now = window.getCurrentDate ? window.getCurrentDate() : new Date();
+        const returnedAt = now.toISOString();
+        
+        // Шукаємо релевантні кампанії за періодом роботи
+        console.log('🔍 Перевіряємо кампанії за періодом роботи...');
+        console.log(`   📱 Supabase доступний: ${!!supabase}`);
+        
+        const relevantCampaigns = await findRelevantCampaigns(supabase, parcel.taken_at, returnedAt);
+        
+        // Беремо першу релевантну кампанію
+        const activeCampaign = relevantCampaigns.length > 0 ? relevantCampaigns[0] : null;
         
         console.log(`   🎯 Активна кампанія: ${activeCampaign ? activeCampaign.name : 'НЕМАЄ'}`);
         if (activeCampaign) {
@@ -295,6 +335,8 @@ export async function returnParcel(id, name, supabase, callback) {
         console.log('🎭 Перевіряємо умови для модального вікна...');
         console.log(`   ✅ Активна кампанія: ${!!activeCampaign}`);
         console.log(`   ✅ Модальне вікно доступне: ${!!window.showCampaignModal}`);
+        console.log(`   📅 Дата взяття території: ${parcel?.taken_at}`);
+        console.log(`   📅 Дата здачі території: ${new Date().toISOString()}`);
         
         if (activeCampaign && window.showCampaignModal) {
             const returnedAt = new Date().toISOString();
@@ -329,7 +371,6 @@ export async function returnParcel(id, name, supabase, callback) {
 
         // Створюємо запис в логах територій
         console.log('📝 Створюємо запис в логах територій...');
-        const returnedAt = new Date().toISOString();
         const campaignId = shouldRecordCampaign ? activeCampaign?.id : null;
         const campaignName = shouldRecordCampaign ? activeCampaign?.name : null;
         

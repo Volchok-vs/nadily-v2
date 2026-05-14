@@ -171,11 +171,44 @@
     /* Головний контент треба опустити нижче, щоб шапка його не закривала */
     .main-content {
         margin-top: 50px !important; 
-        padding: 20px 0;
+        padding: 20px 15px; /* Додаємо бічні відступи */
+    }
+
+    /* Відступи для заголовків */
+    h1, h2, h3 {
+        padding: 0 15px;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    /* Відступи для карток */
+    .card {
+        margin: 0 0 20px 0 !important;
+        padding: 15px !important;
+    }
+
+    /* Відступи для кнопок в заголовках */
+    .tab-header {
+        padding: 0 15px;
+        margin-bottom: 20px;
+    }
+
+    .tab-header h1 {
+        padding: 0;
+    }
+
+    .tab-header .btn-add {
+        margin-right: 0;
+    }
+
+    /* Відступи для табів */
+    .origin-tabs {
+        padding: 0 15px;
+        margin-bottom: 0;
     }
 
     h1.table-title {
-        padding: 0 30px;
+        padding: 0 15px;
     }
 
     /* Стару кнопку, яка тобі заважала, приховуємо */
@@ -209,5 +242,16 @@
 
     .table-container {
         overflow-x: auto;
+        margin: 0 15px;
+    }
+
+    /* Відступи для таблиць */
+    .publishers-table, .history-table {
+        margin: 0;
+    }
+
+    /* Відступи для контейнерів з даними */
+    #publishersList, #myParcels, #myHistory {
+        padding: 0 5px;
     }
 }

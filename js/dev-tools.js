@@ -20,9 +20,10 @@
 
             // 3. ЛОГІКА ДЛЯ СТОРІНКИ НАЛАШТУВАНЬ (Збереження)
             // ПЕРЕВІРТЕ: ID в HTML мають співпадати з цими:
-            const masterToggle = document.getElementById('devModeToggle'); 
+            const masterToggle = document.getElementById('devModeToggle');
             const timerToggle = document.getElementById('showLoadTimer');
             const logoutToggle = document.getElementById('quickLogoutToggle'); // ДОДАНО
+            const testCampaignToggle = document.getElementById('testCampaignToggle'); // 🧪 Тестова кампанія
 
             if (masterToggle && timerToggle) {
                 // Встановлюємо стан при завантаженні сторінки
@@ -31,6 +32,10 @@
                 if (logoutToggle) {
                     // Читаємо окремий ключ для виходу або з об'єкта
                     logoutToggle.checked = localStorage.getItem('showQuickLogout') === 'true';
+                }
+                // 🧪 Ініціалізація тестової кампанії
+                if (testCampaignToggle && masterToggle.checked) {
+                    testCampaignToggle.checked = localStorage.getItem('showTestCampaign') === 'true';
                 }
 
                 const saveSettings = () => {
@@ -46,13 +51,19 @@
                     if (logoutToggle) {
                         localStorage.setItem('showQuickLogout', logoutToggle.checked);
                     }
-                    
+
+                    // 🧪 Зберігаємо налаштування тестової кампанії
+                    if (testCampaignToggle && masterToggle.checked) {
+                        localStorage.setItem('showTestCampaign', testCampaignToggle.checked);
+                    }
+
                     console.log("Налаштування оновлено:", newConfig);
                 };
 
                 masterToggle.addEventListener('change', saveSettings);
                 timerToggle.addEventListener('change', saveSettings);
                 if (logoutToggle) logoutToggle.addEventListener('change', saveSettings);
+                if (testCampaignToggle) testCampaignToggle.addEventListener('change', saveSettings);
             }
         }, 150); // Трохи збільшив затримку для надійності
     });
