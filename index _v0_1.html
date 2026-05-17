@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Рисование участков</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
+
+    <style>
+        #map { height: 90vh; }
+        #output {
+            height: 10vh;
+            padding: 10px;
+            font-family: monospace;
+            background: #111;
+            color: #0f0;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+<div id="output">Тут появится код...</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+
+<script>
+    // меняем только нужные тексты
+L.drawLocal.draw.toolbar.buttons.polygon = "Участок";
+L.drawLocal.draw.toolbar.buttons.rectangle = "Прямоугольник";
+
+L.drawLocal.draw.toolbar.actions.title = "Отменить рисование";
+L.drawLocal.draw.toolbar.actions.text = "Отмена";
+
+L.drawLocal.draw.toolbar.finish.text = "Готово";
+
+L.drawLocal.edit.toolbar.buttons.edit = "Редактировать";
+L.drawLocal.edit.toolbar.buttons.remove = "Удалить";
+
+    var map = L.map('map').setView([49.2321, 29.0577], 15);
+
+    L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {
+    attribution: 'Tiles © Esri'
+  }
+).addTo(map);
+
+    var drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    var drawControl = new L.Control.Draw({
+        draw: {
+            polygon: true,
+            rectangle: true,
+            circle: false,
+            marker: false,
+            polyline: false
+        },
+        edit: {
+            featureGroup: drawnItems
+        }
+    });
+
+    map.addControl(drawControl);
+
+    // Когда нарисовал участок
+    map.on('draw:created', function (e) {
+        var layer = e.layer;
+        drawnItems.addLayer(layer);
+
+        var geojson = layer.toGeoJSON();
+
+        // выводим код
+        document.getElementById('output').innerText =
+            JSON.stringify(geojson, null, 2);
+
+        console.log(geojson);
+    });
+</script>
+
+</body>
+</html>

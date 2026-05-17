@@ -36,7 +36,7 @@ async function exportS13FullPDF() {
         const [{ data: allParcels }, { data: allLogs }] = await Promise.all([
             supabase.from('parcels').select('*'), // Завантажуємо всі дільниці
             supabase.from('territory_logs')
-                .select('parcel_id, publisher_name, taken_at, returned_at')
+                .select('parcel_id, publisher_name, taken_at, returned_at, campaign_id, campaign_name')
                 .or(`taken_at.gte.${rangeStartISO},returned_at.gte.${rangeStartISO}`)
                 .order('taken_at', { ascending: true })
         ]);
@@ -58,7 +58,9 @@ async function exportS13FullPDF() {
                 const pLogs = allLogs.filter(log => log.parcel_id === p.id).map(log => ({
                     publisher_name: log.publisher_name,
                     taken_at: log.taken_at,
-                    returned_at: log.returned_at
+                    returned_at: log.returned_at,
+                    campaign_id: log.campaign_id,
+                    campaign_name: log.campaign_name
                 }));
 
                 if (p.status === 'taken' && p.taken_by) {
@@ -67,7 +69,9 @@ async function exportS13FullPDF() {
                         pLogs.push({
                             publisher_name: p.taken_by,
                             taken_at: p.taken_at,
-                            returned_at: null
+                            returned_at: null,
+                            campaign_id: null,
+                            campaign_name: null
                         });
                     }
                 }
@@ -107,9 +111,21 @@ async function exportS13FullPDF() {
                             ? new Date(log.returned_at).toLocaleDateString('uk-UA', dateOptions) 
                             : '';
                         
+                        // Визначаємо колір фону для кампанії
+                        let campaignStyle = '';
+                        if (log && log.campaign_id && log.campaign_name) {
+                            if (log.campaign_name.toLowerCase().includes('конгрес')) {
+                                campaignStyle = 'background-color: rgba(233, 196, 106, 0.5); color: #5C4B1B;';
+                            } else if (log.campaign_name.toLowerCase().includes('спец. кампанія') || log.campaign_name.toLowerCase().includes('спеціальна')) {
+                                campaignStyle = 'background-color: rgba(255, 205, 178, 0.5); color: #6D4C41;';
+                            } else if (log.campaign_name.toLowerCase().includes('спомин')) {
+                                campaignStyle = 'background-color: rgba(178, 185, 173, 0.5); color: #2F3E30;';
+                            }
+                        }
+                        
                         logCells += `
                             <td style="border:1.5px solid black; height:36px; width:135px; text-align:center; padding:0; box-sizing:border-box;">
-                                <div style="height:18px; border-bottom:1px solid black; font-size:10pt; line-height:18px; overflow:hidden; white-space:nowrap; padding: 0 2px;">
+                                <div style="height:18px; border-bottom:1px solid black; font-size:10pt; line-height:18px; overflow:hidden; white-space:nowrap; padding: 0 2px; ${campaignStyle}">
                                     ${log ? log.publisher_name : ''}
                                 </div>
                                 <div style="display:flex; height:18px; line-height:18px; font-size:9pt;">
@@ -168,12 +184,12 @@ async function exportS13FullPDF() {
                             <thead>
                                 <tr style="background:#eeeeee; height:46px;">
                                     <!-- Заголовки -->
-                                    <th style="border:1.5px solid black; width:${categoryName === 'Села' ? '75px' : '35px'}; font-size:8pt; padding:2px;">${categoryName === 'Села' ? 'Назва тер.' : '№ тер.'}</th> <!-- Заголовок залежить від категорії -->
-                                    <th style="border:1.5px solid black; width:75px; font-size:8pt; padding:2px;">Остання дата<br>опрацювання*</th>
+                                    <th style="border:1.5px solid black; width:${categoryName === 'Села' ? '75px' : '35px'}; font-size:8pt; padding:2px; text-align:center;">${categoryName === 'Села' ? 'Назва тер.' : '№ тер.'}</th> <!-- Заголовок залежить від категорії -->
+                                    <th style="border:1.5px solid black; width:75px; font-size:8pt; padding:2px; text-align:center;">Остання дата<br>опрацювання*</th>
                                     
                                     <!-- Заголовки для вісників (динамічно залежно від кількості колонок) -->
                                     ${Array.from({ length: categoryName === 'Села' ? 3 : 4 }).map((_, k) => `
-                                        <th style="border:1.5px solid black; width:135px; padding:0;">
+                                        <th style="border:1.5px solid black; width:135px; padding:0; text-align:center;">
                                             <div style="font-size:10pt; height:18px; border-bottom:1.5px solid black; line-height:18px;">Вісник</div> <!-- Завжди "Вісник" -->
                                             <div style="display:flex; font-size:7pt; height:26px; line-height:9pt;">
                                                 <div style="flex:1;">Дата<br>отримання</div>
@@ -184,9 +200,23 @@ async function exportS13FullPDF() {
                             </thead>
                             <tbody>${generateRowsHTML(parcelsForPage)}</tbody>
                         </table>
-                        <div style="margin-top:3mm; padding-left:2mm;">
+                        <div style="margin-top:3mm; padding-left:2mm; display:flex; align-items:center; flex-wrap:wrap;">
                             <p style="font-size:8pt; margin:0; line-height:1.2;">*Заповнюючи новий бланк, познач у цій колонці останню дату опрацювання кожної території.</p>
-                            <p style="font-size:9.5pt; margin:3px 0 0 0; font-weight:bold;">S-13-K 1/22</p>
+                            <div style="display:flex; align-items:center; gap:10px; font-size:8pt; margin-left:10px;">
+                                <div style="display:flex; align-items:center; gap:4px;">
+                                    <div style="width:12px; height:12px; background:#E9C46A;"></div>
+                                    <span>Конгрес</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:4px;">
+                                    <div style="width:12px; height:12px; background:#FFCDB2;"></div>
+                                    <span>Спец. кампанія</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:4px;">
+                                    <div style="width:12px; height:12px; background:#B2B9AD;"></div>
+                                    <span>Спомин</span>
+                                </div>
+                            </div>
+                            <p style="font-size:9.5pt; margin:3px 0 0 0; font-weight:bold; width:100%;">S-13-K 1/22</p>
                         </div>
                     </div>`;
 

@@ -145,7 +145,8 @@
 
         /* Модальні вікна та коментарі - ПОВЕРНУТО ОРИГІНАЛ */
         #commentModal,
-        #manualLogModal {
+        #manualLogModal,
+        #assignPublisherModal {
             position: fixed;
             top: 0;
             left: 0;
@@ -566,12 +567,18 @@
             <div class="card">
                 <div id="miniMap"></div>
                 <h3>Статус</h3>
-                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 15px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
                     <p id="currentStatus" style="margin: 0; font-weight: 500;">Завантаження...</p>
-                    <button id="adminReturnBtn"
-                        style="display: none; background: #ff4757; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: 0.2s; width: auto;">
-                        Здати
-                    </button>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="adminAssignBtn"
+                            style="display: none; background: #28a745; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: 0.2s; width: auto;">
+                            Призначити
+                        </button>
+                        <button id="adminReturnBtn"
+                            style="display: none; background: #ff4757; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: 0.2s; width: auto;">
+                            Здати
+                        </button>
+                    </div>
                 </div>
                 <hr>
                 <h4 style="font-family: 'Caveat', cursive;">📝 Коментарі</h4>
@@ -665,6 +672,40 @@
         </div>
     </div>
 
+    <!-- Модалка для призначення вісника -->
+    <div id="assignPublisherModal" class="hidden">
+        <div class="modal-content">
+            <h3>Призначити дільницю <span id="assignParcelName" style="color:#007bff;"></span></h3>
+            
+            <div id="assign-quarantine-msg" style="display:none; background:#fff3cd; color:#856404; padding:10px; border-radius:6px; margin-bottom:15px; font-size:14px;"></div>
+            
+            
+
+            <div id="assign-date-edit-container" style="display:none; margin-bottom:15px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                    <input type="checkbox" id="assign-enable-date-edit">
+                    <span>Змінити дату отримання:</span>
+                </label>
+                <input type="date" id="assign-custom-take-date" disabled style="margin-top:8px;">
+            </div>
+
+            <label>Вісник:</label>
+            <select id="assign-publisher-select" style="width:100%; padding:10px; margin-bottom:15px; border-radius:6px; border:1px solid #ccc;"></select>
+            
+            <div id="assign-admin-bypass-container" style="display:none; margin-bottom:15px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                    <input type="checkbox" id="assign-bypass-checkbox">
+                    <span style="color:#dc3545; font-weight:500;">Дозволити видачу (карантин)</span>
+                </label>
+            </div>
+            <button id="assign-confirm-btn" onclick="window.confirmAssignPublisher()"
+                style="width:100%; background:#28a745; color:white; border:none; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer;">ПІДТВЕРДИТИ</button>
+            
+            <button onclick="window.hideAssignPublisherModal()"
+                style="width:100%; background:#6c757d; color:white; border:none; padding:10px; border-radius:6px; margin-top:10px; cursor:pointer;">Скасувати</button>
+        </div>
+    </div>
+
     <script src="js/campaign-modal.js"></script>
     <script src="temp/date-utils.js"></script>
     <script type="module">
@@ -685,6 +726,15 @@
 
         async function init() {
             if (!parcelId) return (window.location.href = 'index.html');
+
+            // --- ПРОВІРКА ПРАВ ДОСТУПУ ДЛЯ ВІЛЬНИХ ДІЛЬНИЦЬ ---
+            // Звичайні користувачі не можуть бачити вільні картки
+            const { data: parcel } = await supabase.from('parcels').select('status, taken_by_id').eq('id', parcelId).single();
+            if (parcel && parcel.status === 'free' && !isAdmin) {
+                alert("Доступ заборонено: тільки адміни можуть переглядати вільні картки");
+                window.location.href = 'profile.html';
+                return;
+            }
 
             // --- НОВИЙ БЛОК: Керування кнопками повернення ---
             if (urlParams.get('nav') === 'true' || urlParams.get('from')) {
@@ -1197,11 +1247,21 @@
             document.getElementById('currentStatus').innerHTML = formatStatusHTML(p);
 
             const returnBtn = document.getElementById('adminReturnBtn');
+            const assignBtn = document.getElementById('adminAssignBtn');
+            
             if (p.status === 'taken' && returnBtn && isAdmin) {
                 returnBtn.style.display = 'inline-block';
                 returnBtn.onclick = () => window.returnParcel(p.id, p.name);
             } else if (returnBtn) {
                 returnBtn.style.display = 'none';
+            }
+
+            // Кнопка призначення для адмінів на вільних дільницях
+            if (p.status === 'free' && assignBtn && isAdmin) {
+                assignBtn.style.display = 'inline-block';
+                assignBtn.onclick = () => window.startAssignProcess(p.id, p.name, p);
+            } else if (assignBtn) {
+                assignBtn.style.display = 'none';
             }
 
             if (isAdmin) {
@@ -1663,6 +1723,192 @@
 
                 console.log(`window.returnParcel: Оновлення для ${name} завершено.`);
             });
+        };
+
+        // --- Функції для призначення вісника ---
+        let assignAllPublishers = [];
+
+        async function loadPublishersForAssign() {
+            const select = document.getElementById('assign-publisher-select');
+            if (!select) return;
+
+            const { data: publishers, error } = await supabase
+                .from('publishers')
+                .select('id, name, last_name')
+                .order('last_name', { ascending: true });
+
+            if (error) return console.error("Помилка завантаження вісників:", error);
+
+            const currentUserId = localStorage.getItem('userId');
+
+            // Очищуємо список
+            select.innerHTML = '';
+
+            if (isAdmin) {
+                // Адмін бачить усіх
+                publishers.forEach(pub => {
+                    const option = document.createElement('option');
+                    option.value = pub.id;
+                    option.dataset.name = `${pub.last_name} ${pub.name}`;
+                    option.textContent = `${pub.last_name} ${pub.name}`;
+                    // Автовибір поточного адміна для зручності
+                    if (String(pub.id) === String(currentUserId)) option.selected = true;
+                    select.appendChild(option);
+                });
+                assignAllPublishers = publishers;
+            } else {
+                // Звичайний користувач бачить тільки себе
+                const me = publishers.find(p => String(p.id) === String(currentUserId));
+                if (me) {
+                    const option = document.createElement('option');
+                    option.value = me.id;
+                    option.dataset.name = `${me.last_name} ${me.name}`;
+                    option.textContent = `${me.last_name} ${me.name}`;
+                    select.appendChild(option);
+                    assignAllPublishers = [me];
+                }
+            }
+        }
+
+        window.startAssignProcess = async function (parcelId, parcelName, parcelData) {
+            // 1. Оновлюємо заголовок модалки
+            const pNameElem = document.getElementById('assignParcelName');
+            if (pNameElem) pNameElem.innerText = parcelName;
+
+            // 2. Знаходимо всі потрібні елементи в HTML
+            const qMsg = document.getElementById('assign-quarantine-msg');
+            const adminBypass = document.getElementById('assign-admin-bypass-container');
+            const bypassCheckbox = document.getElementById('assign-bypass-checkbox');
+            const confirmBtn = document.getElementById('assign-confirm-btn');
+
+            // --- Поле вибору дати для адміна ---
+            const dateContainer = document.getElementById('assign-date-edit-container');
+            const customDateInput = document.getElementById('assign-custom-take-date');
+            const enableCheck = document.getElementById('assign-enable-date-edit');
+
+            if (dateContainer && isAdmin) {
+                dateContainer.style.display = 'block';
+                const today = new Date().toISOString().split('T')[0];
+                customDateInput.value = today;
+                if (enableCheck) enableCheck.checked = false;
+                if (customDateInput) customDateInput.disabled = true;
+            } else if (dateContainer) {
+                dateContainer.style.display = 'none';
+            }
+
+            // 3. Перевірка на карантин
+            const isQuarantine = parcelData.last_returned ? 
+                (new Date() - new Date(parcelData.last_returned)) / (1000 * 60 * 60 * 24) < 90 : false;
+
+            if (isQuarantine) {
+                const returnDate = parcelData.last_returned ? new Date(parcelData.last_returned) : new Date();
+                const endDate = new Date(returnDate);
+                endDate.setMonth(endDate.getMonth() + 3);
+                const dateStr = endDate.toLocaleDateString('uk-UA');
+
+                if (qMsg) {
+                    qMsg.innerHTML = `⚠️ Дільниця на карантині до <b>${dateStr}</b>`;
+                    qMsg.style.display = 'block';
+                }
+
+                confirmBtn.disabled = true;
+                confirmBtn.style.opacity = '0.5';
+                confirmBtn.style.cursor = 'not-allowed';
+
+                if (isAdmin) {
+                    if (adminBypass) adminBypass.style.display = 'block';
+                    if (bypassCheckbox) {
+                        bypassCheckbox.checked = false;
+                        bypassCheckbox.onchange = function () {
+                            confirmBtn.disabled = !this.checked;
+                            confirmBtn.style.opacity = this.checked ? '1' : '0.5';
+                            confirmBtn.style.cursor = this.checked ? 'pointer' : 'not-allowed';
+                        };
+                    }
+                }
+            } else {
+                if (qMsg) qMsg.style.display = 'none';
+                if (adminBypass) adminBypass.style.display = 'none';
+                confirmBtn.disabled = false;
+                confirmBtn.style.opacity = '1';
+                confirmBtn.style.cursor = 'pointer';
+            }
+
+            // 4. Завантажуємо список вісників
+            await loadPublishersForAssign();
+
+            // 5. Відкриваємо модалку
+            const modal = document.getElementById('assignPublisherModal');
+            if (modal) modal.classList.remove('hidden');
+
+            // 6. Прив'язуємо фінальний виклик Supabase до кнопки
+            confirmBtn.onclick = () => window.confirmAssignPublisher(parcelId);
+        };
+
+        window.confirmAssignPublisher = async function (parcelId) {
+            if (!parcelId) return alert("Помилка: ID дільниці не знайдено.");
+
+            const select = document.getElementById('assign-publisher-select');
+            const bypassCheckbox = document.getElementById('assign-bypass-checkbox');
+            const qMsg = document.getElementById('assign-quarantine-msg');
+            const isQuarantineVisible = qMsg && qMsg.style.display === 'block';
+
+            // 1. Перевірка на карантин
+            if (isQuarantineVisible && bypassCheckbox && !bypassCheckbox.checked) {
+                alert("Дільниця на карантині! Потрібно поставити відмітку 'Дозволити видачу'.");
+                return;
+            }
+
+            const pubId = select.value;
+            const selectedOption = select.options[select.selectedIndex];
+            const pubName = selectedOption ? selectedOption.dataset.name : null;
+
+            if (!pubId) return alert("Оберіть вісника!");
+
+            // --- Логіка дати із захистом ---
+            let finalTakenAt = new Date();
+            const enableCheck = document.getElementById('assign-enable-date-edit');
+            const customDateInput = document.getElementById('assign-custom-take-date');
+
+            if (enableCheck && enableCheck.checked && customDateInput && customDateInput.value) {
+                let tempDate = new Date(customDateInput.value);
+                if (tempDate.getFullYear() < 100) {
+                    tempDate.setFullYear(tempDate.getFullYear() + 2000);
+                }
+                const now = new Date();
+                tempDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+                finalTakenAt = tempDate;
+            }
+
+            const isoDate = finalTakenAt.toISOString();
+
+            const confirmBtn = document.getElementById('assign-confirm-btn');
+            if (confirmBtn) confirmBtn.disabled = true;
+
+            const { error } = await supabase
+                .from('parcels')
+                .update({
+                    status: 'taken',
+                    taken_by_id: pubId,
+                    taken_by: pubName,
+                    taken_at: isoDate
+                })
+                .eq('id', parcelId);
+
+            if (error) {
+                alert("Помилка БД: " + error.message);
+                if (confirmBtn) confirmBtn.disabled = false;
+            } else {
+                hideAssignPublisherModal();
+                await loadParcelInfo();
+                await loadHistory();
+                showToast("Вісника успішно призначено");
+            }
+        };
+
+        window.hideAssignPublisherModal = () => {
+            const modal = document.getElementById('assignPublisherModal');
+            if (modal) modal.classList.add('hidden');
         };
 
         function showToast(message, isError = false) {

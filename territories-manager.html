@@ -1438,6 +1438,8 @@
         <div class="nav-item" onclick="switchTab('on-hands')">👐 На руках</div>
         <div class="nav-item" onclick="switchTab('export-import')">💾 Експорт та Імпорт</div>
         <div class="nav-item" onclick="switchTab('settings')">⚙️ Додаткові налаштування</div>
+        <a href="statistics-dew.html" id="statsLink" class="nav-item" style="border-left: 3px solid #9b59b6; color: #9b59b6; display: none;">📊 Статистика (dev)</a>
+        <a href="admin-statistics.html" id="adminStatsLink" class="nav-item" style="border-left: 3px solid #667eea; color: #667eea; display: none;">📊 Статистика Адміна</a>
         <a href="profile.html" class="nav-item">👤 Назад до Профілю</a>
         <div class="nav-item logout-btn" onclick="logout()">🏃 Вийти</div>
     </div>
@@ -1561,7 +1563,7 @@
                     <div class="filter-container">
                         <div class="filter-group">
                             <label for="period-type-filter" class="filter-label">Тип території:</label>
-                            <select id="period-type-filter" class="filter-select">
+                             <select id="period-type-filter" class="filter-select">
                                 <option value="">Усі типи</option>
                                 <option value="Приватний сектор">Приватний сектор</option>
                                 <option value="Поверхівки">Поверхівки</option>
@@ -1906,6 +1908,15 @@
 
         if (!userId || (userRole !== 'admin' && userRole !== 'super_admin')) {
             window.location.href = 'profile.html';
+        }
+
+        // Показуємо посилання на статистику тільки для super_admin
+        if (userRole === 'super_admin') {
+            const statsLink = document.getElementById('statsLink');
+            if (statsLink) statsLink.style.display = 'flex';
+            
+            const adminStatsLink = document.getElementById('adminStatsLink');
+            if (adminStatsLink) adminStatsLink.style.display = 'flex';
         }
 
         // Глобальна змінна для фільтру територій

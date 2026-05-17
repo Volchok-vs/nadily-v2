@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Рисование с копированием</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
+
+    <style>
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* Панель управления */
+        #top-panel {
+            height: 60px;
+            background: #2c3e50;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+            position: relative;
+        }
+
+        #map { height: calc(100vh - 260px); width: 100%; }
+
+        /* Окно вывода кода */
+        #output-container {
+            height: 200px;
+            background: #1e1e1e;
+            position: relative;
+            border-top: 3px solid #34495e;
+        }
+
+        #output {
+            height: 100%;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 15px;
+            color: #dcdcdc;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            overflow: auto;
+            white-space: pre-wrap;
+            border: none;
+            outline: none;
+            resize: none;
+        }
+
+        /* Кнопка копирования */
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 25px;
+            padding: 8px 15px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .copy-btn:hover { background: #2ecc71; }
+        .copy-btn:active { transform: translateY(1px); }
+
+        .btn-clear { background: #e74c3c; border: none; color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        label { cursor: pointer; display: flex; align-items: center; gap: 5px; }
+    </style>
+</head>
+<body>
+
+<div id="top-panel">
+    <strong>Тип:</strong>
+    <label><input type="radio" name="geomType" value="Polygon" checked onchange="updateOutput()"> Polygon</label>
+    <label><input type="radio" name="geomType" value="MultiPolygon" onchange="updateOutput()"> MultiPolygon</label>
+    <button class="btn-clear" onclick="clearMap()">Очистить карту</button>
+</div>
+
+<div id="map"></div>
+
+<div id="output-container">
+    <button class="copy-btn" onclick="copyToClipboard()" id="copyBtn">Копировать код</button>
+    <textarea id="output" readonly placeholder="Нарисуйте что-нибудь на карте..."></textarea>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+
+<script>
+    // Настройки карты
+    var map = L.map('map').setView([49.2321, 29.0577], 15);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles © Esri'
+    }).addTo(map);
+
+    var drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    var drawControl = new L.Control.Draw({
+        draw: { polygon: true, rectangle: true, circle: false, marker: false, polyline: false },
+        edit: { featureGroup: drawnItems }
+    });
+    map.addControl(drawControl);
+
+    // Функция обновления текста
+    function updateOutput() {
+        var mode = document.querySelector('input[name="geomType"]:checked').value;
+        var layers = drawnItems.getLayers();
+        var outputField = document.getElementById('output');
+        
+        if (layers.length === 0) {
+            outputField.value = "";
+            return;
+        }
+
+        if (mode === "Polygon") {
+            var lastLayer = layers[layers.length - 1];
+            outputField.value = JSON.stringify(lastLayer.toGeoJSON().geometry, null, 4);
+        } else {
+            var multiCoords = layers.map(l => l.toGeoJSON().geometry.coordinates);
+            var multiGeo = {
+                type: "MultiPolygon",
+                coordinates: multiCoords
+            };
+            outputField.value = JSON.stringify(multiGeo, null, 4);
+        }
+    }
+
+    // События Leaflet
+    map.on('draw:created', function (e) {
+        drawnItems.addLayer(e.layer);
+        updateOutput();
+    });
+    map.on('draw:edited', updateOutput);
+    map.on('draw:deleted', updateOutput);
+
+    // Копирование в буфер
+    function copyToClipboard() {
+        var copyText = document.getElementById("output");
+        if (!copyText.value) return;
+
+        copyText.select();
+        copyText.setSelectionRange(0, 99999); // Для мобилок
+        navigator.clipboard.writeText(copyText.value).then(() => {
+            var btn = document.getElementById('copyBtn');
+            btn.innerText = "Скопировано!";
+            btn.style.background = "#3498db";
+            setTimeout(() => {
+                btn.innerText = "Копировать код";
+                btn.style.background = "#27ae60";
+            }, 2000);
+        });
+    }
+
+    function clearMap() {
+        if(confirm("Очистить все нарисованное?")) {
+            drawnItems.clearLayers();
+            updateOutput();
+        }
+    }
+</script>
+
+</body>
+</html>

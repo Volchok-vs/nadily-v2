@@ -42,7 +42,7 @@
         const [{ data: rawParcels }, { data: logs }] = await Promise.all([
             supabase.from('parcels').select('*'),
             supabase.from('territory_logs')
-                .select('parcel_id, publisher_name, taken_at, returned_at')
+                .select('parcel_id, publisher_name, taken_at, returned_at, campaign_id, campaign_name')
                 .or(`taken_at.gte.${rangeStartISO},returned_at.gte.${rangeStartISO}`)
                 .order('taken_at', { ascending: true })
         ]);
@@ -59,8 +59,9 @@
             fitToPage: true,       // Увімкнути масштабування
             fitToWidth: 1,         // Вмістити всі стовпці в 1 сторінку по ширині
             fitToHeight: 0,        // Висота довільна
-            margins: { left: 0.5, right: 0.5, top: 0.55, bottom: 0.39, header: 0.3, footer: 0.3 },
-            horizontalCentered: true // ДОДАНО: Центрування по горизонталі
+            margins: { left: 0.5, right: 0.5, top: 0.55, bottom: 0.5, header: 0.3, footer: 0.3 },
+            horizontalCentered: true, // ДОДАНО: Центрування по горизонталі
+            printTitlesRow: '5:6'  // Повторювати рядки 5-6 (заголовки таблиці) на кожній сторінці при друці
         };
 
         citySheet.columns = [
@@ -79,10 +80,21 @@
         citySheet.getCell('A2').value = `Службовий рік: ${serviceYearText}`;
         citySheet.getCell('A2').font = { bold: true };
 
+        // Додавання легенди кампаній перед таблицею
+        const legendRow = citySheet.addRow(['Легенда:', '', 'Конгрес', '', 'Спец. кампанія', '', 'Спомин', '', '']);
+        legendRow.getCell(1).font = { bold: true, size: 9 };
+        legendRow.getCell(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE9C46A' } };
+        legendRow.getCell(3).font = { size: 8 };
+        legendRow.getCell(5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCDB2' } };
+        legendRow.getCell(5).font = { size: 8 };
+        legendRow.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB2B9AD' } };
+        legendRow.getCell(7).font = { size: 8 };
+
+        citySheet.addRow([]); // Чистий рядок після легенди
         citySheet.addRow(['№ Тер.', 'Остання дата опрацювання*', 'Вісник', '', 'Вісник', '', 'Вісник', '', 'Вісник', '']);
         citySheet.addRow(['', '', 'Дата отримання', 'Дата опрацювання', 'Дата отримання', 'Дата опрацювання', 'Дата отримання', 'Дата опрацювання', 'Дата отримання', 'Дата опрацювання']);
 
-        [3, 4].forEach(rNum => {
+        [5, 6].forEach(rNum => {
             citySheet.getRow(rNum).eachCell(cell => {
                 cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
                 cell.border = { top: {style:'medium'}, left: {style:'medium'}, bottom: {style:'medium'}, right: {style:'medium'} };
@@ -91,15 +103,15 @@
             });
         });
 
-        citySheet.mergeCells('A3:A4'); citySheet.mergeCells('B3:B4');
-        citySheet.mergeCells('C3:D3'); citySheet.mergeCells('E3:F3');
-        citySheet.mergeCells('G3:H3'); citySheet.mergeCells('I3:J3');
+        citySheet.mergeCells('A5:A6'); citySheet.mergeCells('B5:B6');
+        citySheet.mergeCells('C5:D5'); citySheet.mergeCells('E5:F5');
+        citySheet.mergeCells('G5:H5'); citySheet.mergeCells('I5:J5');
 
         parcelsForCity.forEach(p => {
             let pLogs = logs.filter(l => l.parcel_id === p.id);
             if (p.status === 'taken' && p.taken_by) {
                 if (!pLogs.some(l => !l.returned_at && l.publisher_name === p.taken_by)) {
-                    pLogs.push({ publisher_name: p.taken_by, taken_at: p.taken_at, returned_at: null });
+                    pLogs.push({ publisher_name: p.taken_by, taken_at: p.taken_at, returned_at: null, campaign_id: null, campaign_name: null });
                 }
             }
 
@@ -141,6 +153,24 @@
                     if (c === 10) cell.border.right = { style: 'medium' };
                     if (c === 2 || c === 4 || c === 6 || c === 8) cell.border.right = { style: 'medium' };
                     if (c === 3 || c === 5 || c === 7 || c === 9) cell.border.left = { style: 'medium' };
+                    
+                    // Фарбування кампаній для комірок з іменами вісників (тільки у першому рядку)
+                    if (rowIndex === 0 && (c === 3 || c === 5 || c === 7 || c === 9)) {
+                        const logIndex = Math.floor((c - 3) / 2);
+                        const log = pLogs[logIndex];
+                        if (log && log.campaign_id && log.campaign_name) {
+                            if (log.campaign_name.toLowerCase().includes('конгрес')) {
+                                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE9C46A' } };
+                                cell.font = { color: { argb: 'FF5C4B1B' } };
+                            } else if (log.campaign_name.toLowerCase().includes('спец. кампанія') || log.campaign_name.toLowerCase().includes('спеціальна')) {
+                                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCDB2' } };
+                                cell.font = { color: { argb: 'FF6D4C41' } };
+                            } else if (log.campaign_name.toLowerCase().includes('спомин')) {
+                                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB2B9AD' } };
+                                cell.font = { color: { argb: 'FF2F3E30' } };
+                            }
+                        }
+                    }
                 }
             });
 
@@ -158,6 +188,41 @@
         citySheet.mergeCells(cityF2.number, 1, cityF2.number, 10);
         cityF2.getCell(1).font = { bold: true, size: 10 };
 
+        // Додавання page breaks для керування розташуванням дільниць на сторінках
+        const cityParcelCount = parcelsForCity.length;
+        if (cityParcelCount > 0) {
+            const startRow = 7; // Початок дільниць (після заголовків)
+            const rowsPerParcel = 2; // Кожна дільниця займає 2 рядки
+            const parcelsPerPage = 25; // З 2-ї сторінки по 25 дільниць на сторінку
+            
+            // Розрахунок page breaks на основі вимог користувача
+            let currentRow = startRow;
+            let remainingParcels = cityParcelCount;
+            let pageCount = 1;
+            
+            while (remainingParcels > 0) {
+                let parcelsOnPage;
+                if (pageCount === 1) {
+                    // Перша сторінка: всі дільниці, якщо їх менше 25, або 25
+                    parcelsOnPage = Math.min(remainingParcels, parcelsPerPage);
+                } else {
+                    // З 2-ї сторінки: по 25 дільниць на сторінку
+                    parcelsOnPage = Math.min(remainingParcels, parcelsPerPage);
+                }
+                
+                if (parcelsOnPage < remainingParcels) {
+                    // Page break після повної дільниці (після 2 рядків)
+                    const breakRow = currentRow + (parcelsOnPage * rowsPerParcel);
+                    if (!citySheet.pageBreaks) citySheet.pageBreaks = [];
+                    citySheet.pageBreaks.push(breakRow);
+                }
+                
+                currentRow += parcelsOnPage * rowsPerParcel;
+                remainingParcels -= parcelsOnPage;
+                pageCount++;
+            }
+        }
+
 
         // --- ЛИСТ СЕЛО ---
         const villageParcels = rawParcels.filter(p => p.category === 'Село');
@@ -168,7 +233,8 @@
             villageSheet.pageSetup = {
                 paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0,
                 margins: { left: 0.5, right: 0.5, top: 0.55, bottom: 0.39, header: 0.3, footer: 0.3 },
-                horizontalCentered: true // ДОДАНО: Центрування по горизонталі
+                horizontalCentered: true, // ДОДАНО: Центрування по горизонталі
+                printTitlesRow: '5:6'  // Повторювати рядки 5-6 (заголовки таблиці) на кожній сторінці при друці
             };
 
             // НАЛАШТУВАННЯ ШИРИНИ КОЛОНОК ДЛЯ СЕЛА (3 вісника, 8 колонок)
@@ -192,10 +258,21 @@
             villageSheet.getCell('A2').value = `Службовий рік: ${serviceYearText}`;
             villageSheet.getCell('A2').font = { bold: true };
 
+            // Додавання легенди кампаній перед таблицею
+            const villageLegendRow = villageSheet.addRow(['Легенда кампаній:', 'Конгрес', '', 'Спец. кампанія', '', 'Спомин', '', '']);
+            villageLegendRow.getCell(1).font = { bold: true, size: 9 };
+            villageLegendRow.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE9C46A' } };
+            villageLegendRow.getCell(2).font = { size: 8 };
+            villageLegendRow.getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCDB2' } };
+            villageLegendRow.getCell(4).font = { size: 8 };
+            villageLegendRow.getCell(6).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB2B9AD' } };
+            villageLegendRow.getCell(6).font = { size: 8 };
+
+            villageSheet.addRow([]); // Чистий рядок після легенди
             villageSheet.addRow(['Назва тер.', 'Остання дата опрацювання*', 'Вісник', '', 'Вісник', '', 'Вісник', '']);
             villageSheet.addRow(['', '', 'Дата отримання', 'Дата опрацювання', 'Дата отримання', 'Дата опрацювання', 'Дата отримання', 'Дата опрацювання']);
 
-            [3, 4].forEach(rNum => {
+            [5, 6].forEach(rNum => {
                 villageSheet.getRow(rNum).eachCell(cell => {
                     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
                     cell.border = { top: {style:'medium'}, left: {style:'medium'}, bottom: {style:'medium'}, right: {style:'medium'} };
@@ -204,14 +281,14 @@
                 });
             });
 
-            villageSheet.mergeCells('A3:A4'); villageSheet.mergeCells('B3:B4');
-            villageSheet.mergeCells('C3:D3'); villageSheet.mergeCells('E3:F3'); villageSheet.mergeCells('G3:H3');
+            villageSheet.mergeCells('A5:A6'); villageSheet.mergeCells('B5:B6');
+            villageSheet.mergeCells('C5:D5'); villageSheet.mergeCells('E5:F5'); villageSheet.mergeCells('G5:H5');
 
             parcelsForVillage.forEach(p => {
                 let pLogs = logs.filter(l => l.parcel_id === p.id);
                 if (p.status === 'taken' && p.taken_by) {
                     if (!pLogs.some(l => !l.returned_at && l.publisher_name === p.taken_by)) {
-                        pLogs.push({ publisher_name: p.taken_by, taken_at: p.taken_at, returned_at: null });
+                        pLogs.push({ publisher_name: p.taken_by, taken_at: p.taken_at, returned_at: null, campaign_id: null, campaign_name: null });
                     }
                 }
 
@@ -251,6 +328,24 @@
                         if (c === 8) cell.border.right = { style: 'medium' };
                         if (c === 2 || c === 4 || c === 6) cell.border.right = { style: 'medium' };
                         if (c === 3 || c === 5 || c === 7) cell.border.left = { style: 'medium' };
+                        
+                        // Фарбування кампаній для комірок з іменами вісників (тільки у першому рядку)
+                        if (rowIndex === 0 && (c === 3 || c === 5 || c === 7)) {
+                            const logIndex = Math.floor((c - 3) / 2);
+                            const log = pLogs[logIndex];
+                            if (log && log.campaign_id && log.campaign_name) {
+                                if (log.campaign_name.toLowerCase().includes('конгрес')) {
+                                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE9C46A' } };
+                                    cell.font = { color: { argb: 'FF5C4B1B' } };
+                                } else if (log.campaign_name.toLowerCase().includes('спец. кампанія') || log.campaign_name.toLowerCase().includes('спеціальна')) {
+                                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCDB2' } };
+                                    cell.font = { color: { argb: 'FF6D4C41' } };
+                                } else if (log.campaign_name.toLowerCase().includes('спомин')) {
+                                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB2B9AD' } };
+                                    cell.font = { color: { argb: 'FF2F3E30' } };
+                                }
+                            }
+                        }
                     }
                 });
 
@@ -267,6 +362,41 @@
             const villageF2 = villageSheet.addRow(['S-13-K 1/22']);
             villageSheet.mergeCells(villageF2.number, 1, villageF2.number, 8);
             villageF2.getCell(1).font = { bold: true, size: 10 };
+
+            // Додавання page breaks для керування розташуванням дільниць на сторінках
+            const villageParcelCount = parcelsForVillage.length;
+            if (villageParcelCount > 0) {
+                const startRow = 7; // Початок дільниць (після заголовків)
+                const rowsPerParcel = 2; // Кожна дільниця займає 2 рядки
+                const parcelsPerPage = 25; // З 2-ї сторінки по 25 дільниць на сторінку
+                
+                // Розрахунок page breaks на основі вимог користувача
+                let currentRow = startRow;
+                let remainingParcels = villageParcelCount;
+                let pageCount = 1;
+                
+                while (remainingParcels > 0) {
+                    let parcelsOnPage;
+                    if (pageCount === 1) {
+                        // Перша сторінка: всі дільниці, якщо їх менше 25, або 25
+                        parcelsOnPage = Math.min(remainingParcels, parcelsPerPage);
+                    } else {
+                        // З 2-ї сторінки: по 25 дільниць на сторінку
+                        parcelsOnPage = Math.min(remainingParcels, parcelsPerPage);
+                    }
+                    
+                    if (parcelsOnPage < remainingParcels) {
+                        // Page break після повної дільниці (після 2 рядків)
+                        const breakRow = currentRow + (parcelsOnPage * rowsPerParcel);
+                        if (!villageSheet.pageBreaks) villageSheet.pageBreaks = [];
+                        villageSheet.pageBreaks.push(breakRow);
+                    }
+                    
+                    currentRow += parcelsOnPage * rowsPerParcel;
+                    remainingParcels -= parcelsOnPage;
+                    pageCount++;
+                }
+            }
         }
 
         setStatus("Збереження...");

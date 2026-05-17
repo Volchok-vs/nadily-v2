@@ -616,6 +616,38 @@
         .sortable:hover .sort-icon {
             color: #007bff;
         }
+
+        /* Стилі для легенди кампаній */
+        .campaign-legend {
+            display: none;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            font-family: Arial, sans-serif;
+            gap: 30px;
+            flex-wrap: wrap;
+            width: fit-content;
+            background: white;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .color-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .color-congress { background-color: #E9C46A; }
+        .color-special { background-color: #FFCDB2; }
+        .color-memorial { background-color: #B2B9AD; }
     </style>
     <link rel="stylesheet" href="css/profile-style.css" />
     <link rel="stylesheet" href="css/responsive.css">
@@ -636,6 +668,10 @@
         <div id="adminMenu" class="hidden">
             <div class="nav-item" onclick="switchTab('group-cards')">👥 Картки групи</div>
             <div class="nav-item" onclick="switchTab('all-territories')">📋 S-13</div>
+            <a href="statistics-dew.html" id="statsLink" class="nav-item"
+                style="border-left: 3px solid #9b59b6; color: #9b59b6; display: none;">
+                📊 Статистика
+            </a>
             <a href="territories-manager.html" class="nav-item"
                 style="border-left: 3px solid #ff6b6b; color: #ff6b6b;">
                 ⚙️ Адміка
@@ -860,6 +896,21 @@
             </div>
 
             <div class="card" style="overflow-x: auto; border-radius: 0 10px 10px 10px;">
+                <div id="campaign-color-legend" class="campaign-legend">
+                    <div class="legend-item">
+                        <div class="color-box color-congress"></div>
+                        <span>Конгрес</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="color-box color-special"></div>
+                        <span>Спец. кампанія</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="color-box color-memorial"></div>
+                        <span>Спомин</span>
+                    </div>
+                </div>
+
                 <table id="territoryTable">
                     <thead id="tHead"></thead>
                     <tbody id="tBody"></tbody>
@@ -1162,6 +1213,8 @@
                 if (adminMenu) adminMenu.classList.remove('hidden');
                 if (userRole === 'super_admin') {
                     document.getElementById('devLink').style.display = 'flex';
+                    const statsLink = document.getElementById('statsLink');
+                    if (statsLink) statsLink.style.display = 'flex';
                 }
                 loadGroupStats();
                 
@@ -1237,11 +1290,13 @@
             const tBody = document.getElementById('tBody');
             if (!tHead || !tBody) return;
 
+            let hasCampaignInTable = false; // Прапорець для легенди
+
             const rangeStart = getTheocraticStart();
             const titleText = currentTerritoryTab === 'city' ? 'опрацювання міста' : 'опрацювання сіл';
             
             const titleElement = document.querySelector('#tab-all-territories .table-title');
-            if (titleElement) titleElement.innerText = `📋 Записи про ${titleText} ${getTheocraticYearText()}`;
+            if (titleElement) titleElement.innerHTML = `📋 Записи про ${titleText} ${getTheocraticYearText()}`;
 
             // Завантаження даних
             const rangeStartISO = rangeStart.toISOString();
@@ -1342,6 +1397,7 @@
                     // Визначаємо колір фону для кампанії
                     let campaignStyle = '';
                     if (s && s.campaign_id) {
+                        hasCampaignInTable = true; // Знайдено запис з кампанією
                         // Визначаємо тип кампанії за назвою
                         if (s.campaign_name && s.campaign_name.toLowerCase().includes('конгрес')) {
                             campaignStyle = 'background-color: rgba(233, 196, 106, 0.5); color: #5C4B1B;';
@@ -1375,78 +1431,38 @@
                 tBody.appendChild(tr1);
                 tBody.appendChild(tr2);
             });
+
+            // Керування легендою на основі зібраних даних
+            createColorLegend(hasCampaignInTable);
         }
         window.loadAllTerritoriesGrid = loadAllTerritoriesGrid;
 
         // --- ЗАФАРБОВУВАННЯ КЛІТИНОК КАМПАНІЙ (вбудоване в таблицю) ---
         
-        // Створюємо легенду кольорів над таблицею
-        function createColorLegend() {
-            // Перевіряємо, чи вже існує легенда
-            if (document.getElementById('campaign-color-legend')) {
+        // Функція керування видимістю легенди кольорів
+        function createColorLegend(hasCampaign = null) {
+            const legend = document.getElementById('campaign-color-legend');
+            if (!legend) return;
+
+            // Якщо ми передали результат перевірки під час рендеру — використовуємо його
+            if (hasCampaign !== null) {
+                legend.style.display = hasCampaign ? 'flex' : 'none';
                 return;
             }
 
-            // Знаходимо таблицю S-13
+            // Запасний варіант: перевіряємо DOM (якщо викликано не з loadAllTerritoriesGrid)
             const tBody = document.getElementById('tBody');
             if (!tBody) {
-                console.error('❌ Таблиця S-13 не знайдена');
+                legend.style.display = 'none';
                 return;
             }
 
-            // Створюємо контейнер для легенди
-            const legendContainer = document.createElement('div');
-            legendContainer.id = 'campaign-color-legend';
-            legendContainer.style.cssText = `
-                padding:15px;
-                margin-bottom: 10px;
-                border-radius: 8px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                font-family: Arial, sans-serif;
-                display: flex;
-                gap: 30px;
-                flex-wrap: wrap;
-                width: fit-content;
-            `;
-
-            // Створюємо елементи легенди
-            const legendItems = [
-                { color: '#E9C46A', text: 'Конгрес' },
-                { color: '#FFCDB2', text: 'Спеціальна кампанія' },
-                { color: '#B2B9AD', text: 'Спомин' }
-            ];
-
-            legendItems.forEach(item => {
-                const legendItem = document.createElement('div');
-                legendItem.style.cssText = `
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    font-size: 14px;
-                `;
-
-                const colorBox = document.createElement('div');
-                colorBox.style.cssText = `
-                    width: 20px;
-                    height: 20px;
-                    background-color: ${item.color};
-                    border-radius: 4px;
-                    border: 1px solid #ddd;
-                `;
-
-                const text = document.createElement('span');
-                text.textContent = item.text;
-
-                legendItem.appendChild(colorBox);
-                legendItem.appendChild(text);
-                legendContainer.appendChild(legendItem);
+            const hasCampaignCells = Array.from(tBody.querySelectorAll('td.name-row')).some(td => {
+                const bg = td.style.backgroundColor;
+                return bg && bg !== '' && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)';
             });
 
-            // Вставляємо легенду перед таблицею
-            const table = tBody.closest('table');
-            if (table) {
-                table.parentNode.insertBefore(legendContainer, table);
-            }
+            legend.style.display = hasCampaignCells ? 'flex' : 'none';
         }
 
         // Автоматичний запуск зафарбовування після завантаження таблиці (тільки для вкладки S-13)
@@ -1454,16 +1470,16 @@
         window.loadAllTerritoriesGrid = async function(...args) {
             await originalLoadAllTerritoriesGrid.apply(this, args);
             
-            // Перевіряємо чи ми на вкладці S-13 перед запуском зафарбовування
+            // Перевіряємо чи ми на вкладці S-13 перед запуском оновлення фарбування
             const activeTab = document.querySelector('.nav-item.active');
             if (activeTab && activeTab.textContent.includes('S-13')) {
-                console.log('🔄 Таблицю S-13 завантажено, запускаємо зафарбовування...');
-                
-                // Запускаємо зафарбовування з невеликою затримкою
+                // Запускаємо фарбування (якщо воно є в campaign-modal.js)
+                // Легенда вже оновлена всередині loadAllTerritoriesGrid
                 setTimeout(() => {
-                    createColorLegend();
-                    highlightCampaignCells();
-                }, 500);
+                    if (typeof highlightCampaignCells === 'function') {
+                        highlightCampaignCells();
+                    }
+                }, 100);
             }
         };
 

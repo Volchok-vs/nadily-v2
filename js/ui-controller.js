@@ -23,6 +23,25 @@ window.UI = {
         if (modal) {
             modal.style.display = show ? 'block' : 'none';
             
+            // --- ЛОГІКА АВТОМАТИЧНОГО МАСШТАБУВАННЯ ПРИ ВІДКРИТТІ ФІЛЬТРА ---
+            if (show && modalId === 'filterMenu' && window.map) {
+                // Використовуємо requestAnimationFrame для миттєвого масштабування
+                requestAnimationFrame(() => {
+                    if (window.allParcelLayers && window.allParcelLayers.length > 0) {
+                        const bounds = L.latLngBounds([]);
+                        window.allParcelLayers.forEach(item => {
+                            if (item.layer && item.layer.getBounds) {
+                                bounds.extend(item.layer.getBounds());
+                            }
+                        });
+                        if (bounds.isValid()) {
+                            window.map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+                        }
+                    }
+                });
+            }
+            // --------------------------------------------------------------
+
             // --- ЛОГІКА РЕЖИМУ КОРЕКЦІЇ ---
             if (show && modalId === 'takeModal') {
                 const configs = JSON.parse(localStorage.getItem('app_dev_configs')) || {};
