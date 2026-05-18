@@ -197,6 +197,8 @@ async function loadCampaignsStats() {
 // Завантаження загальної статистики за теократичний рік
 async function loadYearlyStats() {
     const { startDate, endDate } = getTeocraticYearRange();
+    console.log('📊 Початок завантаження річної статистики');
+    console.log('📅 Період теократичного року:', startDate, '-', endDate);
 
     try {
         // Отримуємо дільниці міста
@@ -214,6 +216,7 @@ async function loadYearlyStats() {
         }
 
         const totalCity = cityParcels?.length || 0;
+        console.log(`🏙️ Дільниці міста (${totalCity}):`, cityParcels.map(p => `${p.name} (${p.category})`));
 
         // Отримуємо дільниці на руках для міста
         const cityOnHandsResult = await supabase
@@ -223,6 +226,7 @@ async function loadYearlyStats() {
             .eq('status', 'taken');
 
         const cityOnHands = cityOnHandsResult.data?.length || 0;
+        console.log(`👋 Дільниці міста на руках: ${cityOnHands}`);
 
         // Отримуємо дільниці сіл
         const villageParcelsResult = await supabase
@@ -239,6 +243,7 @@ async function loadYearlyStats() {
         }
 
         const totalVillage = villageParcels?.length || 0;
+        console.log(`🏘️ Дільниці сіл (${totalVillage}):`, villageParcels.map(p => `${p.name} (${p.category})`));
 
         // Отримуємо дільниці на руках для сіл
         const villageOnHandsResult = await supabase
@@ -248,15 +253,15 @@ async function loadYearlyStats() {
             .eq('status', 'taken');
 
         const villageOnHands = villageOnHandsResult.data?.length || 0;
+        console.log(`👋 Дільниці сіл на руках: ${villageOnHands}`);
 
         // Отримуємо логи за теократичний рік
+        // Враховуємо логи, де taken_at або returned_at в поточному теократичному році
         const logsResult = await supabase
             .from('territory_logs')
-            .select('*')
-            .gte('taken_at', startDate)
-            .lte('taken_at', endDate);
+            .select('*');
 
-        const logs = logsResult.data;
+        const allLogs = logsResult.data;
         const logsError = logsResult.error;
 
         if (logsError) {
@@ -264,15 +269,43 @@ async function loadYearlyStats() {
             return;
         }
 
+        // Фільтруємо логи в JavaScript - беремо ті, де taken_at або returned_at в поточному теократичному році
+        const logs = allLogs?.filter(log => {
+            const takenDate = log.taken_at ? new Date(log.taken_at) : null;
+            const returnedDate = log.returned_at ? new Date(log.returned_at) : null;
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+
+            // Лог вважається в поточному році, якщо taken_at або returned_at в межах періоду
+            const takenInPeriod = takenDate && takenDate >= start && takenDate <= end;
+            const returnedInPeriod = returnedDate && returnedDate >= start && returnedDate <= end;
+
+            return takenInPeriod || returnedInPeriod;
+        }) || [];
+
+        console.log(`📋 Всього логів за період: ${logs?.length || 0}`);
+
         // Статистика для міста
         const cityLogs = logs?.filter(log => {
             const parcel = cityParcels?.find(p => p.id === log.parcel_id);
             return parcel !== undefined;
         }) || [];
 
+        console.log(`🏙️ Логи для міста (${cityLogs.length}):`);
+        cityLogs.forEach(log => {
+            const parcel = cityParcels?.find(p => p.id === log.parcel_id);
+            console.log(`   - ${parcel?.name}: ${log.publisher_name} (${log.taken_at} - ${log.returned_at || 'не здано'})`);
+        });
+
         const cityProcessedParcels = new Set(cityLogs.map(log => log.parcel_id));
         const cityProcessedCount = cityProcessedParcels.size;
         const cityPercent = totalCity > 0 ? Math.round((cityProcessedCount / totalCity) * 100) : 0;
+
+        console.log(`✅ Опрацьовано дільниць міста: ${cityProcessedCount}/${totalCity} (${cityPercent}%)`);
+        console.log(`   Опрацьовані дільниці:`, Array.from(cityProcessedParcels).map(id => {
+            const parcel = cityParcels?.find(p => p.id === id);
+            return parcel?.name || id;
+        }));
 
         // Підрахунок повторно опрацьованих для міста
         const cityParcelCounts = {};
@@ -280,6 +313,14 @@ async function loadYearlyStats() {
             cityParcelCounts[log.parcel_id] = (cityParcelCounts[log.parcel_id] || 0) + 1;
         });
         const cityRepeated = Object.values(cityParcelCounts).filter(count => count > 1).length;
+
+        console.log(`🔄 Повторно опрацьовано дільниць міста: ${cityRepeated}`);
+        const cityRepeatedParcels = Object.keys(cityParcelCounts).filter(id => cityParcelCounts[id] > 1);
+        console.log(`   Повторно опрацьовані дільниці:`, cityRepeatedParcels.map(id => {
+            const parcel = cityParcels?.find(p => String(p.id) === String(id));
+            const count = cityParcelCounts[id];
+            return `${parcel?.name || id} (${count} разів)`;
+        }));
 
         // Оновлюємо UI для міста
         document.getElementById('cityTotal').textContent = totalCity;
@@ -300,6 +341,12 @@ async function loadYearlyStats() {
         const cityCampaignProcessedParcels = new Set(cityCampaignLogs.map(log => log.parcel_id));
         const cityCampaignProcessedCount = cityCampaignProcessedParcels.size;
 
+        console.log(`🎯 Опрацьовано під час кампаній (місто): ${cityCampaignProcessedCount}`);
+        console.log(`   Логи під час кампаній:`, cityCampaignLogs.map(log => {
+            const parcel = cityParcels?.find(p => p.id === log.parcel_id);
+            return `${parcel?.name || log.parcel_id}: ${log.campaign_name || log.campaign_id} (${log.taken_at} - ${log.returned_at || 'не здано'})`;
+        }));
+
         document.getElementById('cityCampaignProcessed').textContent = cityCampaignProcessedCount;
 
         // Створюємо графік для міста
@@ -311,9 +358,21 @@ async function loadYearlyStats() {
             return parcel !== undefined;
         }) || [];
 
+        console.log(`🏘️ Логи для сіл (${villageLogs.length}):`);
+        villageLogs.forEach(log => {
+            const parcel = villageParcels?.find(p => p.id === log.parcel_id);
+            console.log(`   - ${parcel?.name}: ${log.publisher_name} (${log.taken_at} - ${log.returned_at || 'не здано'})`);
+        });
+
         const villageProcessedParcels = new Set(villageLogs.map(log => log.parcel_id));
         const villageProcessedCount = villageProcessedParcels.size;
         const villagePercent = totalVillage > 0 ? Math.round((villageProcessedCount / totalVillage) * 100) : 0;
+
+        console.log(`✅ Опрацьовано дільниць сіл: ${villageProcessedCount}/${totalVillage} (${villagePercent}%)`);
+        console.log(`   Опрацьовані дільниці:`, Array.from(villageProcessedParcels).map(id => {
+            const parcel = villageParcels?.find(p => p.id === id);
+            return parcel?.name || id;
+        }));
 
         // Підрахунок повторно опрацьованих для сіл
         const villageParcelCounts = {};
@@ -321,6 +380,14 @@ async function loadYearlyStats() {
             villageParcelCounts[log.parcel_id] = (villageParcelCounts[log.parcel_id] || 0) + 1;
         });
         const villageRepeated = Object.values(villageParcelCounts).filter(count => count > 1).length;
+
+        console.log(`🔄 Повторно опрацьовано дільниць сіл: ${villageRepeated}`);
+        const villageRepeatedParcels = Object.keys(villageParcelCounts).filter(id => villageParcelCounts[id] > 1);
+        console.log(`   Повторно опрацьовані дільниці:`, villageRepeatedParcels.map(id => {
+            const parcel = villageParcels?.find(p => p.id === id);
+            const count = villageParcelCounts[id];
+            return `${parcel?.name || id} (${count} разів)`;
+        }));
 
         // Оновлюємо UI для сіл
         document.getElementById('villageTotal').textContent = totalVillage;
@@ -333,6 +400,12 @@ async function loadYearlyStats() {
         const villageCampaignLogs = villageLogs.filter(log => log.campaign_id || log.campaign_name);
         const villageCampaignProcessedParcels = new Set(villageCampaignLogs.map(log => log.parcel_id));
         const villageCampaignProcessedCount = villageCampaignProcessedParcels.size;
+
+        console.log(`🎯 Опрацьовано під час кампаній (села): ${villageCampaignProcessedCount}`);
+        console.log(`   Логи під час кампаній:`, villageCampaignLogs.map(log => {
+            const parcel = villageParcels?.find(p => p.id === log.parcel_id);
+            return `${parcel?.name || log.parcel_id}: ${log.campaign_name || log.campaign_id} (${log.taken_at} - ${log.returned_at || 'не здано'})`;
+        }));
 
         document.getElementById('villageCampaignProcessed').textContent = villageCampaignProcessedCount;
 

@@ -16,6 +16,7 @@
     .details-layout {
         gap: 15px;
     }
+
     .header h1 {
         font-size: 1.4rem;
     }
@@ -24,10 +25,11 @@
 /* Планшети та великі телефони (менше 768px) */
 @media screen and (max-width: 768px) {
     .details-layout {
-        flex-direction: column; /* Стекуємо блоки один під одного */
+        flex-direction: column;
+        /* Стекуємо блоки один під одного */
     }
-        
-    
+
+
 }
 
 /**
@@ -37,13 +39,13 @@
  */
 @media (max-width: 575.98px) {
     /* Оптимально для вашого Google Pixel 7 */
-    
+
 }
 
 /* Смартфони (менше 480px) — наприклад, ваш Pixel 7 */
 @media screen and (max-width: 480px) {
-    
-    
+
+
     .container {
         padding: 15px;
     }
@@ -54,9 +56,18 @@
     }
 
     /* Робимо кнопки дій (Взяти/Здати) великими */
-    #takeBtn, #adminReturnBtn {
+    #takeBtn,
+    #adminReturnBtn {
         padding: 12px;
         font-size: 1rem;
+    }
+
+    .stat-card {
+        width: 26vw;
+    }
+
+    .stat-card h3 {
+        margin-bottom: 0;
     }
 }
 
@@ -64,5 +75,9 @@
 @media screen and (max-width: 360px) {
     .header h1 {
         font-size: 1.2rem;
+    }
+
+    .stat-card h3 {
+        margin-bottom: 0;
     }
 }
