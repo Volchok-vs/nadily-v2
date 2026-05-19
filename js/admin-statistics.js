@@ -162,12 +162,8 @@ async function loadCampaignsStats() {
                     </p>
                     <div class="campaign-stats">
                         <div class="campaign-stat">
-                            <div class="campaign-stat-value">${processedCount}/${totalCityParcels}</div>
+                            <div class="campaign-stat-value">${processedCount} (${percent}%)</div>
                             <div class="campaign-stat-label">Опрацьовано</div>
-                        </div>
-                        <div class="campaign-stat">
-                            <div class="campaign-stat-value">${percent}%</div>
-                            <div class="campaign-stat-label">Відсоток</div>
                         </div>
                         <div class="campaign-stat">
                             <div class="campaign-stat-value">${avgDuration}</div>
@@ -325,8 +321,7 @@ async function loadYearlyStats() {
         // Оновлюємо UI для міста
         document.getElementById('cityTotal').textContent = totalCity;
         document.getElementById('cityOnHands').textContent = cityOnHands;
-        document.getElementById('cityProcessed').textContent = cityProcessedCount;
-        document.getElementById('cityPercent').textContent = cityPercent + '%';
+        document.getElementById('cityProcessed').textContent = `${cityProcessedCount} (${cityPercent}%)`;
         document.getElementById('cityRepeated').textContent = cityRepeated;
 
         // Отримуємо кампанії для розрахунку опрацьованих під час кампаній
@@ -341,13 +336,21 @@ async function loadYearlyStats() {
         const cityCampaignProcessedParcels = new Set(cityCampaignLogs.map(log => log.parcel_id));
         const cityCampaignProcessedCount = cityCampaignProcessedParcels.size;
 
+        // Підрахунок повторно опрацьованих під час кампаній для міста
+        const cityCampaignParcelCounts = {};
+        cityCampaignLogs.forEach(log => {
+            cityCampaignParcelCounts[log.parcel_id] = (cityCampaignParcelCounts[log.parcel_id] || 0) + 1;
+        });
+        const cityCampaignRepeated = Object.values(cityCampaignParcelCounts).filter(count => count > 1).length;
+
         console.log(`🎯 Опрацьовано під час кампаній (місто): ${cityCampaignProcessedCount}`);
+        console.log(`   Повторно опрацьовано під час кампаній (місто): ${cityCampaignRepeated}`);
         console.log(`   Логи під час кампаній:`, cityCampaignLogs.map(log => {
             const parcel = cityParcels?.find(p => p.id === log.parcel_id);
             return `${parcel?.name || log.parcel_id}: ${log.campaign_name || log.campaign_id} (${log.taken_at} - ${log.returned_at || 'не здано'})`;
         }));
 
-        document.getElementById('cityCampaignProcessed').textContent = cityCampaignProcessedCount;
+        document.getElementById('cityCampaignProcessed').textContent = `${cityCampaignProcessedCount} (${cityCampaignRepeated})`;
 
         // Створюємо графік для міста
         createCityChart(cityProcessedCount, totalCity - cityProcessedCount, cityRepeated);
@@ -392,8 +395,7 @@ async function loadYearlyStats() {
         // Оновлюємо UI для сіл
         document.getElementById('villageTotal').textContent = totalVillage;
         document.getElementById('villageOnHands').textContent = villageOnHands;
-        document.getElementById('villageProcessed').textContent = villageProcessedCount;
-        document.getElementById('villagePercent').textContent = villagePercent + '%';
+        document.getElementById('villageProcessed').textContent = `${villageProcessedCount} (${villagePercent}%)`;
         document.getElementById('villageRepeated').textContent = villageRepeated;
 
         // Фільтруємо логи для сіл, які мають campaign_id або campaign_name
@@ -401,13 +403,21 @@ async function loadYearlyStats() {
         const villageCampaignProcessedParcels = new Set(villageCampaignLogs.map(log => log.parcel_id));
         const villageCampaignProcessedCount = villageCampaignProcessedParcels.size;
 
+        // Підрахунок повторно опрацьованих під час кампаній для сіл
+        const villageCampaignParcelCounts = {};
+        villageCampaignLogs.forEach(log => {
+            villageCampaignParcelCounts[log.parcel_id] = (villageCampaignParcelCounts[log.parcel_id] || 0) + 1;
+        });
+        const villageCampaignRepeated = Object.values(villageCampaignParcelCounts).filter(count => count > 1).length;
+
         console.log(`🎯 Опрацьовано під час кампаній (села): ${villageCampaignProcessedCount}`);
+        console.log(`   Повторно опрацьовано під час кампаній (села): ${villageCampaignRepeated}`);
         console.log(`   Логи під час кампаній:`, villageCampaignLogs.map(log => {
             const parcel = villageParcels?.find(p => p.id === log.parcel_id);
             return `${parcel?.name || log.parcel_id}: ${log.campaign_name || log.campaign_id} (${log.taken_at} - ${log.returned_at || 'не здано'})`;
         }));
 
-        document.getElementById('villageCampaignProcessed').textContent = villageCampaignProcessedCount;
+        document.getElementById('villageCampaignProcessed').textContent = `${villageCampaignProcessedCount} (${villageCampaignRepeated})`;
 
         // Створюємо графік для сіл
         createVillageChart(villageProcessedCount, totalVillage - villageProcessedCount, villageRepeated);
