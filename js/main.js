@@ -103,10 +103,10 @@ export function initToolControl(mapInstance) {
 
             // 🔍 Кнопка фільтрів (ВИПРАВЛЕНО)
             createBtn('🔍', "Фільтри", () => {
-                const menu = document.getElementById('filterMenu');
-                if (menu) {
+                if (window.UI && window.UI.toggleModal) {
+                    const menu = document.getElementById('filterMenu');
                     const isHidden = window.getComputedStyle(menu).display === 'none';
-                    menu.style.display = isHidden ? 'block' : 'none';
+                    window.UI.toggleModal('filterMenu', isHidden);
                 }
             });
 

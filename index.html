@@ -344,25 +344,12 @@
             font-family: sans-serif;
         }
 
-        /* Стилі нового фільтра */
-        #filter-wrapper {
-            position: fixed;
-            top: 15px;
-            left: 15px;
-            z-index: 10001;
-            width: 300px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+        
 
 
         /* Мобільна адаптація */
         @media (max-width: 600px) {
-            #filter-wrapper {
-                width: calc(100% - 30px);
-                top: 10px;
-                left: 10px;
-            }
-
+            
             #filter-mobile-header {
                 display: flex !important;
                 justify-content: space-between;
@@ -373,11 +360,6 @@
                 border-radius: 12px;
                 cursor: pointer;
                 margin-bottom: 5px;
-            }
-
-            /* Згорнутий стан на мобільних */
-            #filter-wrapper.collapsed #filterMenu {
-                display: none;
             }
         }
 
@@ -1051,6 +1033,9 @@
             // ... далі ваш код (initGeolocation, AuthControl) ...
             if (typeof initGeolocation === 'function') initGeolocation(window.map);
             new AuthControl().addTo(window.map);
+
+            // 🔍 Ініціалізація віджета зуму
+            if (typeof initZoomWidget === 'function') initZoomWidget();
         }
 
 

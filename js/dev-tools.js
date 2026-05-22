@@ -24,6 +24,7 @@
             const timerToggle = document.getElementById('showLoadTimer');
             const logoutToggle = document.getElementById('quickLogoutToggle'); // ДОДАНО
             const testCampaignToggle = document.getElementById('testCampaignToggle'); // 🧪 Тестова кампанія
+            const zoomWidgetToggle = document.getElementById('zoomWidgetToggle'); // 🔍 Віджет зуму
 
             if (masterToggle && timerToggle) {
                 // Встановлюємо стан при завантаженні сторінки
@@ -36,6 +37,10 @@
                 // 🧪 Ініціалізація тестової кампанії
                 if (testCampaignToggle && masterToggle.checked) {
                     testCampaignToggle.checked = localStorage.getItem('showTestCampaign') === 'true';
+                }
+                // 🔍 Ініціалізація віджета зуму
+                if (zoomWidgetToggle && masterToggle.checked) {
+                    zoomWidgetToggle.checked = localStorage.getItem('showZoomWidget') === 'true';
                 }
 
                 const saveSettings = () => {
@@ -57,6 +62,11 @@
                         localStorage.setItem('showTestCampaign', testCampaignToggle.checked);
                     }
 
+                    // 🔍 Зберігаємо налаштування віджета зуму
+                    if (zoomWidgetToggle && masterToggle.checked) {
+                        localStorage.setItem('showZoomWidget', zoomWidgetToggle.checked);
+                    }
+
                     console.log("Налаштування оновлено:", newConfig);
                 };
 
@@ -64,6 +74,7 @@
                 timerToggle.addEventListener('change', saveSettings);
                 if (logoutToggle) logoutToggle.addEventListener('change', saveSettings);
                 if (testCampaignToggle) testCampaignToggle.addEventListener('change', saveSettings);
+                if (zoomWidgetToggle) zoomWidgetToggle.addEventListener('change', saveSettings);
             }
         }, 150); // Трохи збільшив затримку для надійності
     });
@@ -105,4 +116,61 @@
             if (resSpan) resSpan.innerText = `🖥 ${getScreenRes()}`;
         };
     }
+
+    // 🔍 Функція для відображення віджета зуму
+    function initZoomWidget() {
+        const showZoomWidget = localStorage.getItem('showZoomWidget') === 'true';
+        if (!showZoomWidget) return;
+
+        // Створюємо елемент віджета
+        const zoomWidget = document.createElement('div');
+        zoomWidget.id = 'dynamic-zoom-widget';
+
+        // Додаємо стилі
+        Object.assign(zoomWidget.style, {
+            position: 'fixed',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: 'rgba(21, 101, 192, 0.95)',
+            color: '#ffffff',
+            padding: '8px 16px',
+            borderRadius: '20px',
+            fontSize: '14px',
+            fontFamily: "'Segoe UI', sans-serif",
+            fontWeight: 'bold',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            zIndex: '10005',
+            pointerEvents: 'none',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+        });
+
+        // Функція оновлення тексту
+        function updateZoomDisplay() {
+            if (window.map) {
+                const currentZoom = window.map.getZoom();
+                zoomWidget.innerHTML = `🔍 Zoom: <span>${currentZoom}</span>`;
+            } else {
+                zoomWidget.innerHTML = `⚠️ Карта не знайдена`;
+            }
+        }
+
+        // Додаємо віджет на сторінку
+        document.body.appendChild(zoomWidget);
+
+        // Вішаємо слухач подій на карту Leaflet
+        if (window.map) {
+            window.map.on('zoomend', updateZoomDisplay);
+            updateZoomDisplay();
+            console.log('%c🚀 Віджет Zoom успішно активовано!', 'color: #2ecc71; font-weight: bold;');
+        } else {
+            console.error('Помилка: об\'єкт window.map ще не ініціалізовано.');
+        }
+    }
+
+    // Експортуємо функцію для використання в інших файлах
+    window.initZoomWidget = initZoomWidget;
 })();

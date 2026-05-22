@@ -30,7 +30,10 @@ window.UI = {
                     if (window.allParcelLayers && window.allParcelLayers.length > 0) {
                         const bounds = L.latLngBounds([]);
                         window.allParcelLayers.forEach(item => {
-                            if (item.layer && item.layer.getBounds) {
+                            const p = item.data || {};
+                            const isVillage = (p.category || p.type || "").toLowerCase().includes('сел');
+                            // Масштабуємо тільки на міські дільниці (не села)
+                            if (!isVillage && item.layer && item.layer.getBounds) {
                                 bounds.extend(item.layer.getBounds());
                             }
                         });

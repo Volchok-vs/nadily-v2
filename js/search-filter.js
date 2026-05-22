@@ -264,6 +264,30 @@ function attachEvents(menu, map, layers) {
         }
         apply();
         updateFilterCounts(layers); // Оновлюємо лічильники після зміни фільтра
+
+        // --- ЛОГІКА АВТОМАТИЧНОГО ЗУМУ ПРИ ПЕРЕМИКАННІ ФІЛЬТРІВ ---
+        if (map) {
+            setTimeout(() => {
+                const bounds = L.latLngBounds([]);
+                layers.forEach(item => {
+                    const p = item.data || {};
+                    const isVillageParcel = isVillage(p);
+                    // Перевіряємо, чи дільниця відображається на карті
+                    if (map.hasLayer(item.layer) && item.layer.getBounds) {
+                        // В режимі сіл збираємо тільки сільські дільниці, в режимі місто - тільки міські
+                        if (currentFilterMode === 'village' && isVillageParcel) {
+                            bounds.extend(item.layer.getBounds());
+                        } else if (currentFilterMode === 'city' && !isVillageParcel) {
+                            bounds.extend(item.layer.getBounds());
+                        }
+                    }
+                });
+                if (bounds.isValid()) {
+                    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+                }
+            }, 100);
+        }
+        // --------------------------------------------------------------
     };
 
     searchInput.onfocus = () => {

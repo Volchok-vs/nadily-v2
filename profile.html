@@ -9,646 +9,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        :root {
-            --sidebar-width: 250px;
-            --primary: #007bff;
-            --bg: #f4f7f6;
-        }
-
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: var(--bg);
-            margin: 0;
-            display: flex;
-            height: 100dvh;
-            width: 100%;
-            overflow: hidden;
-        }
-
-        /* Бокове меню */
-        .sidebar {
-            width: var(--sidebar-width);
-            background: #2c3e50;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            padding: 20px 0;
-        }
-
-        .sidebar h2 {
-            padding: 0 20px;
-            font-size: 1.2rem;
-            margin-bottom: 30px;
-            color: #ecf0f1;
-        }
-
-        .nav-item {
-            padding: 15px 20px;
-            cursor: pointer;
-            transition: 0.3s;
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-            color: #bdc3c7;
-        }
-
-        .nav-item:hover,
-        .nav-item.active {
-            background: #34495e;
-            color: white;
-        }
-
-        .nav-item i {
-            margin-right: 10px;
-        }
-
-        .logout-btn {
-            margin-top: 20px;
-            color: #e74c3c;
-            border-top: 1px solid #34495e;
-        }
-
-        /* Контентна область */
-        .main-content {
-            flex: 1;
-            padding: 30px;
-            overflow-y: auto;
-        }
-
-        /* Таблиці та списки */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-
-        th,
-        td {
-            text-align: left;
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-        }
-
-        tr:hover {
-            background: #f9f9f9;
-            cursor: pointer;
-        }
-
-        .badge {
-            background: #eee;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .btn-back {
-            margin-bottom: 15px;
-            cursor: pointer;
-            color: var(--primary);
-            display: inline-block;
-        }
-
-        .territory-grid {
-            border: 2px solid #333;
-            width: auto;
-            min-width: 100%;
-        }
-
-        .territory-grid th,
-        .territory-grid td {
-            border: 1px solid #444;
-            text-align: center;
-            padding: 5px;
-            font-size: 0.85rem;
-        }
-
-        .territory-grid thead th {
-            background: #e9ecef;
-            font-weight: bold;
-        }
-
-        .cell-date {
-            font-size: 0.75rem;
-            width: 80px;
-        }
-
-        .parcel-num {
-            font-weight: bold;
-            font-size: 1.1rem;
-            background: #f8f9fa;
-        }
-
-        #territoryTable th,
-        #territoryTable td {
-            border: 1px solid #444;
-            padding: 8px;
-            text-align: center;
-            font-family: sans-serif;
-        }
-
-        #territoryTable thead th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 12px;
-        }
-
-        .num-col {
-            background: #eee;
-            font-weight: bold;
-            width: 50px;
-            font-size: 16px;
-        }
-
-        .name-row {
-            background: #fff;
-            font-weight: bold;
-            color: #2c3e50;
-            height: 30px;
-        }
-
-        .date-row {
-            background: #fafafa;
-            height: 25px;
-        }
-
-        .date-cell {
-            font-size: 11px;
-            width: 90px;
-            color: #555;
-        }
-
-        .last-done-col {
-            background: #f0f0f0;
-            width: 100px;
-            font-size: 11px;
-            color: #d32f2f;
-            font-weight: bold;
-        }
-
-        .current-year-cell {
-            background: #e8f5e9;
-        }
-
-        /* Контейнер адмін-панелі */
-        .admin-settings-container {
-            display: none;
-            margin-top: 25px;
-            font-family: 'Segoe UI', sans-serif;
-        }
-
-        /* Картки секцій */
-        .admin-card {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            margin-bottom: 15px;
-        }
-
-        .admin-card.secondary {
-            background: #f8f9fa;
-            border-color: #dee2e6;
-        }
-
-        /* Заголовки */
-        .admin-card-title {
-            margin: 0 0 15px 0;
-            color: #333;
-            font-size: 1.1rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .admin-card-title.gray {
-            color: #495057;
-        }
-
-        /* Форми та сітки */
-        .admin-grid {
-            display: grid;
-            gap: 12px;
-        }
-
-        .form-group {
-            margin-bottom: 12px;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 4px;
-        }
-
-        .input-row {
-            display: flex;
-            gap: 8px;
-        }
-
-        /* Поля вводу */
-        .admin-input,
-        .admin-select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            background: white;
-            box-sizing: border-box;
-        }
-
-        .admin-select {
-            cursor: pointer;
-        }
-
-        .admin-input:disabled,
-        .admin-select:disabled {
-            background: #eee;
-            cursor: not-allowed;
-        }
-
-        /* Кнопки */
-        .btn-admin {
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            border: none;
-            font-size: 0.95rem;
-        }
-
-        .btn-main {
-            background: #007bff;
-            color: white;
-        }
-
-        .btn-main:hover {
-            background: #0056b3;
-        }
-
-        .btn-outline {
-            background: white;
-            color: #1565C0;
-            border: 1px solid #1565C0;
-        }
-
-        .btn-outline:hover {
-            background: #f0f7ff;
-        }
-
-        .btn-success {
-            background: #2e7d32;
-            color: white;
-        }
-
-        .btn-warning {
-            background: #ff9800;
-            color: white;
-            box-shadow: 0 4px 10px rgba(255, 152, 0, 0.2);
-        }
-
-        .btn-delete {
-            background: transparent;
-            color: #c62828;
-            border: 1px solid #ef9a9a;
-            font-size: 0.9rem;
-            opacity: 0.7;
-            margin-top: 15px;
-        }
-
-        .btn-delete:hover {
-            opacity: 1;
-            background: #fff5f5;
-        }
-
-        /* Секція безпеки */
-        .security-row {
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .checkbox-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            cursor: pointer;
-        }
-
-        .auth-display-box {
-            display: none;
-            margin-top: 15px;
-            background: white;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-        }
-
-        .password-reset-zone {
-            background: #fff8e1;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #ffe082;
-            margin-bottom: 15px;
-        }
-
-        .password-reset-zone .warning-label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 11px;
-            color: #d32f2f;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        /* Стиль для компактного перемикача */
-        .switch-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px;
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.9rem;
-            color: #1565C0;
-        }
-
-        .switch-container input {
-            cursor: pointer;
-            width: 18px;
-            height: 18px;
-        }
-
-        /* Повноекранний лоадер */
-        #main-loader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            transition: opacity 0.3s ease;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #007bff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* Шапка вкладки */
-        .tab-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        h1, h2, h3 {
-            margin: 0;
-            font-family: 'Caveat', cursive;
-        }
-
-        /* Кнопка Додати */
-        .btn-add {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 0.9rem;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: background 0.2s;
-        }
-
-        .btn-add:hover {
-            background: #218838;
-        }
-
-
-        /* Стилізація таблиці */
-        .publishers-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .publishers-table th,
-        .publishers-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-
-        .publishers-table th {
-            background: #f8f9fa;
-            color: #666;
-            font-weight: 600;
-        }
-
-        .publishers-table tr {
-            cursor: pointer;
-            transition: background 0.1s;
-        }
-
-        .publishers-table tr:hover {
-            background: #f1f8ff;
-        }
-
-        /* Бейдж з числом дільниць */
-        .badge {
-            background: #e9ecef;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: bold;
-            color: #495057;
-        }
-
-        /* Контейнер для табів тепер притиснутий до картки */
-        .origin-tabs {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 0;
-            /* Прибираємо відступ, щоб таби торкалися картки */
-            padding-left: 10px;
-        }
-
-        /* Базовий стиль табів-вушок */
-        .origin-tab-btn {
-            padding: 10px 20px;
-            border: 1px solid #ddd;
-            border-bottom: none;
-            /* У всіх табів немає нижньої межі */
-            background: #e9ecef;
-            /* Неактивні таби сіріші */
-            border-radius: 10px 10px 0 0;
-            /* Заокруглення тільки зверху */
-            cursor: pointer;
-            font-size: 0.9rem;
-            color: #666;
-            transition: all 0.2s;
-            position: relative;
-            z-index: 1;
-            /* Неактивні таби нижче за рівнем */
-        }
-
-        /* Активний таб */
-        .origin-tab-btn.active {
-            background: white;
-            /* Колір такий же, як у картки */
-            color: #007bff;
-            font-weight: bold;
-            z-index: 3;
-            /* Виводимо на передній план */
-            margin-bottom: -1px;
-            /* Насуваємо на рамку картки */
-            padding-bottom: 11px;
-            /* Компенсуємо зміщення, щоб текст не стрибав */
-            border-color: #ddd;
-        }
-
-        /* Стиль самої картки */
-        .card {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 0 10px 10px 10px;
-            /* Верхній лівий кут гострий, щоб злитись з табом */
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            position: relative;
-            z-index: 2;
-            /* Картка вище неактивних табів */
-            padding: 15px;
-        }
-
-        /* Ефект злиття табів з карткою */
-        .origin-tabs {
-            display: flex;
-            gap: 4px;
-            margin-bottom: 0;
-            padding-left: 10px;
-        }
-
-        .origin-tab-btn {
-            padding: 10px 18px;
-            border: 1px solid #ddd;
-            border-bottom: none;
-            background: #eaeeef;
-            border-radius: 10px 10px 0 0;
-            cursor: pointer;
-            font-size: 0.9rem;
-            color: #555;
-            transition: all 0.2s;
-            position: relative;
-            z-index: 1;
-        }
-
-        .origin-tab-btn.active {
-            background: white;
-            color: #007bff;
-            font-weight: bold;
-            z-index: 3;
-            margin-bottom: -1px;
-            padding-bottom: 11px;
-            border-color: #ddd;
-        }
-
-        .publishers-card {
-            border-radius: 0 10px 10px 10px;
-            /* Гострий кут зліва зверху для злиття */
-            z-index: 2;
-            position: relative;
-            border-top: 1px solid #ddd;
-        }
-
-        /* Стилі заголовків таблиці для сортування */
-        .sortable {
-            cursor: pointer;
-            user-select: none;
-            transition: background 0.2s;
-        }
-
-        .sortable:hover {
-            background: #f8f9fa;
-        }
-
-        .sort-icon {
-            margin-left: 5px;
-            font-size: 0.8rem;
-            color: #bbb;
-        }
-
-        .sortable:hover .sort-icon {
-            color: #007bff;
-        }
-
-        /* Стилі для легенди кампаній */
-        .campaign-legend {
-            display: none;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            font-family: Arial, sans-serif;
-            gap: 30px;
-            flex-wrap: wrap;
-            width: fit-content;
-            background: white;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-        }
-
-        .color-box {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
-
-        .color-congress { background-color: #E9C46A; }
-        .color-special { background-color: #FFCDB2; }
-        .color-memorial { background-color: #B2B9AD; }
-    </style>
     <link rel="stylesheet" href="css/profile-style.css" />
     <link rel="stylesheet" href="css/responsive.css">
 </head>
@@ -666,18 +26,15 @@
         <h2 id="displayRole">Кабінет</h2>
         <div class="nav-item active" onclick="switchTab('my-card')">👤 Моя картка</div>
         <div id="adminMenu" class="hidden">
-            <div class="nav-item" onclick="switchTab('group-cards')">👥 Картки групи</div>
+            <div class="nav-item" onclick="switchTab('group-cards')">👥 Вісники</div>
             <div class="nav-item" onclick="switchTab('all-territories')">📋 S-13</div>
-            <a href="statistics-dew.html" id="statsLink" class="nav-item"
-                style="border-left: 3px solid #9b59b6; color: #9b59b6; display: none;">
+            <a href="statistics-dew.html" id="statsLink" class="nav-item nav-stats hidden">
                 📊 Статистика
             </a>
-            <a href="territories-manager.html" class="nav-item"
-                style="border-left: 3px solid #ff6b6b; color: #ff6b6b;">
+            <a href="territories-manager.html" class="nav-item nav-admin">
                 ⚙️ Адміка
             </a>
-            <a href="dev-settings.html" id="devLink" class="nav-item"
-                style="display: none; border-left: 3px solid #ff9800; color: #ff9800;">
+            <a href="dev-settings.html" id="devLink" class="nav-item nav-dev hidden">
                 🛠 Режим розробки
             </a>
         </div>
@@ -687,13 +44,13 @@
 
     <div class="main-content">
         <div id="tab-my-card" class="tab-content">
-            <h1 id="userName">Завантаження...</h1>
+            <h1 id="userName" class="page-header">Завантаження...</h1>
             <div class="card">
                 <h3>Дільниці у мене на руках</h3>
                 <div id="myParcels">Пошук дільниць...</div>
             </div>
 
-            <div class="card">
+            <div class="card" id="historyCard">
                 <h3>📜 Історія опрацювань</h3>
                 <div id="myHistory">Завантаження історії...</div>
             </div>
@@ -701,7 +58,7 @@
 
         <div id="tab-group-cards" class="tab-content hidden">
             <div class="tab-header">
-                <h1>Вісники групи</h1>
+                <h1>Вісники</h1>
                 <button onclick="openAddPublisherModal()" class="btn-add">
                     + Додати
                 </button>
@@ -721,7 +78,7 @@
                             <th onclick="toggleSort('name')" class="sortable">
                                 Прізвище та ім'я <span id="sort-icon-name" class="sort-icon">↕</span>
                             </th>
-                            <th onclick="toggleSort('count')" class="sortable" style="text-align: center;">
+                            <th onclick="toggleSort('count')" class="sortable text-center">
                                 Кількість дільниць <span id="sort-icon-count" class="sort-icon">↕</span>
                             </th>
                         </tr>
@@ -732,54 +89,43 @@
             </div>
         </div>
 
-        <div id="addPublisherModal"
-            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:9999; padding:15px; box-sizing:border-box;">
-            <div
-                style="background:white; padding:25px; border-radius:15px; width:100%; max-width:400px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
-                <h2 style="margin-top:0; color:#333; font-size:1.4rem;">Новий вісник</h2>
+        <div id="addPublisherModal" class="modal-overlay">
+            <div class="modal-container">
+                <h2 class="modal-title">Новий вісник</h2>
 
                 <!-- ТЕПЕР ІМ'Я ПЕРШЕ -->
-                <div style="margin-bottom:15px;">
-                    <label
-                        style="display:block; margin-bottom:5px; font-weight:bold; font-size:0.85rem; color:#666;">Ім'я</label>
+                <div class="modal-form-group">
+                    <label class="modal-label">Ім'я</label>
                     <input type="text" id="newPubFirstName"
                         oninput="validateUniqueName('newPubFirstName', 'newPubLastName')" placeholder="Наприклад: Тарас"
-                        style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:1rem; box-sizing:border-box;">
+                        class="modal-input">
                 </div>
 
                 <!-- ТЕПЕР ПРІЗВИЩЕ ДРУГЕ -->
-                <div style="margin-bottom:15px;">
-                    <label id="labelLastName"
-                        style="display:block; margin-bottom:5px; font-weight:bold; font-size:0.85rem; color:#666;">Прізвище
-                        (необов'язково)</label>
+                <div class="modal-form-group">
+                    <label id="labelLastName" class="modal-label">Прізвище (необов'язково)</label>
                     <input type="text" id="newPubLastName" placeholder="Наприклад: Шевченко"
-                        style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:1rem; box-sizing:border-box;">
+                        class="modal-input">
                 </div>
 
-                <div style="margin-bottom:15px;">
-                    <label
-                        style="display:block; margin-bottom:5px; font-weight:bold; font-size:0.85rem; color:#666;">Походження</label>
-                    <select id="newPubGroupTag"
-                        style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:1rem; box-sizing:border-box; background: white;">
+                <div class="modal-form-group">
+                    <label class="modal-label">Походження</label>
+                    <select id="newPubGroupTag" class="modal-select">
                         <option value="Липовець">🏠 Липовець</option>
                         <option value="Іллінці">🚗 Іллінці</option>
                         <option value="Гості">👣 Гості</option>
                     </select>
                 </div>
 
-                <div style="margin-bottom:25px;">
-                    <label
-                        style="display:block; margin-bottom:5px; font-weight:bold; font-size:0.85rem; color:#666;">Логін
-                        (необов'язково)</label>
+                <div class="modal-form-group-large">
+                    <label class="modal-label">Логін (необов'язково)</label>
                     <input type="text" id="newPubLogin" placeholder="Наприклад: taras77"
-                        style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:1rem; box-sizing:border-box;">
+                        class="modal-input">
                 </div>
 
-                <div style="display:flex; gap:12px;">
-                    <button onclick="closeAddPublisherModal()"
-                        style="flex:1; background:#f1f2f6; color:#2f3542; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold;">Скасувати</button>
-                    <button onclick="saveNewPublisher()"
-                        style="flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold;">Зберегти</button>
+                <div class="modal-buttons">
+                    <button onclick="closeAddPublisherModal()" class="modal-btn modal-btn-cancel">Скасувати</button>
+                    <button onclick="saveNewPublisher()" class="modal-btn modal-btn-save">Зберегти</button>
                 </div>
             </div>
         </div>
@@ -888,6 +234,8 @@
         </div>
 
         <div id="tab-all-territories" class="tab-content hidden">
+
+
             <h1 class="table-title">📋 Записи про опрацювання</h1>
 
             <div class="origin-tabs">
@@ -918,38 +266,6 @@
             </div>
         </div>
 
-        <style>
-            /* Стилі для друкованого вигляду таблиці */
-            #territoryTable th,
-            #territoryTable td {
-                border: 1px solid #000 !important;
-                /* Чіткі межі як у журналі */
-                padding: 1px;
-                text-align: center;
-                vertical-align: middle;
-            }
-
-            .num-col {
-                background: #eee;
-                font-weight: bold;
-                width: 60px;
-                font-size: 18px;
-            }
-
-            .name-cell {
-                background: #fff;
-                font-weight: bold;
-                height: 35px;
-                font-size: 14px;
-            }
-
-            .date-cell {
-                font-size: 11px;
-                width: 100px;
-                color: #333;
-                height: 25px;
-            }
-        </style>
     </div>
 
     <script src="js/campaign-modal.js"></script>
@@ -976,14 +292,6 @@
         window.toggleSidebar = () => {
             const sidebar = document.querySelector('.sidebar');
             const overlay = document.querySelector('.sidebar-overlay');
-            sidebar.classList.toggle('active');
-            overlay.classList.toggle('active');
-        };
-
-        // 1. Функція перемикання (відкрити/закрити)
-        window.toggleSidebar = () => {
-            const sidebar = document.querySelector('.sidebar');
-            const overlay = document.querySelector('.sidebar-overlay');
             if (sidebar && overlay) {
                 sidebar.classList.toggle('active');
                 overlay.classList.toggle('active');
@@ -995,7 +303,7 @@
             const mobileTitle = document.getElementById('mobile-title');
             const titles = {
                 'my-card': '👤 Моя картка',
-                'group-cards': '👥 Картки групи',
+                'group-cards': '👥 Вісники',
                 'all-territories': '📋 S-13',
                 'user-details': '👤 Картка вісника'
             };
@@ -1078,7 +386,7 @@
 
         let currentSortCol = 'name'; // Початкове сортування за назвою
         let sortAsc = true;         // Напрямок за зростанням
-        
+
         let currentTerritoryTab = 'city'; // Початковий режим для реєстру S-13
 
         // Функція перемикання сортування
@@ -1126,11 +434,11 @@
         // Функція для оновлення видимості табів на основі наявності вісників
         function updateTabsVisibility() {
             const groups = ['Липовець', 'Іллінці', 'Гості'];
-            
+
             groups.forEach(group => {
                 const hasPublishers = allUsers.some(user => user.group_tag === group);
                 const tabBtn = document.querySelector(`.origin-tab-btn[onclick*="'${group}'"]`);
-                
+
                 if (tabBtn) {
                     if (hasPublishers) {
                         tabBtn.style.display = 'inline-block';
@@ -1154,11 +462,11 @@
 
         // Робимо функцію доступною для HTML-атрибутів oninput
         window.validateUniqueName = validateUniqueName;
-        
+
         // Функція перемикання табів у реєстрі S-13
-        window.switchTerritoryTab = function(type) {
+        window.switchTerritoryTab = function (type) {
             currentTerritoryTab = type;
-            
+
             // Візуал кнопок
             document.querySelectorAll('.origin-tabs .origin-tab-btn').forEach(btn => btn.classList.remove('active'));
             event.currentTarget.classList.add('active');
@@ -1173,12 +481,12 @@
 
             // Ховаємо лоадер після завантаження сторінки
             hideLoader();
-            
+
             // Якщо завантажуємо сторінку з параметром tab=all-territories, створюємо легенду
             setTimeout(() => {
                 const urlParams = new URLSearchParams(window.location.search);
                 const tab = urlParams.get('tab');
-                
+
                 if (tab === 'all-territories') {
                     console.log('🔄 Сторінка завантажена на вкладці S-13, створюємо легенду...');
                     setTimeout(() => {
@@ -1217,7 +525,7 @@
                     if (statsLink) statsLink.style.display = 'flex';
                 }
                 loadGroupStats();
-                
+
                 // Оновлюємо видимість табів після завантаження даних
                 setTimeout(() => {
                     if (typeof updateTabsVisibility === 'function') {
@@ -1283,7 +591,7 @@
             return (now.getMonth() >= 8) ? new Date(currentYear, 8, 1) : new Date(currentYear - 1, 8, 1);
         }
 
-        
+
         // Ця функція формує бланк S-13. Вона групує дані з логів по ID дільниці.
         async function loadAllTerritoriesGrid() {
             const tHead = document.getElementById('tHead');
@@ -1294,7 +602,7 @@
 
             const rangeStart = getTheocraticStart();
             const titleText = currentTerritoryTab === 'city' ? 'опрацювання міста' : 'опрацювання сіл';
-            
+
             const titleElement = document.querySelector('#tab-all-territories .table-title');
             if (titleElement) titleElement.innerHTML = `📋 Записи про ${titleText} ${getTheocraticYearText()}`;
 
@@ -1366,8 +674,8 @@
             parcels.forEach(p => {
                 const pSessions = combinedData[p.id] || [];
                 const lastProcDate = p.last_processed ? new Date(p.last_processed) : null;
-                let lastDoneDate = (lastProcDate && lastProcDate < rangeStart) 
-                    ? lastProcDate.toLocaleDateString('uk-UA', {day:'2-digit', month:'2-digit', year:'2-digit'}) 
+                let lastDoneDate = (lastProcDate && lastProcDate < rangeStart)
+                    ? lastProcDate.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: '2-digit' })
                     : "-";
 
                 const tr1 = document.createElement('tr');
@@ -1413,7 +721,7 @@
                     if (s && s.in) {
                         const takenDate = new Date(s.in);
                         const returnedDate = s.out ? new Date(s.out) : null;
-                        
+
                         if (takenDate < rangeStart && (!returnedDate || returnedDate >= rangeStart)) {
                             inDateStyle = 'color: #1976d2; font-weight: bold;';
                         }
@@ -1438,7 +746,7 @@
         window.loadAllTerritoriesGrid = loadAllTerritoriesGrid;
 
         // --- ЗАФАРБОВУВАННЯ КЛІТИНОК КАМПАНІЙ (вбудоване в таблицю) ---
-        
+
         // Функція керування видимістю легенди кольорів
         function createColorLegend(hasCampaign = null) {
             const legend = document.getElementById('campaign-color-legend');
@@ -1467,9 +775,9 @@
 
         // Автоматичний запуск зафарбовування після завантаження таблиці (тільки для вкладки S-13)
         const originalLoadAllTerritoriesGrid = loadAllTerritoriesGrid;
-        window.loadAllTerritoriesGrid = async function(...args) {
+        window.loadAllTerritoriesGrid = async function (...args) {
             await originalLoadAllTerritoriesGrid.apply(this, args);
-            
+
             // Перевіряємо чи ми на вкладці S-13 перед запуском оновлення фарбування
             const activeTab = document.querySelector('.nav-item.active');
             if (activeTab && activeTab.textContent.includes('S-13')) {
@@ -1508,7 +816,8 @@
                 }
 
                 if (!logs || logs.length === 0) {
-                    historyDiv.innerHTML = '<p style="color: gray; text-align: center; padding: 20px;">Історія опрацювань порожня</p>';
+                    const historyCard = document.getElementById('historyCard');
+                    if (historyCard) historyCard.style.display = 'none';
                     return;
                 }
 
@@ -1531,7 +840,7 @@
                     const parcelName = log.parcels?.name || 'Невідомо';
                     const isVillage = log.parcels?.category === 'Село';
                     const displayName = isVillage ? `Дільниця: ${parcelName}` : `Дільниця № ${parcelName}`;
-                    
+
                     const dateIn = log.taken_at ? new Date(log.taken_at).toLocaleDateString('uk-UA') : '--';
                     const dateOut = log.returned_at ? new Date(log.returned_at).toLocaleDateString('uk-UA') : '--';
                     const duration = log.duration_text || '-';
@@ -1664,13 +973,13 @@
             }
 
             container.innerHTML = parcels.map(p => {
-    const days = Math.floor((new Date() - new Date(p.taken_at)) / (1000 * 60 * 60 * 24));
-    const showReturnBtn = isMyCard || isAdmin;
+                const days = Math.floor((new Date() - new Date(p.taken_at)) / (1000 * 60 * 60 * 24));
+                const showReturnBtn = isMyCard || isAdmin;
 
-    // ПРАВКА: Перевіряємо категорію дільниці
-    const prefix = p.category === 'Село' ? ': ' : ' №';
+                // ПРАВКА: Перевіряємо категорію дільниці
+                const prefix = p.category === 'Село' ? ': ' : ' №';
 
-    return `
+                return `
         <div style="border:1px solid #eee; padding:15px; margin-bottom:10px; border-radius:8px; cursor:pointer;" 
              onclick="window.location.href='parcel-details.html?id=${p.id}&from=${isMyCard ? 'my' : 'all'}'">
             <div style="display:flex; justify-content:space-between;">
@@ -1685,7 +994,7 @@
                 </button>` : ''}
         </div>
     `;
-}).join('');
+            }).join('');
         }
 
         // Функція генерації пароля (6 цифр + 2 букви)
@@ -1990,7 +1299,7 @@
             }
         };
 
-        
+
     </script>
 
     <script src="js/dev-tools.js"></script>

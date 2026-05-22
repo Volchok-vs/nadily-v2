@@ -26,9 +26,6 @@ async function checkAuth() {
         return;
     }
 
-    // Відображаємо роль як у profile.html
-    document.getElementById('displayRole').textContent = userRole === 'super_admin' ? 'Супер Адмін' : (userRole === 'admin' ? 'Адміністратор' : 'Вісник');
-
     // Оскільки меню тепер статичне, динамічна заміна не потрібна.
     // Просто переконуємося, що adminMenu відображається, якщо воно існує.
     document.getElementById('adminMenu')?.classList.remove('hidden');

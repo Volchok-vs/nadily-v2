@@ -1,24 +1,770 @@
-/* Базові стилі для ПК */
-.sidebar { 
-    width: var(--sidebar-width); 
-    background: #2c3e50; 
-    color: white; 
-    display: flex; 
-    flex-direction: column; 
-    padding: 20px 0; 
-    transition: transform 0.3s ease; /* Додаємо плавний рух */
+/* CSS змінні */
+:root {
+    --sidebar-width: 250px;
+    --primary: #007bff;
+    --bg: #f4f7f6;
+    --sidebar-bg: #2c3e50;
+    --sidebar-hover: #34495e;
+    --white: #fff;
+    --success: #2e7d32;
+    --warning: #ff9800;
+    --danger: #c62828;
+    --font-main: 'Segoe UI', sans-serif;
+    --nav-stats: #9b59b6;
+    --nav-admin: #ff6b6b;
+    --nav-dev: #ff9800;
+    --tooltip-bg: #333;
+}
+
+/* Базові стилі */
+body {
+    font-family: var(--font-main);
+    background: var(--bg);
+    margin: 0;
+    display: flex;
+    height: 100dvh;
+    width: 100%;
+    overflow: hidden;
+}
+
+/* Бокове меню */
+.sidebar {
+    width: var(--sidebar-width);
+    background: var(--sidebar-bg);
+    color: var(--white);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+    transition: transform 0.3s ease;
     overflow-y: auto;
+}
+
+.sidebar h2 {
+    padding: 0 20px;
+    font-size: 1.2rem;
+    margin-bottom: 30px;
+    color: #ecf0f1;
+}
+
+.nav-item {
+    padding: 15px 20px;
+    cursor: pointer;
+    transition: 0.3s;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: #bdc3c7;
+}
+
+.nav-item:hover,
+.nav-item.active {
+    background: var(--sidebar-hover);
+    color: var(--white);
+}
+
+.nav-item i {
+    margin-right: 10px;
+}
+
+.logout-btn {
+    margin-top: 20px;
+    color: #e74c3c;
+    border-top: 1px solid var(--sidebar-hover);
+}
+
+/* Навігаційні посилання з кольорами */
+.nav-stats {
+    border-left: 3px solid var(--nav-stats);
+    color: var(--nav-stats);
+}
+
+.nav-admin {
+    border-left: 3px solid var(--nav-admin);
+    color: var(--nav-admin);
+}
+
+.nav-dev {
+    border-left: 3px solid var(--nav-dev);
+    color: var(--nav-dev);
+}
+
+/* Модальне вікно */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+.modal-container {
+    background: var(--white);
+    padding: 25px;
+    border-radius: 15px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.modal-title {
+    margin-top: 0;
+    color: #333;
+    font-size: 1.4rem;
+}
+
+.modal-form-group {
+    margin-bottom: 15px;
+}
+
+.modal-form-group-large {
+    margin-bottom: 25px;
+}
+
+.modal-label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.modal-input,
+.modal-select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+.modal-btn {
+    flex: 1;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.modal-btn-cancel {
+    background: #f1f2f6;
+    color: #2f3542;
+}
+
+.modal-btn-save {
+    background: #28a745;
+    color: var(--white);
+}
+
+/* Контентна область */
+.main-content {
+    flex: 1;
+    padding: 30px;
+    overflow-y: auto;
+}
+
+/* Таблиці та списки */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+th,
+td {
+    text-align: left;
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+tr:hover {
+    background: #f9f9f9;
+    cursor: pointer;
+}
+
+.hidden {
+    display: none;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.btn-back {
+    margin-bottom: 15px;
+    cursor: pointer;
+    color: var(--primary);
+    display: inline-block;
+}
+
+.territory-grid {
+    border: 2px solid #333;
+    width: auto;
+    min-width: 100%;
+}
+
+.territory-grid th,
+.territory-grid td {
+    border: 1px solid #444;
+    text-align: center;
+    padding: 5px;
+    font-size: 0.85rem;
+}
+
+.territory-grid thead th {
+    background: #e9ecef;
+    font-weight: bold;
+}
+
+.cell-date {
+    font-size: 0.75rem;
+    width: 80px;
+}
+
+.parcel-num {
+    font-weight: bold;
+    font-size: 1.1rem;
+    background: #f8f9fa;
+}
+
+#territoryTable th,
+#territoryTable td {
+    border: 1px solid #444;
+    padding: 8px;
+    text-align: center;
+    font-family: sans-serif;
+}
+
+#territoryTable thead th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 12px;
+}
+
+.num-col {
+    background: #eee;
+    font-weight: bold;
+    width: 50px;
+    font-size: 16px;
+}
+
+.name-row {
+    background: var(--white);
+    font-weight: bold;
+    color: var(--sidebar-bg);
+    height: 30px;
+}
+
+.date-row {
+    background: #fafafa;
+    height: 25px;
+}
+
+.date-cell {
+    font-size: 11px;
+    width: 90px;
+    color: #555;
+}
+
+.last-done-col {
+    background: #f0f0f0;
+    width: 100px;
+    font-size: 11px;
+    color: #d32f2f;
+    font-weight: bold;
+}
+
+.current-year-cell {
+    background: #e8f5e9;
+}
+
+/* Контейнер адмін-панелі */
+.admin-settings-container {
+    display: none;
+    margin-top: 25px;
+    font-family: var(--font-main);
+}
+
+/* Картки секцій */
+.admin-card {
+    background: var(--white);
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    margin-bottom: 15px;
+}
+
+.admin-card.secondary {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+/* Заголовки */
+.admin-card-title {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-card-title.gray {
+    color: #495057;
+}
+
+/* Форми та сітки */
+.admin-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.form-group {
+    margin-bottom: 12px;
+}
+
+.form-label {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.input-row {
+    display: flex;
+    gap: 8px;
+}
+
+/* Поля вводу */
+.admin-input,
+.admin-select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: var(--white);
+    box-sizing: border-box;
+}
+
+.admin-select {
+    cursor: pointer;
+}
+
+.admin-input:disabled,
+.admin-select:disabled {
+    background: #eee;
+    cursor: not-allowed;
+}
+
+/* Кнопки */
+.btn {
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 0.95rem;
+}
+
+.btn-admin {
+    width: 100%;
+    border: none;
+}
+
+.btn-main {
+    background: var(--primary);
+    color: var(--white);
+    border: none;
+}
+
+.btn-main:hover {
+    background: #0056b3;
+}
+
+.btn-outline {
+    background: var(--white);
+    color: #1565C0;
+    border: 1px solid #1565C0;
+}
+
+.btn-outline:hover {
+    background: #f0f7ff;
+}
+
+.btn-success {
+    background: var(--success);
+    color: var(--white);
+    border: none;
+}
+
+.btn-warning {
+    background: var(--warning);
+    color: var(--white);
+    box-shadow: 0 4px 10px rgba(255, 152, 0, 0.2);
+    border: none;
+}
+
+.btn-delete {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid #ef9a9a;
+    font-size: 0.9rem;
+    opacity: 0.7;
+    margin-top: 15px;
+}
+
+.btn-delete:hover {
+    opacity: 1;
+    background: #fff5f5;
+}
+
+/* Секція безпеки */
+.security-row {
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.auth-display-box {
+    display: none;
+    margin-top: 15px;
+    background: var(--white);
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.password-reset-zone {
+    background: #fff8e1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ffe082;
+    margin-bottom: 15px;
+}
+
+.password-reset-zone .warning-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #d32f2f;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Стиль для компактного перемикача */
+.switch-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    background: var(--white);
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1565C0;
+}
+
+.switch-container input {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+}
+
+/* Повноекранний лоадер */
+#main-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--white);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    transition: opacity 0.3s ease;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Шапка вкладки */
+.tab-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+/* Заголовки сторінок */
+.page-header,
+.table-title {
+    margin-bottom: 20px;
+}
+
+h1,
+h2,
+h3 {
+    margin: 0;
+    font-family: 'Caveat', cursive;
+}
+
+/* Кнопка Додати */
+.btn-add {
+    background: #28a745;
+    color: var(--white);
+    border: none;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: background 0.2s;
+}
+
+.btn-add:hover {
+    background: #218838;
+}
+
+/* Стилізація таблиці */
+.publishers-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.publishers-table th,
+.publishers-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.publishers-table th {
+    background: #f8f9fa;
+    color: #666;
+    font-weight: 600;
+}
+
+.publishers-table tr {
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.publishers-table tr:hover {
+    background: #f1f8ff;
+}
+
+/* Бейдж з числом дільниць */
+.badge {
+    background: #e9ecef;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #495057;
+}
+
+/* Контейнер для табів */
+.origin-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 0;
+    padding-left: 10px;
+}
+
+/* Базовий стиль табів-вушок */
+.origin-tab-btn {
+    padding: 10px 18px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    background: #eaeeef;
+    border-radius: 10px 10px 0 0;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #555;
+    transition: all 0.2s;
+    position: relative;
+    z-index: 1;
+}
+
+/* Активний таб */
+.origin-tab-btn.active {
+    background: var(--white);
+    color: var(--primary);
+    font-weight: bold;
+    z-index: 3;
+    margin-bottom: -1px;
+    padding-bottom: 11px;
+    border-color: #ddd;
+}
+
+/* Стиль самої картки */
+.card {
+    background: var(--white);
+    border: 1px solid #ddd;
+    border-radius: 0 10px 10px 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    position: relative;
+    z-index: 2;
+    padding: 15px;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+}
+
+.publishers-card {
+    border-radius: 0 10px 10px 10px;
+    z-index: 2;
+    position: relative;
+    border-top: 1px solid #ddd;
+}
+
+/* Стилі заголовків таблиці для сортування */
+.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+}
+
+.sortable:hover {
+    background: #f8f9fa;
+}
+
+.sort-icon {
+    margin-left: 5px;
+    font-size: 0.8rem;
+    color: #bbb;
+}
+
+.sortable:hover .sort-icon {
+    color: var(--primary);
+}
+
+/* Стилі для легенди кампаній */
+.campaign-legend {
+    display: none;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    font-family: Arial, sans-serif;
+    gap: 30px;
+    flex-wrap: wrap;
+    width: fit-content;
+    background: var(--white);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.color-box {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+.color-congress {
+    background-color: #E9C46A;
+}
+
+.color-special {
+    background-color: #FFCDB2;
+}
+
+.color-memorial {
+    background-color: #B2B9AD;
+}
+
+/* Стилі для друкованого вигляду таблиці */
+#territoryTable th,
+#territoryTable td {
+    border: 1px solid #000 !important;
+    padding: 1px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.num-col {
+    background: #eee;
+    font-weight: bold;
+    width: 60px;
+    font-size: 18px;
+}
+
+.name-cell {
+    background: var(--white);
+    font-weight: bold;
+    height: 35px;
+    font-size: 14px;
+}
+
+.date-cell {
+    font-size: 11px;
+    width: 100px;
+    color: #333;
+    height: 25px;
 }
 
 /* Кнопка перемикача (бургер) */
 .mobile-nav-toggle {
-    display: none; /* Схована на комп'ютері */
+    display: none;
     position: fixed;
     top: 10px;
     left: 10px;
     z-index: 1100;
-    background: #2c3e50;
-    color: white;
+    background: var(--sidebar-bg);
+    color: var(--white);
     border: none;
     width: 45px;
     height: 45px;
@@ -31,113 +777,25 @@
 .sidebar-overlay {
     display: none;
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.5);
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
     z-index: 1000;
-}
-
-.card {
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    padding: 15px;
-    
-    /* КЛЮЧОВІ ПАРАМЕТРИ */
-    max-width: 100%;    /* Картка не ширша за екран */
-    overflow-x: auto;   /* З'явиться горизонтальна прокрутка, якщо таблиця широка */
-    overflow-y: visible; /* Щоб підказка (tooltip) не обрізалася зверху/знизу */
-    position: relative;
-}
-
-
-
-#territoryTable {
-    table-layout: fixed; /* Змушує таблицю суворо дотримуватися заданої ширини ширини */
-    width: max-content;  /* Таблиця розтягнеться залежно від кількості колонок */
-    border-collapse: collapse;
-}
-
-#territoryTable td {
-    word-wrap: break-word; /* Якщо текст довгий, він не зламає таблицю */
-    font-size: 13px;       /* Трохи менший шрифт для кращої місткості */
-}
-
-#territoryTable td.name-row {
-    height: 15.5px;
-    min-height: 15.5px;
-}
-#territoryTable td.date-cell {
-    height: 18px;
-    max-height: 18px;
-}
-
-/* 1. Головний контейнер (th) */
-.help-tooltip {
-    position: relative;
-    cursor: help;
-    /* Дозволяємо підказці виходити за межі клітинки */
-    overflow: visible !important; 
-}
-
-/* 2. Текст підказки */
-.help-tooltip .tooltiptext {
-    visibility: hidden;
-    width: 240px;
-    background-color: #333;
-    color: #fff;
-    text-align: center;
-    border-radius: 6px;
-    padding: 10px;
-    position: absolute;
-    
-    /* ПРІОРИТЕТ НАКЛАДАННЯ */
-    z-index: 9999; 
-    
-    /* Позиціонування (знизу від заголовка, щоб не перекривати верх карти) */
-    top: 120%; 
-    left: 50%;
-    transform: translateX(-50%);
-    
-    opacity: 0;
-    transition: opacity 0.3s;
-    font-weight: normal;
-    font-size: 13px;
-    line-height: 1.4;
-    box-shadow: 0px 8px 16px rgba(0,0,0,0.3);
-    pointer-events: none; /* Щоб віконце не заважало клікати під ним */
-}
-
-/* 3. Стрілочка зверху (вказує на заголовок) */
-.help-tooltip .tooltiptext::after {
-    content: "";
-    position: absolute;
-    bottom: 100%; /* Стрілка тепер зверху віконця */
-    left: 50%;
-    margin-left: -5px;
-    border-width: 8px;
-    border-style: solid;
-    border-color: transparent transparent #333 transparent;
-}
-
-/* 4. Показ */
-.help-tooltip:hover .tooltiptext, 
-.help-tooltip:active .tooltiptext {
-    visibility: visible;
-    opacity: 1;
 }
 
 /* Шапка для мобілок */
 .mobile-header {
-    display: none; /* За замовчуванням прихована на ПК */
+    display: none;
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 60px;
-    background: white;
+    background: var(--white);
     border-bottom: 1px solid #ddd;
-    z-index: 1000; /* Щоб була поверх усього */
+    z-index: 1000;
     align-items: center;
     padding: 0 15px;
     box-sizing: border-box;
@@ -145,14 +803,14 @@
 
 .mobile-title {
     font-weight: bold;
-    margin-left: 50px; /* Місце, щоб не налізало на кнопку */
-    color: #2c3e50;
+    margin-left: 50px;
+    color: var(--sidebar-bg);
 }
 
 /* Новий стиль кнопки всередині шапки */
 .mobile-nav-toggle-new {
-    background: #2c3e50;
-    color: white;
+    background: var(--sidebar-bg);
+    color: var(--white);
     border: none;
     padding: 8px 12px;
     border-radius: 6px;
@@ -162,32 +820,30 @@
     left: 10px;
 }
 
-/* Адаптивність: показуємо шапку і посуваємо контент */
+/* Адаптивність */
 @media (max-width: 768px) {
     .mobile-header {
         display: flex;
     }
-    
-    /* Головний контент треба опустити нижче, щоб шапка його не закривала */
+
     .main-content {
-        margin-top: 50px !important; 
-        padding: 20px 15px; /* Додаємо бічні відступи */
+        margin-top: 50px !important;
+        padding: 20px 15px;
     }
 
-    /* Відступи для заголовків */
-    h1, h2, h3 {
+    h1,
+    h2,
+    h3 {
         padding: 0 15px;
         margin-left: 0 !important;
         margin-right: 0 !important;
     }
 
-    /* Відступи для карток */
     .card {
         margin: 0 0 20px 0 !important;
         padding: 15px !important;
     }
 
-    /* Відступи для кнопок в заголовках */
     .tab-header {
         padding: 0 15px;
         margin-bottom: 20px;
@@ -201,20 +857,18 @@
         margin-right: 0;
     }
 
-    /* Відступи для табів */
     .origin-tabs {
         padding: 0 15px;
         margin-bottom: 0;
     }
 
-    /* Стару кнопку, яка тобі заважала, приховуємо */
     .mobile-nav-toggle {
         display: none !important;
     }
-}
-/* Адаптивність для телефонів */
-@media (max-width: 768px) {
-    .mobile-nav-toggle { display: block; }
+
+    .mobile-nav-toggle-new {
+        display: block;
+    }
 
     .sidebar {
         position: fixed;
@@ -222,10 +876,9 @@
         top: 0;
         bottom: 0;
         z-index: 1050;
-        transform: translateX(-100%); /* Виносимо за межі екрану */
+        transform: translateX(-100%);
     }
 
-    /* Коли меню активне — висуваємо його */
     .sidebar.active {
         transform: translateX(0);
     }
@@ -234,20 +887,23 @@
         display: block;
     }
 
-   
-
     .table-container {
         overflow-x: auto;
         margin: 0 15px;
     }
 
-    /* Відступи для таблиць */
-    .publishers-table, .history-table {
+    .publishers-table,
+    .history-table {
         margin: 0;
     }
 
-    /* Відступи для контейнерів з даними */
-    #publishersList, #myParcels, #myHistory {
+    table.history-table {
+        min-width: 430px;
+    }
+
+    #publishersList,
+    #myParcels,
+    #myHistory {
         padding: 0 5px;
     }
 }
