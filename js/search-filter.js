@@ -7,6 +7,7 @@ let config = JSON.parse(localStorage.getItem('filterConfig')) || {
 };
 
 let currentFilterMode = 'city'; // 'city' або 'village'
+window.currentFilterMode = currentFilterMode; // Експортуємо глобально для використання в інших модулях
 let allParcelLayers = [];
 
 const catsDef = [
@@ -500,11 +501,135 @@ export function initSearchAndFilters(map, parcelLayers) {
     updateFilterCounts(allParcelLayers);
 }
 
+// Глобальна функція для застосування фільтрів
+window.applyFilters = () => {
+    const menu = document.getElementById('filterMenu');
+    const map = window.map;
+    if (!menu || !map || allParcelLayers.length === 0) return;
+
+    const searchInput = menu.querySelector('#searchBox');
+    const searchVal = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+    // Перевіряємо, який режим активний
+    const isVillageMode = currentFilterMode === 'village';
+
+    const isAll = menu.querySelector('#chk-all')?.checked || false;
+    const isFreeMode = menu.querySelector('#chk-free')?.checked || false;
+    const isTakenMode = menu.querySelector('#chk-taken')?.checked || false;
+    const isMineMode = menu.querySelector('#chk-mine')?.checked || false;
+
+    // Фільтри для режиму Села
+    const isVillageAll = menu.querySelector('#chk-village-all')?.checked || false;
+    const isVillageFree = menu.querySelector('#chk-village-free')?.checked || false;
+    const isVillageTaken = menu.querySelector('#chk-village-taken')?.checked || false;
+    const isVillageMine = menu.querySelector('#chk-village-mine')?.checked || false;
+
+    allParcelLayers.forEach(item => {
+        const p = item.data || {};
+        const pName = (p.name || "").toString().toLowerCase();
+        const pCat = (p.category || p.type || "").toLowerCase();
+
+        let visible = false;
+
+        // Режим Села
+        if (isVillageMode) {
+            if (!isVillage(p)) {
+                visible = false;
+            } else if (isVillageAll) {
+                visible = true;
+            } else if (isVillageFree && isFree(p)) {
+                visible = true;
+            } else if (isVillageTaken && isTaken(p)) {
+                visible = true;
+            } else if (isVillageMine && isMine(p)) {
+                visible = true;
+            }
+        } else {
+            // Режим Місто
+            if (searchVal !== "") {
+                visible = (pName === searchVal);
+            } else if (isAll) {
+                visible = true;
+            } else {
+                if (isMineMode && isMine(p)) {
+                    const activeCats = Array.from(menu.querySelectorAll('.sub-mine:checked')).map(el => el.dataset.type);
+                    visible = activeCats.length === 0 || activeCats.some(c => pCat.includes(c));
+                } else if (isFreeMode && isFree(p)) {
+                    const activeCats = Array.from(menu.querySelectorAll('.sub-free:checked')).map(el => el.dataset.type);
+                    visible = activeCats.length === 0 || activeCats.some(c => pCat.includes(c));
+                } else if (isTakenMode && isTaken(p)) {
+                    const activeCats = Array.from(menu.querySelectorAll('.sub-taken:checked')).map(el => el.dataset.type);
+                    visible = activeCats.length === 0 || activeCats.some(c => pCat.includes(c));
+                }
+            }
+        }
+
+        // Застосовуємо видимість тільки для шарів ділянок, не для ярликів
+        if (visible) {
+            if (!map.hasLayer(item.layer)) item.layer.addTo(map);
+        } else {
+            if (map.hasLayer(item.layer)) map.removeLayer(item.layer);
+            if (item.label && map.hasLayer(item.label)) map.removeLayer(item.label);
+        }
+    });
+
+    updateFilterCounts(allParcelLayers);
+
+    // Оновлюємо видимість ярликів згідно з поточним зумом
+    if (typeof window.updateLabelsVisibility === 'function') {
+        window.updateLabelsVisibility();
+    }
+};
+
+// Глобальна функція для скидання фільтрів
+window.resetFilters = () => {
+    const menu = document.getElementById('filterMenu');
+    if (!menu) return;
+
+    // Скидаємо основні чекбокси
+    const chkAll = menu.querySelector('#chk-all');
+    const chkMine = menu.querySelector('#chk-mine');
+    const chkFree = menu.querySelector('#chk-free');
+    const chkTaken = menu.querySelector('#chk-taken');
+
+    if (chkAll) chkAll.checked = true;
+    if (chkMine) chkMine.checked = false;
+    if (chkFree) chkFree.checked = false;
+    if (chkTaken) chkTaken.checked = false;
+
+    // Скидаємо всі sub-chk чекбокси на checked (за замовчуванням)
+    const subChecks = menu.querySelectorAll('.sub-chk');
+    subChecks.forEach(chk => {
+        chk.checked = true;
+    });
+
+    // Скидаємо поле пошуку
+    const searchBox = menu.querySelector('#searchBox');
+    if (searchBox) searchBox.value = '';
+
+    // Показуємо всі ділянки (і міські, і сільські)
+    const map = window.map;
+    if (map && allParcelLayers.length > 0) {
+        allParcelLayers.forEach(item => {
+            // Показуємо всі ділянки незалежно від режиму
+            if (!map.hasLayer(item.layer)) item.layer.addTo(map);
+        });
+
+        updateFilterCounts(allParcelLayers);
+    }
+
+    // Оновлюємо видимість ярликів згідно з поточним зумом
+    if (typeof window.updateLabelsVisibility === 'function') {
+        window.updateLabelsVisibility();
+    }
+};
+
 // Глобальна функція для перемикання режимів (toggle switch)
 window.toggleFilterMode = () => {
     const toggle = document.getElementById('modeToggle');
     const mode = toggle.checked ? 'village' : 'city';
     currentFilterMode = mode;
+    window.currentFilterMode = mode; // Оновлюємо глобальне значення
     
     const cityMode = document.getElementById('cityMode');
     const villageMode = document.getElementById('villageMode');

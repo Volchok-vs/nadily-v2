@@ -1036,6 +1036,42 @@
 
             // 🔍 Ініціалізація віджета зуму
             if (typeof initZoomWidget === 'function') initZoomWidget();
+
+            // 🔍 Логіка приховування ярликів при зумі < 15 (крім сіл)
+            window.updateLabelsVisibility = function() {
+                if (!window.allParcelLayers) return;
+                const currentZoom = window.map.getZoom();
+                const showLabels = currentZoom >= 15;
+
+                // Допоміжна функція для перевірки, чи це село
+                const isVillage = (p) => (p.category || p.type || "").toLowerCase().includes('сел');
+
+                window.allParcelLayers.forEach(item => {
+                    if (item.label) {
+                        const p = item.data || {};
+                        const isVillageParcel = isVillage(p);
+
+                        // Ярлики сіл завжди видимі, незалежно від зуму
+                        if (isVillageParcel) {
+                            if (window.map.hasLayer(item.layer) && !window.map.hasLayer(item.label)) {
+                                item.label.addTo(window.map);
+                            }
+                        } else {
+                            // Для міських ділянок - залежить від зуму
+                            if (showLabels && window.map.hasLayer(item.layer)) {
+                                if (!window.map.hasLayer(item.label)) item.label.addTo(window.map);
+                            } else {
+                                if (window.map.hasLayer(item.label)) window.map.removeLayer(item.label);
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Додаємо подію на зміну зуму
+            window.map.on('zoomend', updateLabelsVisibility);
+            // Первинний виклик при ініціалізації
+            updateLabelsVisibility();
         }
 
 

@@ -178,7 +178,6 @@ body {
 
 /* Таблиці та списки */
 table {
-    width: 100%;
     border-collapse: collapse;
     margin-top: 15px;
 }
@@ -253,6 +252,11 @@ tr:hover {
     font-weight: bold;
     text-transform: uppercase;
     font-size: 12px;
+}
+
+#territoryTable td.name-row {
+    height: 15.5px;
+    min-height: 15.5px;
 }
 
 .num-col {

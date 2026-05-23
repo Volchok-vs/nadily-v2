@@ -99,6 +99,39 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
+        #campaignsStats {
+            margin-top: 15px;
+        }
+
+        .collapsible-header {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .collapsible-header:hover {
+            color: #667eea;
+        }
+
+        .toggle-icon {
+            font-size: 0.8em;
+            transition: transform 0.3s;
+        }
+
+        .collapsible-content {
+            display: none;
+        }
+
+        .collapsible.open .collapsible-content {
+            display: block;
+        }
+
+        .collapsible.open .toggle-icon {
+            transform: rotate(180deg);
+        }
+
         .section h2 {
             margin-top: 0;
             color: #333;
@@ -328,9 +361,9 @@
             </div>
 
             <!-- Статистика по кампаніях -->
-            <div class="section">
-                <h2>🎯 Статистика по кампаніях (Місто)</h2>
-                <div id="campaignsStats">
+            <div class="section collapsible">
+                <h2 class="collapsible-header">🎯 Статистика по кампаніях (Місто) <span class="toggle-icon">▼</span></h2>
+                <div id="campaignsStats" class="collapsible-content">
                     <div class="loading">Завантаження...</div>
                 </div>
             </div>

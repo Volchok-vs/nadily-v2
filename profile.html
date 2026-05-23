@@ -31,6 +31,9 @@
             <a href="statistics-dew.html" id="statsLink" class="nav-item nav-stats hidden">
                 📊 Статистика
             </a>
+            <a href="admin-statistics.html" class="nav-item nav-admin">
+                📈 Адмін статистика
+            </a>
             <a href="territories-manager.html" class="nav-item nav-admin">
                 ⚙️ Адміка
             </a>
@@ -658,9 +661,8 @@
             tHead.innerHTML = `
         <tr>
             <th rowspan="2" style="width: 40px; min-width: 40px; border:1px solid #444;">№</th>
-            <th rowspan="2" class="help-tooltip" style="width: 110px; min-width: 110px; border:1px solid #444; cursor: help; position: relative;">
+            <th rowspan="2" style="width: 110px; min-width: 110px; border:1px solid #444; cursor: help;" title="Заповнюючи новий бланк, познач у цій колонці останню дату опрацювання кожної території">
                 Остання дата опрацювання<span style="color:red;">*</span>
-                <span class="tooltiptext">Заповнюючи новий бланк, познач у цій колонці останню дату опрацювання кожної території</span>
             </th>
             ${`<th colspan="2" style="width: 210px; min-width: 210px; border:1px solid #444;">Вісник</th>`.repeat(maxCols)}
         </tr>

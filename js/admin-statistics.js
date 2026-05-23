@@ -5,30 +5,24 @@ import { supabase } from './config.js';
 // Перевірка автентифікації
 async function checkAuth() {
     const userId = localStorage.getItem('userId');
-    const userRole = localStorage.getItem('userRole');
 
-    if (!userId || userRole !== 'super_admin') {
-        console.warn('Доступ заборонено: сторінка статистики лише для адмінів');
-        window.location.href = 'profile.html';
-        return;
-    }
-
-    const publisherResult = await supabase
-        .from('publishers')
-        .select('name, role')
-        .eq('id', userId)
-        .single();
-
-    const publisher = publisherResult.data;
-    const error = publisherResult.error;
-
-    if (error || !publisher || publisher.role !== 'super_admin') {
-        console.error('Перевірка безпеки не пройдена');
-        window.location.href = 'profile.html';
+    if (!userId) {
+        console.warn('Користувач не авторизований');
+        window.location.href = 'index.html';
         return;
     }
 
     document.getElementById('main-loader').style.display = 'none';
+}
+
+// Ініціалізація акордеонів
+function initCollapsibles() {
+    document.querySelectorAll('.collapsible-header').forEach(header => {
+        header.addEventListener('click', () => {
+            const section = header.closest('.collapsible');
+            section.classList.toggle('open');
+        });
+    });
 }
 
 // Отримання початку і кінця теократичного року
@@ -504,7 +498,10 @@ window.logout = async () => {
 // Ініціалізація
 document.addEventListener('DOMContentLoaded', async () => {
     await checkAuth();
-    
+
+    // Ініціалізуємо акордеони
+    initCollapsibles();
+
     // Додаємо event listeners для табів
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', () => {

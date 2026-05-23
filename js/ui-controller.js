@@ -5,13 +5,16 @@
 window.UI = {
     // Список всіх потенційних модальних елементів
     selectors: [
-        '.modal', 
-        '#takeModal', 
-        '#filterMenu', 
-        '#modalOverlay', 
+        '.modal',
+        '#takeModal',
+        '#filterMenu',
+        '#modalOverlay',
         '#superadmin-palette',
         '#logicModal'
     ],
+
+    // Прапорець для відстеження закриття віконця фільтрів
+    filterMenuJustClosed: false,
 
     /**
      * Універсальний метод для перемикання вікна
@@ -19,22 +22,34 @@ window.UI = {
     toggleModal(modalId, show = true) {
         const modal = document.getElementById(modalId);
         const overlay = document.getElementById('modalOverlay');
-        
+
         if (modal) {
             modal.style.display = show ? 'block' : 'none';
-            
+
             // --- ЛОГІКА АВТОМАТИЧНОГО МАСШТАБУВАННЯ ПРИ ВІДКРИТТІ ФІЛЬТРА ---
             if (show && modalId === 'filterMenu' && window.map) {
                 // Використовуємо requestAnimationFrame для миттєвого масштабування
                 requestAnimationFrame(() => {
                     if (window.allParcelLayers && window.allParcelLayers.length > 0) {
                         const bounds = L.latLngBounds([]);
+                        // Отримуємо поточний режим фільтра з search-filter.js
+                        const currentFilterMode = window.currentFilterMode || 'city';
+
                         window.allParcelLayers.forEach(item => {
                             const p = item.data || {};
                             const isVillage = (p.category || p.type || "").toLowerCase().includes('сел');
-                            // Масштабуємо тільки на міські дільниці (не села)
-                            if (!isVillage && item.layer && item.layer.getBounds) {
-                                bounds.extend(item.layer.getBounds());
+
+                            // Масштабуємо відповідно до поточного режиму
+                            if (currentFilterMode === 'city') {
+                                // В режимі місто - тільки міські дільниці
+                                if (!isVillage && item.layer && item.layer.getBounds) {
+                                    bounds.extend(item.layer.getBounds());
+                                }
+                            } else {
+                                // В режимі село - тільки сільські дільниці
+                                if (isVillage && item.layer && item.layer.getBounds) {
+                                    bounds.extend(item.layer.getBounds());
+                                }
                             }
                         });
                         if (bounds.isValid()) {
@@ -42,6 +57,16 @@ window.UI = {
                         }
                     }
                 });
+
+                // Застосовуємо фільтрацію при відкритті віконця
+                if (typeof window.applyFilters === 'function') {
+                    window.applyFilters();
+                }
+            }
+
+            // --- ЛОГІКА ВІДСТЕЖЕННЯ ЗАКРИТТЯ ФІЛЬТРА ---
+            if (!show && modalId === 'filterMenu') {
+                this.filterMenuJustClosed = true;
             }
             // --------------------------------------------------------------
 
@@ -49,7 +74,7 @@ window.UI = {
             if (show && modalId === 'takeModal') {
                 const configs = JSON.parse(localStorage.getItem('app_dev_configs')) || {};
                 const isCorrectionMode = configs.correctionMode === true;
-                
+
                 const correctionSection = document.getElementById('manual-date-section');
                 const dateInput = document.getElementById('correction-date-input');
 
@@ -120,6 +145,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filterMenu && filterMenu.style.display === 'block') {
             if (!filterMenu.contains(e.target) && !e.target.closest('.leaflet-custom-btn')) {
                 UI.toggleModal('filterMenu', false);
+            }
+        } else if (filterMenu && filterMenu.style.display === 'none') {
+            // Якщо віконце фільтрів закрите і клік на карту - скидаємо фільтри тільки один раз
+            if (window.map && e.target.closest('#map') && UI.filterMenuJustClosed) {
+                if (typeof window.resetFilters === 'function') {
+                    window.resetFilters();
+                }
+                UI.filterMenuJustClosed = false; // Скидаємо прапорець
             }
         }
     });
