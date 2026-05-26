@@ -67,7 +67,7 @@ body {
 }
 
 .logout-btn {
-    margin-top: 20px;
+    margin-top: auto;
     color: #e74c3c;
     border-top: 1px solid var(--sidebar-hover);
 }
