@@ -235,6 +235,11 @@ function attachEvents(menu, map, layers) {
                 sec.className = `filter-section ${chk.checked ? 'active' : 'inactive'}`;
             }
         });
+
+        // Оновлюємо видимість ярликів згідно з поточним зумом
+        if (typeof window.updateLabelsVisibility === 'function') {
+            window.updateLabelsVisibility();
+        }
     };
 
     const switchMode = (id) => {

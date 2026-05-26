@@ -24,7 +24,9 @@
         }
 
         /* Шрифт Caveat для заголовків */
-        h1, h2, h3 {
+        h1,
+        h2,
+        h3 {
             font-family: 'Caveat', cursive;
         }
 
@@ -226,6 +228,10 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .tab-title {
             margin-bottom: 20px;
         }
 
@@ -526,19 +532,11 @@
         .filter-select,
         .input-date,
         .input-text {
-            width: 150px;
             padding: 8px;
             border: 1px solid #d1d5db;
             border-radius: 4px;
             font-size: 0.875rem;
-        }
 
-        .filter-row {
-            gap: 5rem;
-        }
-
-        .filter-row>div {
-            align-items: stretch;
         }
 
         .summary {
@@ -563,6 +561,7 @@
             padding-top: 1.5rem;
             border-top: 2px solid #e5e7eb;
             margin-top: 0.5rem;
+            gap: 10px;
         }
 
         .filter-actions button {
@@ -570,6 +569,20 @@
             align-items: center;
             gap: 0.5rem;
             font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            
+        }
+
+        .filter-actions button:hover {
+            opacity: 0.9;
+        }
+
+        .text-center {
+            text-align: center;
         }
 
         /* Візуальний роздільник для дат */
@@ -740,11 +753,6 @@
             margin-bottom: 15px;
         }
 
-        @media (max-width: 450px) {
-            .name-settings-grid {
-                grid-template-columns: 1fr;
-            }
-        }
 
         #historyLoadingIndicator {
             text-align: center;
@@ -1127,21 +1135,6 @@
             padding: 1.5rem;
         }
 
-        .btn-primary {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: background 0.2s;
-        }
-
-        .btn-primary:hover {
-            background: #0056b3;
-        }
-
         .btn-secondary {
             background: #6c757d;
             color: white;
@@ -1209,25 +1202,6 @@
             }
         }
 
-        @media (max-width: 450px) {
-            .card {
-                text-align: center;
-            }
-
-            .campaign-card {
-                padding: 1rem;
-                margin-bottom: 1rem;
-            }
-
-            .campaign-header {
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-
-            .campaign-info {
-                text-align: center;
-            }
-        }
 
         #progress-container,
         .progress-container {
@@ -1275,7 +1249,6 @@
             .input-days,
             .input-date,
             .input-text {
-                width: stretch;
                 font-size: 0.875rem;
             }
 
@@ -1323,11 +1296,6 @@
             }
         }
 
-        /* Семантичні класи для фільтрів */
-        .filter-section {
-            margin-bottom: 1.5rem;
-        }
-
         .date-group {
             display: flex;
             align-items: center;
@@ -1337,8 +1305,7 @@
         .filter-container {
             display: flex;
             flex-wrap: wrap;
-            align-items: stretch;
-            gap: 2rem;
+            gap: 1rem;
         }
 
         .filter-group {
@@ -1359,6 +1326,48 @@
             color: #9ca3af;
             margin-left: 0.5rem;
             margin-right: 0.5rem;
+        }
+
+        @media (max-width: 575px) {
+            .filter-actions {
+                flex-wrap: wrap;
+            }
+        }
+
+        @media (max-width: 450px) {
+            .name-settings-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .card {
+                text-align: center;
+            }
+
+            .campaign-card {
+                padding: 1rem;
+                margin-bottom: 1rem;
+            }
+
+            .campaign-header {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .campaign-info {
+                text-align: center;
+            }
+
+            .date-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .input-days,
+            .filter-select,
+            .input-date,
+            .input-text {
+                width: 100%;
+            }
         }
 
         /* Семантичні класи для розділу Опрацювання територій */
@@ -1433,8 +1442,10 @@
         <div class="nav-item" onclick="switchTab('on-hands')">👐 На руках</div>
         <div class="nav-item" onclick="switchTab('export-import')">💾 Експорт та Імпорт</div>
         <div class="nav-item" onclick="switchTab('settings')">⚙️ Додаткові налаштування</div>
-        <a href="statistics-dew.html" id="statsLink" class="nav-item" style="border-left: 3px solid #9b59b6; color: #9b59b6; display: none;">📊 Статистика (dev)</a>
-        <a href="admin-statistics.html" id="adminStatsLink" class="nav-item" style="border-left: 3px solid #667eea; color: #667eea; display: none;">📊 Статистика Адміна</a>
+        <a href="statistics-dew.html" id="statsLink" class="nav-item"
+            style="border-left: 3px solid #9b59b6; color: #9b59b6; display: none;">📊 Статистика (dev)</a>
+        <a href="admin-statistics.html" id="adminStatsLink" class="nav-item"
+            style="border-left: 3px solid #667eea; color: #667eea; display: none;">📊 Статистика Адміна</a>
         <a href="profile.html" class="nav-item">👤 Назад до Профілю</a>
         <div class="nav-item logout-btn" onclick="logout()">🏃 Вийти</div>
     </div>
@@ -1459,8 +1470,8 @@
 
         <!-- ТАБ: ОПРАЦЮВАННЯ (ЗВІТ) -->
         <div id="tab-processing" class="tab-content hidden">
-            <h1>📊 Опрацювання територій</h1>
-            <div id="progress-container" class="bg-white rounded-lg shadow-sm">
+            <h1 class="tab-title">📊 Опрацювання територій</h1>
+            <div id="progress-container" class="progress-container">
                 <h2 class="section-title-lg">Завантаження звіту...</h2>
                 <div id="progress-bar">
                     <div id="progress-fill"></div>
@@ -1469,13 +1480,10 @@
             </div>
 
             <div class="report-section">
-                <div class="summary-block">
-                    <p class="summary-text">Територій без записів: <span id="no-records-count">0</span></p>
-                </div>
+
                 <h2 class="section-title-xl">Території без записів</h2>
                 <div class="filter-bar">
-                    <button id="no-records-search-btn"
-                        class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Пошук</button>
+                    <button id="no-records-search-btn" class="btn-primary">Пошук</button>
                     <select id="no-records-type-filter" class="filter-select">
                         <option value="">Усі типи</option>
                         <option value="Приватний сектор">Приватний сектор</option>
@@ -1483,6 +1491,9 @@
                         <option value="Змішані">Змішані</option>
                         <option value="Село">Села</option>
                     </select>
+                </div>
+                <div class="summary-block">
+                    <p class="summary-text">Територій без записів: <span id="no-records-count">0</span></p>
                 </div>
                 <div class="report-table-wrapper">
                     <table class="report-table">
@@ -1499,9 +1510,7 @@
             </div>
 
             <div class="report-section">
-                <div class="summary-block">
-                    <p class="summary-text">Опрацьованих територій: <span id="processed-count">0</span></p>
-                </div>
+
                 <h2 class="section-title-xl">Опрацьовані території</h2>
                 <div class="filter-bar">
                     <div class="filter-group">
@@ -1516,9 +1525,11 @@
                             <option value="Змішані">Змішані</option>
                             <option value="Село">Села</option>
                         </select>
-                        <button id="processed-search-btn"
-                            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Пошук</button>
+                        <button id="processed-search-btn" class="btn-primary">Пошук</button>
                     </div>
+                </div>
+                <div class="summary-block">
+                    <p class="summary-text">Опрацьованих територій: <span id="processed-count">0</span></p>
                 </div>
                 <div class="report-table-wrapper report-table-scrollable">
                     <table class="report-table">
@@ -1539,17 +1550,45 @@
 
         <!-- ТАБ: АНАЛІЗ ТЕРИТОРІЙ -->
         <div id="tab-analysis" class="tab-content hidden">
-            <h1>📈 Аналіз Територій за Період</h1>
+            <h1 class="tab-title">📈 Аналіз Територій за Період</h1>
 
             <div class="report-section">
-                <!-- Рядок дат -->
+                <!-- Рядок вибору типу періоду -->
                 <div class="filter-row filter-section">
-                    <div class="date-group">
-                        <label for="period-from" class="filter-label">Від:</label>
-                        <input type="date" id="period-from" class="input-date">
-                        <span class="filter-separator">—</span>
-                        <label for="period-to" class="filter-label">До:</label>
-                        <input type="date" id="period-to" class="input-date">
+                    <div class="filter-container">
+                        <div class="filter-group">
+                            <label for="period-type" class="filter-label">Тип періоду:</label>
+                            <select id="period-type" class="filter-select" onchange="handlePeriodTypeChange()">
+                                <option value="current-year">Поточний теократичний рік</option>
+                                <option value="previous-year">Попередній теократичний рік</option>
+                                <option value="month">За місяць</option>
+                                <option value="custom">За період</option>
+                            </select>
+                        </div>
+
+                        <!-- Опис періоду для теократичних років -->
+                        <div id="period-description" class="filter-group">
+                            <span id="period-text" style="color: #666; font-style: italic;"></span>
+                        </div>
+
+                        <!-- Вибір місяця -->
+                        <div id="month-selector" class="filter-group">
+                            <label for="month-select" class="filter-label">Місяць:</label>
+                            <select id="month-select" class="filter-select" onchange="handleMonthChange()">
+                            </select>
+                        </div>
+
+                        <!-- Рядок дат для періоду -->
+                        <div id="date-range" class="date-group">
+                            <div class="filter-group">
+                                <label for="period-from" class="filter-label">Від:</label>
+                                <input type="date" id="period-from" class="input-date" onchange="syncDateTo()">
+                            </div>
+                            <div class="filter-group">
+                                <label for="period-to" class="filter-label">До:</label>
+                                <input type="date" id="period-to" class="input-date">
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1558,7 +1597,7 @@
                     <div class="filter-container">
                         <div class="filter-group">
                             <label for="period-type-filter" class="filter-label">Тип території:</label>
-                             <select id="period-type-filter" class="filter-select">
+                            <select id="period-type-filter" class="filter-select">
                                 <option value="">Усі типи</option>
                                 <option value="Приватний сектор">Приватний сектор</option>
                                 <option value="Поверхівки">Поверхівки</option>
@@ -1574,29 +1613,22 @@
                             <label for="period-notes-filter" class="filter-label">Пошук у нотатках:</label>
                             <input type="text" id="period-notes-filter" class="input-text" placeholder="Введіть текст">
                         </div>
+                        <button id="period-search-btn" class="btn-primary">
+                            🔍 Пошук
+                        </button>
                     </div>
-                </div>
-
-                <!-- Кнопка пошуку -->
-                <div class="filter-actions pt-4">
-                    <button id="period-search-btn"
-                        class="bg-blue-500 text-white px-8 py-3 rounded-lg hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg">
-                        🔍 Пошук
-                    </button>
                 </div>
             </div>
 
             <div id="period-progress-container" class="progress-container">
-                <div class="mb-2">
-                    <div id="period-progress-bar" class="progress-bar">
-                        <div id="period-progress-fill" class="progress-fill"></div>
-                    </div>
+                <div id="period-progress-bar" class="progress-bar">
+                    <div id="period-progress-fill" class="progress-fill"></div>
                 </div>
-                <div id="period-progress-text" class="text-center font-semibold text-gray-700">Прогрес: 0%</div>
+                <div id="period-progress-text" class="progress-text">Прогрес: 0%</div>
             </div>
 
             <div id="period-summary" class="summary-block">
-                <p class="text-gray-700">Знайдено територій: <span id="period-count">0</span></p>
+                <p class="summary-text">Знайдено територій: <span id="period-count">0</span></p>
             </div>
 
             <div id="period-report" class="report-section">
@@ -1613,7 +1645,7 @@
                         </thead>
                         <tbody id="period-table">
                             <tr>
-                                <td colspan="5" class="text-center text-gray-600">Очікування пошуку...</td>
+                                <td colspan="5" class="text-center">Очікування пошуку...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1623,62 +1655,60 @@
 
         <!-- ТАБ: ТЕРИТОРІЯ НА РУКАХ -->
         <div id="tab-on-hands" class="tab-content hidden">
-            <h1>👐 Території на Руках</h1>
+            <h1 class="tab-title">👐 Території на Руках</h1>
 
             <div class="report-section">
-                <h3 class="text-lg font-semibold mb-4">Фільтр звіту</h3>
-                <div class="flex items-center mb-4 space-x-4">
-                    <div>
-                        <label class="text-sm text-gray-700">Території на руках більше (днів):</label>
-                        <input id="on-hands-days-threshold" type="number" min="0" placeholder="0" class="input-days">
+                <h3 class="section-title-lg">Фільтр звіту</h3>
+                <div class="filter-row filter-section">
+                    <div class="filter-container">
+                        <div class="filter-group">
+                            <label for="on-hands-days-threshold" class="filter-label">Території на руках більше
+                                (днів):</label>
+                            <input id="on-hands-days-threshold" type="number" min="0" placeholder="0"
+                                class="input-days">
+                        </div>
+                        <div class="filter-group">
+                            <label for="on-hands-publisher-filter" class="filter-label">Фільтр за Вісником:</label>
+                            <input id="on-hands-publisher-filter" type="text" placeholder="Ім'я вісника"
+                                class="input-text">
+                        </div>
+                        <button id="generate-on-hands-report" class="btn-primary">
+                            Пошук
+                        </button>
                     </div>
-                    <div>
-                        <label class="text-sm text-gray-700">Фільтр за Вісником:</label>
-                        <input id="on-hands-publisher-filter" type="text" placeholder="Ім'я вісника"
-                            class="filter-select" style="width: 150px;">
-                    </div>
-                    <button id="generate-on-hands-report"
-                        class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                        Пошук
-                    </button>
                 </div>
-                <div class="flex flex-wrap gap-2 mb-4">
-                    <button id="sort-on-hands-publisher"
-                        class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600">
+                <div class="filter-actions">
+                    <button id="sort-on-hands-publisher">
                         Сортувати за Вісником (А-Я)
                     </button>
-                    <button id="sort-on-hands-number"
-                        class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600">
+                    <button id="sort-on-hands-number">
                         Сортувати за Номером
                     </button>
-                    <button id="sort-on-hands-days"
-                        class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600">
+                    <button id="sort-on-hands-days">
                         Сортувати за Днями
                     </button>
                 </div>
             </div>
 
             <div id="on-hands-progress-container" class="progress-container">
-                <div class="mb-2">
-                    <div id="on-hands-progress-bar">
-                        <div id="on-hands-progress-fill"></div>
-                    </div>
+                <div id="on-hands-progress-bar">
+                    <div id="on-hands-progress-fill"></div>
                 </div>
                 <div id="on-hands-progress-text">Прогрес: 0%</div>
             </div>
 
             <div id="on-hands-summary" class="summary-block">
-                <p class="text-gray-700">Загальна кількість територій на руках: <span id="on-hands-count">0</span></p>
+                <p class="summary-text">Загальна кількість територій на руках: <span id="on-hands-count">0</span></p>
             </div>
 
             <div id="on-hands-report" class="report-section">
-                <p class="text-gray-600">Очікування пошуку...</p>
+                <p>Очікування пошуку...</p>
             </div>
         </div>
 
         <!-- ТАБ: ЕКСПОРТ ТА ІМПОРТ -->
         <div id="tab-export-import" class="tab-content hidden">
-            <h1>💾 Експорт та Імпорт</h1>
+            <h1 class="tab-title">💾 Експорт та Імпорт</h1>
             <div class="content-placeholder">
                 💾 Розділ буде заповнено згодом...
             </div>
@@ -1909,7 +1939,7 @@
         if (userRole === 'super_admin') {
             const statsLink = document.getElementById('statsLink');
             if (statsLink) statsLink.style.display = 'flex';
-            
+
             const adminStatsLink = document.getElementById('adminStatsLink');
             if (adminStatsLink) adminStatsLink.style.display = 'flex';
         }
@@ -1921,7 +1951,7 @@
         async function init() {
             // Встановлюємо початковий фільтр територій з localStorage або за замовчуванням
             currentTerritoryFilter = localStorage.getItem('currentTerritoryFilter') || 'city';
-            
+
             // Встановлюємо відповідний активний таб
             document.querySelectorAll('.origin-tabs .origin-tab-btn').forEach(btn => btn.classList.remove('active'));
             if (currentTerritoryFilter === 'city') {
@@ -2001,7 +2031,7 @@
         // Перемикання фільтру територій
         window.switchTerritoryFilter = (filter) => {
             currentTerritoryFilter = filter;
-            
+
             // Зберігаємо поточний фільтр в localStorage
             localStorage.setItem('currentTerritoryFilter', filter);
 
@@ -2038,7 +2068,7 @@
             const daysThreshold = document.getElementById('on-hands-days-threshold');
             const publisherFilter = document.getElementById('on-hands-publisher-filter');
 
-            reportContainer.innerHTML = '<p class="text-gray-600">Очікування пошуку...</p>';
+            reportContainer.innerHTML = '<p>Очікування пошуку...</p>';
             summaryContainer.innerHTML = "";
             progressContainer.style.display = 'block';
             progressFill.style.width = '0%';
@@ -2163,10 +2193,10 @@
             const countElement = document.getElementById('on-hands-count');
 
             reportContainer.innerHTML = "";
-            summaryContainer.innerHTML = `<p class="text-gray-700">Загальна кількість територій на руках: <span id="on-hands-count">${onHandsResults.length}</span></p>`;
+            summaryContainer.innerHTML = `<p class="summary-text">Загальна кількість територій на руках: <span id="on-hands-count">${onHandsResults.length}</span></p>`;
 
             if (onHandsResults.length === 0) {
-                reportContainer.innerHTML = '<p class="text-gray-600 text-center">Немає територій на руках.</p>';
+                reportContainer.innerHTML = '<p class="text-center">Немає територій на руках.</p>';
                 return;
             }
 
@@ -2178,8 +2208,8 @@
 
                 // Визначаємо клас для бейджа днів
                 let daysClass = 'days-low';
-                if (result.daysHeld > 30) daysClass = 'days-high';
-                else if (result.daysHeld > 14) daysClass = 'days-medium';
+                if (result.daysHeld > 90) daysClass = 'days-high';
+                else if (result.daysHeld > 30) daysClass = 'days-medium';
 
                 entry.innerHTML = `
                     <div class="card-header">
@@ -3675,7 +3705,7 @@
                 }
 
                 alert(`Дільниця "${parcelName}" успішно видалена!`);
-                
+
                 // Видаляємо картку з DOM без перезавантаження сторінки
                 const territoryCards = document.querySelectorAll('.territory-card');
                 let territoryCard = null;
@@ -3895,7 +3925,7 @@
         function renderNoRecordsTable() {
             noRecordsTable.innerHTML = '';
             if (noRecordsData.length === 0) {
-                noRecordsTable.innerHTML = '<tr><td colspan="3" class="text-center text-gray-500">Записів не знайдено.</td></tr>';
+                noRecordsTable.innerHTML = '<tr><td colspan="3" class="text-center">Записів не знайдено.</td></tr>';
                 return;
             }
             noRecordsData.forEach(({ number, type, id }) => {
@@ -3903,7 +3933,7 @@
                     <tr>
                         <td>${number}</td>
                         <td>${type || 'Не вказано'}</td>
-                        <td><a href="parcel-details.html?id=${id}&from=admin" class="text-blue-600 hover:underline">Відкрити</a></td>
+                        <td><a href="parcel-details.html?id=${id}&from=admin">Відкрити</a></td>
                     </tr>`;
             });
         }
@@ -3972,7 +4002,7 @@
         function renderProcessedTable() {
             processedTable.innerHTML = '';
             if (processedData.length === 0) {
-                processedTable.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500">Записів не знайдено.</td></tr>';
+                processedTable.innerHTML = '<tr><td colspan="5" class="text-center">Записів не знайдено.</td></tr>';
                 return;
             }
             processedData.forEach(({ number, type, processDate, daysSinceProcessed, id }) => {
@@ -3982,7 +4012,7 @@
                         <td>${type || 'Не вказано'}</td>
                         <td>${processDate.toLocaleDateString('uk-UA')}</td>
                         <td>${daysSinceProcessed}</td>
-                        <td><a href="parcel-details.html?id=${id}&from=admin" class="text-blue-600 hover:underline">Відкрити</a></td>
+                        <td><a href="parcel-details.html?id=${id}&from=admin">Відкрити</a></td>
                     </tr>`;
             });
         }
@@ -4086,6 +4116,118 @@
         processedTypeFilter.addEventListener('change', debounce(() => fetchProcessed(parseInt(daysInput.value) || 0, processedTypeFilter.value), 300));
         daysInput.addEventListener('input', debounce(() => fetchProcessed(parseInt(daysInput.value) || 0, processedTypeFilter.value), 500));
 
+        // Функція для обробки зміни типу періоду
+        window.handlePeriodTypeChange = function () {
+            const periodType = document.getElementById('period-type').value;
+            const fromInput = document.getElementById('period-from');
+            const toInput = document.getElementById('period-to');
+            const periodDescription = document.getElementById('period-description');
+            const periodText = document.getElementById('period-text');
+            const monthSelector = document.getElementById('month-selector');
+            const dateRange = document.getElementById('date-range');
+            const monthSelect = document.getElementById('month-select');
+            const filterContainer = document.querySelector('#tab-analysis .filter-container');
+
+            // Приховуємо всі блоки
+            periodDescription.style.display = 'none';
+            monthSelector.style.display = 'none';
+            dateRange.style.display = 'none';
+
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+
+            // Теократичний рік: вересень попереднього року - серпень поточного року
+            const teoStartYear = (currentMonth >= 8) ? currentYear : currentYear - 1;
+            const teoEndYear = teoStartYear + 1;
+
+            switch (periodType) {
+                case 'current-year':
+                    // Поточний теократичний рік (вересень попереднього року - серпень поточного року)
+                    fromInput.value = `${teoStartYear}-09-01`;
+                    toInput.value = `${teoEndYear}-08-31`;
+                    periodText.textContent = `Період: 01.09.${teoStartYear} - 31.08.${teoEndYear}`;
+                    periodDescription.style.display = 'flex';
+                    break;
+                case 'previous-year':
+                    // Попередній теократичний рік (вересень позапопереднього року - серпень попереднього року)
+                    const prevTeoStartYear = teoStartYear - 1;
+                    const prevTeoEndYear = prevTeoStartYear + 1;
+                    fromInput.value = `${prevTeoStartYear}-09-01`;
+                    toInput.value = `${prevTeoEndYear}-08-31`;
+                    periodText.textContent = `Період: 01.09.${prevTeoStartYear} - 31.08.${prevTeoEndYear}`;
+                    periodDescription.style.display = 'flex';
+                    break;
+                case 'month':
+                    // За місяць - показуємо селектор місяців
+                    monthSelector.style.display = 'flex';
+                    window.populateMonthSelector();
+                    window.handleMonthChange();
+                    break;
+                case 'custom':
+                    // За період - показуємо поля дат
+                    dateRange.style.display = 'flex';
+                    break;
+            }
+        };
+
+        // Ініціалізуємо поточний теократичний рік при завантаженні
+        window.handlePeriodTypeChange();
+
+        // Функція для заповнення селектора місяців
+        window.populateMonthSelector = function () {
+            const monthSelect = document.getElementById('month-select');
+            monthSelect.innerHTML = '';
+
+            const now = new Date();
+            const monthNames = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
+                'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
+
+            // Додаємо 12 місяців назад
+            for (let i = 0; i < 12; i++) {
+                const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const year = date.getFullYear();
+                const month = date.getMonth();
+                const value = `${year}-${String(month + 1).padStart(2, '0')}`;
+                const label = `${monthNames[month]} ${year}`;
+
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = label;
+                if (i === 0) option.selected = true; // Поточний місяць за замовчуванням
+                monthSelect.appendChild(option);
+            }
+        }
+
+        // Функція для обробки зміни місяця
+        window.handleMonthChange = function () {
+            const monthSelect = document.getElementById('month-select');
+            const fromInput = document.getElementById('period-from');
+            const toInput = document.getElementById('period-to');
+
+            if (!monthSelect.value) return;
+
+            const [year, month] = monthSelect.value.split('-').map(Number);
+            const firstDay = new Date(year, month - 1, 1);
+            const lastDay = new Date(year, month, 0);
+
+            // Форматуємо дати в локальній часовій зоні без UTC конвертації
+            fromInput.value = `${year}-${String(month).padStart(2, '0')}-01`;
+            toInput.value = `${year}-${String(month).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+        }
+
+        // Функція для синхронізації дати "до" з датою "від"
+        window.syncDateTo = function () {
+            const fromInput = document.getElementById('period-from');
+            const toInput = document.getElementById('period-to');
+            const periodType = document.getElementById('period-type').value;
+
+            // Синхронізуємо тільки для режиму "За період"
+            if (periodType === 'custom' && fromInput.value) {
+                toInput.value = fromInput.value;
+            }
+        }
+
         // Функція для аналізу територій за період
         async function generatePeriodAnalysis() {
             const fromInput = document.getElementById('period-from');
@@ -4104,8 +4246,16 @@
                 return;
             }
 
+            // Створюємо дати в UTC, щоб уникнути проблем з часовими зонами
             const fromDate = new Date(fromInput.value);
+            fromDate.setUTCHours(0, 0, 0, 0);
             const toDate = new Date(toInput.value);
+            toDate.setUTCHours(23, 59, 59, 999);
+
+            // Перевіряємо дати для відладки
+            console.log('Період:', fromInput.value, '-', toInput.value);
+            console.log('fromDate:', fromDate.toISOString());
+            console.log('toDate:', toDate.toISOString());
 
             if (fromDate > toDate) {
                 alert('Дата "Від" не може бути пізнішою за дату "До"');
@@ -4115,7 +4265,7 @@
             progressContainer.style.display = 'block';
             progressFill.style.width = '0%';
             progressText.innerText = 'Прогрес: 0%';
-            reportTable.innerHTML = '<tr><td colspan="5" class="text-center text-gray-600">Пошук...</td></tr>';
+            reportTable.innerHTML = '<tr><td colspan="5" class="text-center">Пошук...</td></tr>';
 
             try {
                 // Отримуємо всі території
@@ -4220,7 +4370,7 @@
 
             } catch (error) {
                 console.error('Помилка аналізу:', error);
-                reportTable.innerHTML = '<tr><td colspan="5" class="text-center text-red-600">Помилка завантаження даних</td></tr>';
+                reportTable.innerHTML = '<tr><td colspan="5" class="text-center">Помилка завантаження даних</td></tr>';
             }
         }
 
@@ -4229,7 +4379,7 @@
             const tableBody = document.getElementById('period-table');
 
             if (results.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-600">Територій не знайдено</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Територій не знайдено</td></tr>';
                 return;
             }
 
@@ -4240,7 +4390,7 @@
                     <td>${result.count}</td>
                     <td>${result.history.join(', ') || '-'}</td>
                     <td>
-                        <button onclick="viewTerritoryDetails('${result.territory.id}')" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
+                        <button onclick="viewTerritoryDetails('${result.territory.id}')" class="btn-primary">
                             Деталі
                         </button>
                     </td>
