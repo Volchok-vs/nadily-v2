@@ -1194,36 +1194,20 @@
                 clickCount++;
                 console.log(`Клік: ${clickCount}`);
 
-                // Скидаємо лічильник, якщо пауза між кліками більше 500мс
                 clearTimeout(clickTimer);
                 clickTimer = setTimeout(() => {
+                    if (clickCount === 1) {
+                        if (editMode || selectionMode) {
+                            deactivateAllModes();
+                        }
+                    } else if (clickCount === 2) {
+                        activateEditMode();
+                    } else if (clickCount >= 4) {
+                        activateSelectionMode();
+                    }
+
                     clickCount = 0;
                 }, 500);
-
-                // 1 клік → деактивація будь-якого режиму
-                if (clickCount === 1) {
-                    // Чекаємо короткий час, щоб перевірити чи не буде більше кліків
-                    setTimeout(() => {
-                        if (clickCount === 1) {
-                            clickCount = 0;
-                            if (editMode || selectionMode) {
-                                deactivateAllModes();
-                            }
-                        }
-                    }, 400);
-                }
-
-                // 2 кліки → режим редагування
-                if (clickCount === 2) {
-                    clickCount = 0; // Скидаємо
-                    activateEditMode();
-                }
-
-                // 4 кліки → режим масового видалення
-                if (clickCount >= 4) {
-                    clickCount = 0; // Скидаємо
-                    activateSelectionMode();
-                }
             };
 
             // Додаємо стиль курсору, щоб було зрозуміло, що це кнопка
