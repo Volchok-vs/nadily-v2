@@ -49,13 +49,39 @@
         <div id="tab-my-card" class="tab-content">
             <h1 id="userName" class="page-header">Завантаження...</h1>
             <div class="card">
-                <h3>Дільниці у мене на руках</h3>
+                <h3 class="parcel-title">🗂️ Мої дільниці</h3>
                 <div id="myParcels">Пошук дільниць...</div>
             </div>
 
+            <div class="card campaign-card">
+                <div id="campaignHeader" onclick="toggleCampaignInfo()" style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; cursor:pointer;">
+                    <h3 style="margin:0; display:flex; align-items:center; gap:10px;">
+                        🗓️ Кампанії
+                    </h3>
+                    <span id="campaignHeaderText" style="font-size:0.95rem; color:#1976d2; display:flex; align-items:center; gap:6px;">
+                        <span id="campaignHeaderIcon" style="font-size:1.1rem;">＋</span>
+                        <span id="campaignHeaderLabel">Розгорнути</span>
+                    </span>
+                </div>
+                <div id="campaignPreview" class="hidden" style="margin-top:12px; line-height:1.5;"></div>
+                <div id="campaignInfoCard" class="hidden" style="margin-top:12px; line-height:1.5;">
+                    <div id="campaignInfoContent">
+                        <p style="color:gray; margin:0;">Завантаження інформації про кампанії...</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="card" id="historyCard">
-                <h3>📜 Історія опрацювань</h3>
-                <div id="myHistory">Завантаження історії...</div>
+                <div id="historyHeader" onclick="toggleHistoryInfo()" style="display:flex; justify-content:space-between; align-items:center; gap:10px; cursor:pointer;">
+                    <h3 style="margin:0; display:flex; align-items:center; gap:10px;">📜 Історія опрацювань</h3>
+                    <span id="historyHeaderText" style="font-size:0.95rem; color:#1976d2; display:flex; align-items:center; gap:6px;">
+                        <span id="historyHeaderIcon" style="font-size:1.1rem;">＋</span>
+                        <span id="historyHeaderLabel">Розгорнути</span>
+                    </span>
+                </div>
+                <div id="historyContent" class="hidden" style="margin-top:12px;">
+                    <div id="myHistory">Завантаження історії...</div>
+                </div>
             </div>
         </div>
 
@@ -539,6 +565,7 @@
 
             loadMyParcels();
             loadMyHistory();
+            loadCampaignInfo();
 
             // ОБРОБКА ПАРАМЕТРІВ URL
             const urlParams = new URLSearchParams(window.location.search);
@@ -869,6 +896,180 @@
                 historyDiv.innerHTML = '<p style="color: gray;">Помилка завантаження історії</p>';
             }
         }
+
+        // --- КАМПАНІЇ НА СТОРІНЦІ ПРОФІЛЮ ---
+        let campaignInfoLoaded = false;
+        let campaignHasActive = false;
+        let campaignPreviewLoaded = false;
+
+        async function loadCampaignInfo() {
+            const campaignInfoContent = document.getElementById('campaignInfoContent');
+            const campaignCard = document.getElementById('campaignInfoCard');
+            if (!campaignInfoContent || !campaignCard) return;
+
+            try {
+                const { data: campaigns, error } = await supabase
+                    .from('campaigns')
+                    .select('id, name, description, campaign_start, campaign_end')
+                    .order('campaign_start', { ascending: true });
+
+                if (error) {
+                    console.error('Помилка завантаження кампаній:', error);
+                    campaignInfoContent.innerHTML = '<p style="color:gray;">Помилка завантаження інформації про кампанії.</p>';
+                    return;
+                }
+
+                if (!campaigns || campaigns.length === 0) {
+                    campaignInfoContent.innerHTML = '<p style="color:gray;">Інформація про кампанії недоступна.</p>';
+                    return;
+                }
+
+                const now = new Date();
+                const currentTheoStart = getTheocraticStart();
+                const currentTheoEnd = new Date(currentTheoStart.getFullYear() + 1, 7, 31);
+
+                const currentYearCampaigns = campaigns.filter(campaign => {
+                    const startDate = new Date(campaign.campaign_start);
+                    const endDate = new Date(campaign.campaign_end);
+                    return endDate >= currentTheoStart && startDate <= currentTheoEnd;
+                });
+
+                const activeCampaigns = currentYearCampaigns.filter(campaign => {
+                    const startDate = new Date(campaign.campaign_start);
+                    const endDate = new Date(campaign.campaign_end);
+                    return now >= startDate && now <= endDate;
+                });
+
+                const plannedCampaigns = currentYearCampaigns
+                    .filter(campaign => new Date(campaign.campaign_start) > now)
+                    .sort((a, b) => new Date(a.campaign_start) - new Date(b.campaign_start));
+
+                const pastCampaigns = currentYearCampaigns
+                    .filter(campaign => new Date(campaign.campaign_end) < now)
+                    .sort((a, b) => new Date(b.campaign_end) - new Date(a.campaign_end));
+
+                const sections = [];
+
+                if (activeCampaigns.length > 0) {
+                    campaignHasActive = true;
+                    campaignPreview.innerHTML = renderCampaignPreview(activeCampaigns);
+                    campaignPreview.classList.remove('hidden');
+                    campaignInfoCard.classList.add('hidden');
+                } else {
+                    campaignHasActive = false;
+                    campaignPreview.classList.add('hidden');
+                    campaignInfoCard.classList.add('hidden');
+                }
+
+                if (plannedCampaigns.length > 0) {
+                    sections.push(renderCampaignSection('Заплановані кампанії цього теократичного року', plannedCampaigns, false, false));
+                } else {
+                    sections.push('<p style="color:gray; margin: 0 0 8px 0;">Запланованих кампаній у поточному теократичному році немає.</p>');
+                }
+
+                if (pastCampaigns.length > 0) {
+                    sections.push(renderCampaignSection('Пройдені кампанії цього теократичного року', pastCampaigns, false, true));
+                }
+
+                campaignInfoContent.innerHTML = sections.join('');
+                campaignInfoLoaded = true;
+            } catch (error) {
+                console.error('Помилка під час отримання кампаній:', error);
+                campaignInfoContent.innerHTML = '<p style="color:gray;">Помилка завантаження інформації про кампанії.</p>';
+            }
+        }
+
+        function renderCampaignPreview(campaigns) {
+            return campaigns.map(campaign => {
+                const period = formatCampaignPeriod(campaign.campaign_start, campaign.campaign_end);
+                return `
+                    <div style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 10px; background:#f1f8f5; margin-bottom: 8px;">
+                        <div style="display:flex; justify-content:space-between; gap: 12px; flex-wrap:wrap; align-items:center;">
+                            <strong style="font-size: 1rem;">${campaign.name}</strong>
+                            <span style="font-size: 0.9rem; color:#2e7d32; font-weight: 600;">Активна</span>
+                        </div>
+                        <p style="margin: 8px 0 0 0; color:#555;"><strong>Період:</strong> ${period}</p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderCampaignSection(title, campaigns, isActive, isCompleted) {
+            const statusText = isCompleted ? 'Завершена' : (isActive ? 'Активна' : 'Планується');
+            const statusColor = isCompleted ? '#757575' : (isActive ? '#2e7d32' : '#1565c0');
+            const textDecoration = isCompleted ? 'text-decoration: line-through;' : '';
+
+            const itemsHtml = campaigns.map(campaign => {
+                const period = formatCampaignPeriod(campaign.campaign_start, campaign.campaign_end);
+                const description = campaign.description ? `<p style="margin: 6px 0 0 0; color:#444; ${textDecoration}">${campaign.description}</p>` : '';
+                return `
+                    <div style="margin-bottom: 12px; padding: 12px; border: 1px solid #e0e0e0; border-radius: 10px; background:#fafafa; ${textDecoration}">
+                        <div style="display:flex; justify-content:space-between; gap: 12px; flex-wrap:wrap;">
+                            <strong style="font-size: 1rem; ${textDecoration}">${campaign.name}</strong>
+                            <span style="font-size: 0.9rem; color:${statusColor}; font-weight: 600;">${statusText}</span>
+                        </div>
+                        <p style="margin: 8px 0 0 0; color:#555; ${textDecoration}"><strong>Період:</strong> ${period}</p>
+                        ${description}
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div style="margin-bottom: 14px;">
+                    <h4 style="margin: 0 0 8px 0; font-size: 1rem;">${title}</h4>
+                    ${itemsHtml}
+                </div>
+            `;
+        }
+
+        function formatCampaignPeriod(start, end) {
+            if (!start || !end) return 'Невідомо';
+            const startDate = formatDateDisplay(start);
+            const endDate = formatDateDisplay(end);
+            return start === end ? startDate : `${startDate} — ${endDate}`;
+        }
+
+        function formatDateDisplay(dateValue) {
+            if (!dateValue) return '—';
+            const date = new Date(dateValue);
+            if (Number.isNaN(date.getTime())) return '—';
+            return date.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+
+        window.toggleCampaignInfo = function () {
+            const card = document.getElementById('campaignInfoCard');
+            const preview = document.getElementById('campaignPreview');
+            const headerText = document.getElementById('campaignHeaderText');
+            const headerIcon = document.getElementById('campaignHeaderIcon');
+            if (!card) return;
+            const hidden = card.classList.toggle('hidden');
+            if (campaignHasActive && preview) {
+                preview.classList.toggle('hidden', !hidden);
+            }
+            const headerLabel = document.getElementById('campaignHeaderLabel');
+            if (headerLabel) {
+                headerLabel.textContent = hidden ? 'Розгорнути' : 'Згорнути';
+            }
+            if (headerIcon) {
+                headerIcon.textContent = hidden ? '＋' : '－';
+            }
+            if (!hidden && !campaignInfoLoaded) {
+                loadCampaignInfo();
+            }
+        };
+        window.toggleHistoryInfo = function () {
+            const content = document.getElementById('historyContent');
+            const headerLabel = document.getElementById('historyHeaderLabel');
+            const headerIcon = document.getElementById('historyHeaderIcon');
+            if (!content) return;
+            const hidden = content.classList.toggle('hidden');
+            if (headerLabel) {
+                headerLabel.textContent = hidden ? 'Розгорнути' : 'Згорнути';
+            }
+            if (headerIcon) {
+                headerIcon.textContent = hidden ? '＋' : '－';
+            }
+        };
 
         // --- СПИСОК ГРУПИ (ВИПРАВЛЕНО: Прізвища на першому місці + захист від апострофів) ---
         // Глобальна змінна для зберігання даних (кеш)
