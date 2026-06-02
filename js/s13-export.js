@@ -316,9 +316,9 @@ async function exportS13Excel() {
         };
 
         citySheet.columns = [
-            { width: 6 }, { width: 11 }, 
-            { width: 9 }, { width: 11 }, { width: 9 }, { width: 11 },
-            { width: 9 }, { width: 11 }, { width: 9 }, { width: 11 }
+            { width: 6 }, { width: 12 }, 
+            { width: 10 }, { width: 12 }, { width: 10 }, { width: 12 },
+            { width: 10 }, { width: 12 }, { width: 10 }, { width: 12 }
         ];
 
         citySheet.mergeCells('A1:J1');
@@ -482,10 +482,10 @@ async function exportS13Excel() {
 
             villageSheet.columns = [
                 { width: 12 },
-                { width: 11 },
-                { width: 9 }, { width: 11 },
-                { width: 9 }, { width: 11 },
-                { width: 9 }, { width: 11 }
+                { width: 12 },
+                { width: 10 }, { width: 12 },
+                { width: 10 }, { width: 12 },
+                { width: 10 }, { width: 12 }
             ];
             const totalVillageColumns = 8;
 
