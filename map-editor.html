@@ -15,6 +15,9 @@
             top: 10px;
             left: 50px;
             z-index: 1000;
+            display: flex;
+            flex-direction: column; /* Меню випадає вниз */
+            gap: 8px;
         }
 
         /* КНОПКА ГАМБУРГЕР */
@@ -30,6 +33,29 @@
             font-size: 16px;
         }
 
+        .hamburger:hover {
+            background: #444;
+        }
+
+        /* Стиль для кнопки виходу */
+        .btn-exit {
+            background: #6c757d; /* Спокійний сірий колір */
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: background 0.3s, transform 0.2s;
+        }
+
+        .btn-exit:hover {
+            background: #5a6268;
+            transform: translateY(-1px); /* Легкий ефект натискання */
+        }
+
         /* ПАНЕЛЬ КЕРУВАННЯ */
         .controls {
             display: none; /* Сховано за замовчуванням */
@@ -39,7 +65,7 @@
             padding: 15px;
             border-radius: 8px;
             border: 1px solid #ccc;
-            margin-top: 8px;
+            margin-top: 0; /* Оскільки ми додали gap у контейнер */
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             width: 260px;
         }
@@ -222,58 +248,6 @@
         .btn-modal-cancel:hover {
             background: #5a6268;
         }
-
-        /* Робимо контейнер гнучким, щоб кнопки були в ряд */
-.menu-container {
-    position: absolute;
-    top: 10px;
-    left: 50px;
-    z-index: 1000;
-    display: flex;
-    flex-direction: column; /* Меню випадає вниз */
-    gap: 8px;
-}
-
-        /* Стиль для кнопки виходу */
-        .btn-exit {
-            background: #6c757d; /* Спокійний сірий колір */
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            transition: background 0.3s, transform 0.2s;
-        }
-
-        .btn-exit:hover {
-            background: #5a6268;
-            transform: translateY(-1px); /* Легкий ефект натискання */
-        }
-
-        /* Переконайтеся, що гамбургер має таку ж висоту */
-        .hamburger {
-            background: #333;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
-
-        .hamburger:hover {
-            background: #444;
-        }
-
-        /* Щоб панель керування не зміщувалася */
-        .controls {
-            margin-top: 0; /* Оскільки ми додали gap у контейнер */
-        }
     </style>
 </head>
 <body>
@@ -304,7 +278,6 @@
     </div>
 </div>
 
-<!-- МОДАЛЬНЕ ВІКНО ДЛЯ ДОДАВАННЯ/РЕДАГУВАННЯ ДІЛЯНКИ -->
 <div id="parcelModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">Інформація про ділянку</div>
@@ -343,9 +316,8 @@
 <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
 
 <script type="module">
-    import { supabase } from "./js/config.js"; // Просто імпортуємо готову "розетку"
+    import { supabase } from "./js/config.js"; 
 
-    // Глобальна змінна для зберігання поточного шару в модалі
     window.currentModalLayer = null;
     window.isEditingMode = false;
 
@@ -372,11 +344,10 @@
             categorySelect.value = 'Приватний сектор';
         }
 
-        // У режимі редагування дозволяємо змінювати категорію
-        editCheckbox.checked = isEdit;
-        categorySelect.disabled = !isEdit;
+        // Завжди дозволяємо редагувати поля в модалці
+        editCheckbox.checked = true;
+        categorySelect.disabled = false;
 
-        // Слухач для чекбокса
         editCheckbox.onchange = function() {
             categorySelect.disabled = !this.checked;
         };
@@ -409,25 +380,28 @@
         const layer = window.currentModalLayer;
         const category = categorySelect.value;
 
-        // Оновлюємо властивості шару
         if (!layer.feature) {
             layer.feature = { type: "Feature", properties: {} };
         }
         layer.feature.properties.name = name;
         layer.feature.properties.category = category;
 
-        // Оновлюємо тултіп (показуємо тільки назву)
-        const tooltipText = `${name}`;
-        layer.setTooltipContent(tooltipText);
-        layer.openTooltip(layer.getTooltip().getLatLng());
+        // Оновлюємо тултіп
+        layer.setTooltipContent(name);
+        
+        let currentTooltip = layer.getTooltip();
+        if (currentTooltip) {
+            layer.openTooltip(currentTooltip.getLatLng());
+        } else {
+            layer.openTooltip(layer.getBounds().getCenter());
+        }
 
-        // Зберігаємо в базу
+        // Запускаємо збереження в базу
         saveToSupabase();
         window.closeParcelModal();
     }
 
-    // Карта з різними шарами
-    // 1. ОПИС БАЗОВИХ ШАРІВ
+    // ОПИС БАЗОВИХ ШАРІВ
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
         attribution: '© OpenStreetMap contributors' 
     });
@@ -440,20 +414,17 @@
     });
     const satelliteHybrid = L.layerGroup([satelliteOnly, labels]);
 
-    // 2. Об'єднуємо в словник базових шарів
     const baseMaps = {
         "🛰️ Гібрид": satelliteHybrid,
         "🗺️ Схема (OSM)": osm,
         "⛰️ Рельєф (Topo)": topo
     };
 
-    // Перевіряємо localStorage для збереженого вибору
     const savedLayerName = localStorage.getItem('selectedBaseLayer');
     const initialLayer = (savedLayerName && baseMaps[savedLayerName])
         ? baseMaps[savedLayerName]
         : satelliteHybrid;
 
-    // 3. ІНІЦІАЛІЗАЦІЯ КАРТИ
     var map = L.map('map', {
         preferCanvas: false,
         center: [49.2321, 29.0577],
@@ -462,28 +433,30 @@
         zoomControl: false
     });
 
-    // Додаємо перемикач шарів
     L.control.layers(baseMaps, null, {
         position: 'bottomleft',
         collapsed: true
     }).addTo(map);
 
-    // Зберігаємо вибір шару в localStorage
     map.on('baselayerchange', function (e) {
         localStorage.setItem('selectedBaseLayer', e.name);
-        console.log("💾 Шар збережено:", e.name);
     });
 
     var drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
 
-    // Налаштування шару
+    // НАЛАШТУВАННЯ ШАРУ (Виправлено: беремо актуальне ім'я з властивостей в момент кліку)
     window.setupLayer = function(layer, feature) {
         var props = feature.properties || {};
         var name = props.name || "Без назви";
-        var category = props.category || "Приватний сектор";
         
-        // Перевірка формату координат (масив чи об'єкт)
+        // Прив'язуємо ID з бази до об'єкта шару Leaflet
+        if (feature.id) {
+            layer.databaseId = feature.id;
+        } else if (props.id) {
+            layer.databaseId = props.id;
+        }
+
         var labelPos;
         if (props.labelPos) {
             labelPos = L.latLng(props.labelPos);
@@ -491,73 +464,133 @@
             labelPos = layer.getBounds().getCenter();
         }
         
-        const tooltipText = `${name}`;
-        layer.bindTooltip(tooltipText, { 
+        layer.bindTooltip(name, { 
             permanent: true, 
             direction: 'center' 
         });
-        layer.openTooltip(labelPos); // Примусове відкриття в точці
+        layer.openTooltip(labelPos); 
 
         layer.on('click', function (e) {
             L.DomEvent.stopPropagation(e);
-            if (!document.getElementById('enableLabelMove').checked) {
-                // Якщо режим редагування вимкнено, відкриємо модалю для перегляду/редагування
-                window.openParcelModal(layer, false);
+            
+            // Якщо РЕЖИМ ПЕРЕМІЩЕННЯ ЯРЛИКІВ УВІМКНЕНО
+            if (document.getElementById('enableLabelMove').checked) {
+                var newPos = e.latlng;
+                
+                // 🔥 ВИПРАВЛЕННЯ БАГУ: беремо актуальне ім'я та категорію безпосередньо з об'єкта шару, 
+                // щоб воно випадково не скидалося на базові змінні ("Нова ділянка")
+                let currentName = "Без назви";
+                let currentCategory = "Приватний сектор";
+                
+                if (layer.feature && layer.feature.properties) {
+                    currentName = layer.feature.properties.name || "Без назви";
+                    currentCategory = layer.feature.properties.category || "Приватний сектор";
+                }
+
+                layer.setTooltipContent(currentName); 
+                layer.openTooltip(newPos);
+                
+                if (!layer.feature) layer.feature = { type: "Feature", properties: {} };
+                layer.feature.properties.name = currentName;
+                layer.feature.properties.category = currentCategory;
+                layer.feature.properties.labelPos = [newPos.lat, newPos.lng];
+                
+                saveToSupabase();
                 return;
             }
 
-            var newPos = e.latlng;
-            // Оновлюємо тултіп на нову позицію
-            layer.setTooltipContent(tooltipText); 
-            layer.openTooltip(newPos);
-            
-            if (!layer.feature) layer.feature = { type: "Feature", properties: {} };
-            layer.feature.properties.name = name;
-            layer.feature.properties.category = category;
-            layer.feature.properties.labelPos = [newPos.lat, newPos.lng];
-            
-            saveToSupabase();
+            // Якщо режим переміщення вимкнено — відкриваємо модалку редагування
+            window.openParcelModal(layer, true);
         });
     }
 
-    // Збереження
+    // НАДnetworkНЕ ЗБЕРЕЖЕННЯ (Поділ на Нові (.insert) та Старі (.upsert) за ID)
     async function saveToSupabase() {
-    const parcels = [];
-    drawnItems.eachLayer(layer => {
-        let name = "Без назви";
-        let category = "Приватний сектор";
+        const toUpdate = [];
+        const toInsert = [];
         
-        if (layer.feature && layer.feature.properties) {
-            name = layer.feature.properties.name || "Без назви";
-            category = layer.feature.properties.category || "Приватний сектор";
-        }
-        
-        let labelPos = null;
-        if (layer.getTooltip()) {
-            const ll = layer.getTooltip().getLatLng();
-            labelPos = [ll.lat, ll.lng];
-        }
+        drawnItems.eachLayer(layer => {
+            let name = "Без назви";
+            let category = "Приватний сектор";
+            
+            if (layer.feature && layer.feature.properties) {
+                name = layer.feature.properties.name || "Без назви";
+                category = layer.feature.properties.category || "Приватний сектор";
+            }
+            
+            let labelPos = null;
+            if (layer.getTooltip()) {
+                const ll = layer.getTooltip().getLatLng();
+                labelPos = [ll.lat, ll.lng];
+            }
 
-        parcels.push({
-            name: name,
-            category: category,
-            geom: layer.toGeoJSON().geometry,
-            label_pos: labelPos
+            const dataRow = {
+                name: name,
+                category: category,
+                geom: layer.toGeoJSON().geometry,
+                label_pos: labelPos
+            };
+
+            // Якщо є databaseId — це старий об'єкт, оновлюємо. Якщо немає — створюємо.
+            if (layer.databaseId) {
+                dataRow.id = layer.databaseId;
+                toUpdate.push(dataRow);
+            } else {
+                toInsert.push(dataRow);
+            }
         });
-    });
 
-    // Використовуємо upsert. Він знайде запис за 'name' і оновить тільки geom та label_pos
-    const { error } = await supabase
-        .from('parcels')
-        .upsert(parcels, { onConflict: 'name' }); 
+        if (toUpdate.length === 0 && toInsert.length === 0) return;
 
-    if (!error) {
-        document.getElementById('output').innerText = "Зміни збережено (без втрати даних)";
-    } else {
-        console.error("Помилка збереження:", error.message);
-        document.getElementById('output').innerText = "Помилка збереження!";
+        let hasError = false;
+        let errorMessage = "";
+
+        // 1. Оновлюємо існуючі ділянки за унікальним ID
+        if (toUpdate.length > 0) {
+            const { error } = await supabase
+                .from('parcels')
+                .upsert(toUpdate, { onConflict: 'id' });
+            if (error) {
+                hasError = true;
+                errorMessage += " Помилка оновлення: " + error.message;
+            }
+        }
+
+        // 2. Вставляем абсолютно нові ділянки (поля ID немає, база виконає nextval)
+        if (toInsert.length > 0) {
+            const { data, error } = await supabase
+                .from('parcels')
+                .insert(toInsert)
+                .select('id, name'); 
+
+            if (!error) {
+                // Миттєво записуємо згенеровані базою ID назад у карту Leaflet
+                if (data && data.length > 0) {
+                    drawnItems.eachLayer(layer => {
+                        if (!layer.databaseId) {
+                            const currentName = layer.feature?.properties?.name;
+                            const found = data.find(d => d.name === currentName);
+                            if (found) {
+                                layer.databaseId = found.id;
+                                if (!layer.feature) layer.feature = { type: "Feature", properties: {} };
+                                layer.feature.id = found.id;
+                            }
+                        }
+                    });
+                }
+            } else {
+                hasError = true;
+                errorMessage += " Помилка створення: " + error.message;
+            }
+        }
+
+        if (!hasError) {
+            document.getElementById('output').innerText = "Зміни збережено успішно";
+        } else {
+            console.error("Помилка збереження:", errorMessage);
+            document.getElementById('output').innerText = errorMessage;
+        }
     }
-}
 
     // Завантаження файлу
     window.handleUpload = async function() {
@@ -566,15 +599,18 @@
 
         const text = await file.text();
         const geojson = JSON.parse(text);
-        const parcels = geojson.features.map(f => ({
-            name: f.properties?.name || f.properties?.Name || "№?",
-            category: f.properties?.category || "Приватний сектор",
-            geom: f.geometry,
-            label_pos: f.properties?.labelPos || null
-        }));
+        const parcels = geojson.features.map(f => {
+            const row = {
+                name: f.properties?.name || f.properties?.Name || "№?",
+                category: f.properties?.category || "Приватний сектор",
+                geom: f.geometry,
+                label_pos: f.properties?.labelPos || null
+            };
+            if (f.id) row.id = f.id;
+            return row;
+        });
 
-        // Замість видалення - розумне оновлення
-        const { error } = await supabase.from('parcels').upsert(parcels, { onConflict: 'name' });
+        const { error } = await supabase.from('parcels').upsert(parcels, { onConflict: 'id' });
         
         if (!error) {
             loadParcelsFromDB();
@@ -583,7 +619,7 @@
         }
     }
 
-    // Завантаження з бази
+    // ЗАВАНТАЖЕННЯ З БАЗИ ДАНИХ (Витягуємо та присвоюємо id)
     async function loadParcelsFromDB() {
         drawnItems.clearLayers();
         let { data, error } = await supabase.from('parcels').select('*');
@@ -597,16 +633,18 @@
                         category: p.category || "Приватний сектор",
                         labelPos: p.label_pos 
                     };
+                    f.id = p.id; 
+                    layer.databaseId = p.id; 
                     layer.feature = f;
                     drawnItems.addLayer(layer);
                     window.setupLayer(layer, f);
                 }
             });
         });
-        document.getElementById('output').innerText = "Завантажено: " + data.length;
+        document.getElementById('output').innerText = "Завантажено ділянок: " + data.length;
     }
 
-    // Малювання
+    // Налаштування малювання
     var drawControl = new L.Control.Draw({
         draw: { polygon: true, rectangle: true, circle: false, marker: false, polyline: false, circlemarker: false },
         edit: { featureGroup: drawnItems }
@@ -615,6 +653,11 @@
 
     map.on('draw:created', function (e) {
         var layer = e.layer;
+        
+        if (drawControl && drawControl._toolbars && drawControl._toolbars.draw) {
+            drawControl._toolbars.draw.disable();
+        }
+
         layer.feature = { 
             type: "Feature", 
             properties: { 
@@ -624,28 +667,28 @@
         };
         drawnItems.addLayer(layer);
         window.setupLayer(layer, layer.feature);
-        // Відкриваємо модалю для введення інформації
+        
         window.openParcelModal(layer, true);
     });
 
     map.on('draw:edited', saveToSupabase);
+    
+    // ВИДАЛЕННЯ З БАЗИ ЗА ID
     map.on('draw:deleted', async function (e) {
         const layers = e.layers;
         layers.eachLayer(async (layer) => {
-            const name = layer.feature?.properties?.name;
-            if (name) {
-                // Видаляємо конкретно цю дільницю за назвою
-                const { error } = await supabase.from('parcels').delete().eq('name', name);
-                if (!error) {
-                    console.log(`Дільницю ${name} видалено з бази`);
-                } else {
-                    console.error("Помилка видалення:", error.message);
+            if (layer.databaseId) {
+                const { error } = await supabase.from('parcels').delete().eq('id', layer.databaseId);
+                if (!error) console.log(`Ділянку з ID ${layer.databaseId} видалено з бази`);
+            } else {
+                const name = layer.feature?.properties?.name;
+                if (name) {
+                    await supabase.from('parcels').delete().eq('name', name);
                 }
             }
         });
-        // Після видалення оновлюємо інші дільниці
         saveToSupabase(); 
-    });;
+    });
 
     window.downloadGeoJSON = function() {
         var data = drawnItems.toGeoJSON();
@@ -657,36 +700,38 @@
     }
 
     window.clearMap = async function() {
-    // Перший рівень: звичайне питання
-    const firstCheck = confirm("⚠️ Ви впевнені, що хочете ПОВНІСТЮ ОЧИСТИТИ БАЗУ ДАНИХ?\nЦю дію неможливо скасувати.");
-    
-    if (firstCheck) {
-        // Другий рівень: захист від "випадкового ОК"
-        const secondCheck = prompt("Для підтвердження введіть слово: ВИДАЛИТИ");
-        
-        if (secondCheck === "ВИДАЛИТИ") {
-            try {
-                document.getElementById('output').innerText = "Видалення...";
-                
-                // Видаляємо всі записи в Supabase
-                const { error } = await supabase.from('parcels').delete().neq('id', 0);
-                
-                if (error) throw error;
+        const firstCheck = confirm("⚠️ Ви впевнені, що хочете ПОВНІСТЮ ОЧИСТИТИ БАЗУ ДАНИХ?\nЦю дію неможливо скасувати.");
+        if (firstCheck) {
+            const secondCheck = prompt("Для підтвердження введіть слово: ВИДАЛИТИ");
+            if (secondCheck === "ВИДАЛИТИ") {
+                try {
+                    document.getElementById('output').innerText = "Видалення...";
+                    const { error } = await supabase.from('parcels').delete().neq('id', 0);
+                    if (error) throw error;
 
-                // Очищаємо карту
-                drawnItems.clearLayers();
-                document.getElementById('output').innerText = "Базу успішно очищено.";
-                console.log("Database cleared by user.");
-                
-            } catch (err) {
-                console.error("Помилка при видаленні:", err.message);
-                alert("Не вдалося видалити: " + err.message);
+                    drawnItems.clearLayers();
+                    document.getElementById('output').innerText = "Базу успішно очищено.";
+                } catch (err) {
+                    console.error("Помилка при видаленні:", err.message);
+                    alert("Не вдалося видалити: " + err.message);
+                }
+            } else {
+                alert("Слово введено неправильно. Видалення скасовано.");
             }
-        } else {
-            alert("Слово введено неправильно. Видалення скасовано.");
         }
     }
-}
+
+    // Слухач для чекбокса переміщення ярликів
+    document.getElementById('enableLabelMove').addEventListener('change', function() {
+        if (this.checked) {
+            if (drawControl && drawControl._toolbars && drawControl._toolbars.draw) {
+                drawControl._toolbars.draw.disable();
+            }
+            document.getElementById('output').innerText = "Режим коригування ярликів АКТИВНО.";
+        } else {
+            document.getElementById('output').innerText = "Режим перегляду карти.";
+        }
+    });
 
     loadParcelsFromDB();
 </script>

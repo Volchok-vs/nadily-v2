@@ -177,7 +177,7 @@ async function exportS13FullPDF() {
                 tempContainer.innerHTML = `
                     <div id="page-render" style="padding:${pagePaddingTop} 10mm 10mm 10mm; background:white; width:210mm; min-height:297mm; display:block; box-sizing:border-box; font-family:Arial, sans-serif;">
                         ${i === 0 ? `
-                            <div style="text-align:center; font-size:17pt; font-weight:bold; margin-bottom:15px;">ЗАПИСИ ПРО ${categoryName.toUpperCase()} ТЕРИТОРІЙ</div>
+                            <div style="text-align:center; font-size:17pt; font-weight:bold; margin-bottom:15px;">ЗАПИСИ ПРО ОПРАЦЮВАННЯ ТЕРИТОРІЙ ${categoryName.toUpperCase()}</div>
                             <div style="font-size:13pt; font-weight:bold; margin-bottom:15px; margin-left:5mm;">Службовий рік: <span style="border-bottom:1px solid black; padding:0 20px;">${serviceYear}</span></div>
                         ` : ''}
                         <table style="width:100%; border-collapse:collapse; border:2.5px solid black; table-layout:fixed;">

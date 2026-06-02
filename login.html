@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="uk">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вхід у систему територій</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -15,29 +15,34 @@
             height: 100vh;
             margin: 0;
         }
+
         .login-card {
             background: white;
             padding: 40px;
             border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             width: 100%;
             max-width: 400px;
             text-align: center;
         }
+
         .login-card h2 {
             margin-bottom: 25px;
             color: #333;
         }
+
         .input-group {
             margin-bottom: 20px;
             text-align: left;
         }
+
         .input-group label {
             display: block;
             margin-bottom: 5px;
             color: #666;
             font-size: 14px;
         }
+
         .input-group input {
             width: 100%;
             padding: 12px;
@@ -46,6 +51,7 @@
             box-sizing: border-box;
             font-size: 16px;
         }
+
         .btn-login {
             background-color: #007bff;
             color: white;
@@ -58,15 +64,18 @@
             cursor: pointer;
             transition: background 0.3s;
         }
+
         .btn-login:hover {
             background-color: #0056b3;
         }
+
         .error-msg {
             color: #dc3545;
             margin-top: 15px;
             font-size: 14px;
             display: none;
         }
+
         .back-link {
             display: block;
             margin-top: 20px;
@@ -80,117 +89,149 @@
         }
 
         .password-wrapper input {
-            box-sizing: border-box; /* Щоб padding не розширював поле */
+            box-sizing: border-box;
         }
 
         #togglePassword:hover {
-            color: #007bff; /* Колір при наведенні */
+            color: #007bff;
         }
 
-        /* Прибираємо стандартну синю рамку при натисканні на кнопку */
         #togglePassword:focus {
             outline: none;
         }
     </style>
 </head>
+
 <body>
 
-<div class="login-card">
-    <h2>Вхід для вісників</h2>
-    
-    <div class="input-group">
-        <label for="name">Прізвище та Ім'я</label>
-        <input type="text" id="name" placeholder="Наприклад: Петренко Іван" required>
-    </div>
+    <div class="login-card">
+        <h2>Вхід для вісників</h2>
 
-    <div class="input-group">
-        <label for="password">Пароль (Секретний ключ)</label>
-        <div class="password-wrapper" style="position: relative; display: flex; align-items: center;">
-            <input type="password" id="password" placeholder="Введіть ваш ключ" required 
-                style="width: 100%; padding-right: 45px;"> 
-            <button type="button" id="togglePassword" 
-                    style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; font-size: 20px; line-height: 1; padding: 5px; color: #666; user-select: none;">
-                🔒
-            </button>
+        <div class="input-group">
+            <label for="name">Прізвище та Ім'я</label>
+            <input type="text" id="name" placeholder="Наприклад: Петренко Іван" required>
         </div>
+
+        <div class="input-group">
+            <label for="password">Пароль (Секретний ключ)</label>
+            <div class="password-wrapper" style="position: relative; display: flex; align-items: center;">
+                <input type="password" id="password" placeholder="Введіть ваш ключ" required
+                    style="width: 100%; padding-right: 45px;">
+                <button type="button" id="togglePassword"
+                    style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; font-size: 20px; line-height: 1; padding: 5px; color: #666; user-select: none;">
+                    🔒
+                </button>
+            </div>
+        </div>
+
+        <button class="btn-login" id="submitLogin">УВІЙТИ</button>
+
+        <div id="error" class="error-msg">Невірне ім'я або пароль.</div>
+
+        <a href="index.html" class="back-link">← Повернутися до карти</a>
     </div>
 
-    <button class="btn-login" onclick="handleLogin()">УВІЙТИ</button>
-    
-    <div id="error" class="error-msg">Невірне ім'я або пароль.</div>
-    
-    <a href="index.html" class="back-link">← Повернутися до карти</a>
-</div>
+    <script type="module">
+        import { supabase } from "./js/config.js";
 
-<script type="module">
-    // Імпортуємо клієнт (якщо ви використовуєте ES модулі, інакше використовуйте вікно)
-   import { supabase } from "./js/config.js"; // Просто імпортуємо готову "розетку"
-   
-    async function handleLogin() {
-        const name = document.getElementById('name').value.trim();
-        const key = document.getElementById('password').value.trim();
-        const errorDiv = document.getElementById('error');
+        // Основна функція авторизації
+        async function handleLogin() {
+            const nameInput = document.getElementById('name');
+            const passwordInput = document.getElementById('password');
+            const errorDiv = document.getElementById('error');
 
-        if (!name || !key) {
-            alert("Заповніть усі поля");
-            return;
-        }
+            if (!nameInput || !passwordInput || !errorDiv) return;
 
-        try {
-            // Шукаємо користувача в таблиці publishers
-            const { data, error } = await supabase
-                .from('publishers')
-                .select('id, name, role, secret_key')
-                .eq('name', name)
-                .eq('secret_key', key)
-                .single();
-
-            if (error || !data) {
-                errorDiv.style.display = 'block';
+            // 🛑 ДЕБАГ-ПЕРЕВІРКА №1: Чи взагалі існує підключення до Supabase?
+            if (typeof supabase === 'undefined' || !supabase) {
+                console.error("КРИТИЧНА ПОМИЛКА: Об'єкт 'supabase' не ініціалізований або імпортується невірно з config.js!");
+                alert("Помилка конфігурації: клієнт бази даних не знайдений.");
                 return;
             }
 
-            // Якщо успішно — зберігаємо дані в пам'ять браузера (localStorage)
-            localStorage.setItem('userId', data.id);
-            localStorage.setItem('userName', data.name);
-            localStorage.setItem('userRole', data.role);
-            localStorage.setItem('userKey', data.secret_key);
+            const name = nameInput.value.trim();
+            const key = passwordInput.value.trim();
 
-            // Перенаправляємо в кабінет або на головну карту з ключем
-            window.location.href = `index.html?key=${data.secret_key}`;
+            errorDiv.style.display = 'none';
 
-        } catch (err) {
-            console.error(err);
-            alert("Сталася помилка при вході");
+            if (!name || !key) {
+                alert("Заповніть усі поля");
+                return;
+            }
+
+            try {
+                // Запит до Supabase з ПРАВИЛЬНИМ синтаксисом передачі заголовків для RLS
+                const { data, error } = await supabase
+                    .from('publishers', { headers: { 'x-publisher-key': key } })
+                    .select('id, name, role, secret_key')
+                    .eq('name', name)
+                    .eq('secret_key', key)
+                    .maybeSingle();
+
+                if (error || !data) {
+                    console.warn("Авторизація відхилена базою даних:", error);
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+
+                console.log("Отримані дані користувача:", data);
+
+                // Запис у localStorage
+                localStorage.setItem('userId', data.id);
+                localStorage.setItem('userName', data.name);
+                localStorage.setItem('userRole', data.role);
+                localStorage.setItem('userKey', data.secret_key);
+
+                // Перенаправлення на карту
+                window.location.href = `index.html?key=${encodeURIComponent(data.secret_key)}`;
+
+            } catch (err) {
+                console.error("Критична помилка виконання скрипта всередині try-catch:", err.message, err.stack);
+                alert(`Сталася технічна помилка: ${err.message}`);
+            }
         }
-    }
 
-    // Дозволяємо вхід натисканням Enter
-    document.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleLogin();
-    });
+        // Універсальна ініціалізація подій
+        function initEvents() {
+            const passwordInput = document.getElementById('password');
+            const nameInput = document.getElementById('name');
+            const toggleBtn = document.getElementById('togglePassword');
+            const submitBtn = document.getElementById('submitLogin');
 
-    // Робимо функцію доступною для кнопки
-    window.handleLogin = handleLogin;
+            if (submitBtn) {
+                submitBtn.removeEventListener('click', handleLogin);
+                submitBtn.addEventListener('click', handleLogin);
+            }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const passwordInput = document.getElementById('password');
-        const toggleBtn = document.getElementById('togglePassword');
+            // Використовуємо keydown замість keypress для повної кросбраузерності
+            if (nameInput) {
+                nameInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') handleLogin();
+                });
+            }
+            if (passwordInput) {
+                passwordInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') handleLogin();
+                });
+            }
 
-        if (toggleBtn && passwordInput) {
-            toggleBtn.addEventListener('click', () => {
-                // Перевіряємо поточний тип
-                const isPassword = passwordInput.getAttribute('type') === 'password';
-                
-                // Змінюємо тип
-                passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
-                
-                // Змінюємо іконку (Око -> Перекреслене око або замок)
-                toggleBtn.textContent = isPassword ? '👁️' : '🔒';
-            });
+            if (toggleBtn && passwordInput) {
+                toggleBtn.addEventListener('click', () => {
+                    const isPassword = passwordInput.getAttribute('type') === 'password';
+                    passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+                    toggleBtn.textContent = isPassword ? '👁️' : '🔒';
+                });
+            }
         }
-    });
-</script>
+
+        // Запуск ініціалізації залежно від готовності DOM-дерева
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initEvents);
+        } else {
+            initEvents();
+        }
+    </script>
 
 </body>
+
 </html>

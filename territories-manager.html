@@ -66,7 +66,7 @@
 
         .on-hands-card .card-info {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             gap: 0.75rem;
             margin-bottom: 1rem;
         }
@@ -583,6 +583,15 @@
 
         .text-center {
             text-align: center;
+        }
+
+        .export-import-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            margin-top: 1rem;
         }
 
         /* Візуальний роздільник для дат */
@@ -1709,8 +1718,21 @@
         <!-- ТАБ: ЕКСПОРТ ТА ІМПОРТ -->
         <div id="tab-export-import" class="tab-content hidden">
             <h1 class="tab-title">💾 Експорт та Імпорт</h1>
-            <div class="content-placeholder">
-                💾 Розділ буде заповнено згодом...
+            <div class="export-import-section">
+                <h2 class="section-title-lg">📊 Експорт звіту S-13</h2>
+                <p class="summary-text">
+                    Експорт звіту про опрацювання територій за службовий рік. 
+                    Звіт включає дані про всі дільниці (місто та села) з історією опрацювання, 
+                    включаючи інформацію про кампанії (конгрес, спец. кампанія, спомин).
+                </p>
+                <div class="filter-actions">
+                    <button onclick="exportS13FullPDF()" class="btn-primary">
+                        📄 Експорт в PDF
+                    </button>
+                    <button onclick="exportS13Excel()" class="btn-primary">
+                        📊 Експорт в Excel
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -4389,22 +4411,9 @@
                     <td>${result.territory.category}</td>
                     <td>${result.count}</td>
                     <td>${result.history.join(', ') || '-'}</td>
-                    <td>
-                        <button onclick="viewTerritoryDetails('${result.territory.id}')" class="btn-primary">
-                            Деталі
-                        </button>
-                    </td>
+                    <td><a href="parcel-details.html?id=${result.territory.id}&from=admin">Відкрити</a></td>
                 </tr>
             `).join('');
-        }
-
-        // Функція для переходу до картки території
-        window.viewTerritoryDetails = function (territoryId) {
-            // Зберігаємо ID території в localStorage
-            localStorage.setItem('selectedTerritoryId', territoryId);
-
-            // Переходимо на сторінку територій
-            window.location.href = 'territories.html';
         }
 
         // Функція для скорочення назв кампаній
@@ -4816,6 +4825,7 @@
         });
     </script>
 
+    <script src="js/s13-export.js"></script>
     <script src="js/dev-tools.js"></script>
 </body>
 
