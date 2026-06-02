@@ -310,7 +310,7 @@ async function exportS13Excel() {
             fitToPage: true,
             fitToWidth: 1,
             fitToHeight: 0,
-            margins: { left: 0.5, right: 0.5, top: 0.55, bottom: 0.5, header: 0.3, footer: 0.3 },
+            margins: { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
             horizontalCentered: true,
             printTitlesRow: '5:6'
         };
