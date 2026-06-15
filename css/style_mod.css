@@ -9,8 +9,6 @@
     border: none;
 }
 
-
-
 .leaflet-control-layers.leaflet-control {
     margin-bottom: 10px;
 }
@@ -40,8 +38,6 @@
     border: 1px solid #1b0ff9;
     font-weight: bold;
 }
-
-
 
 .m3-share-btn {
 
@@ -85,9 +81,6 @@
         1px 1px 0 #E8DEF8;
 }
 
-
-
-
 /* ПОВНА АДАПТАЦІЯ ПІД МОБІЛЬНІ ПРИСТРОЇ */
 @media screen and (max-width: 768px) {
 
@@ -97,8 +90,7 @@
     .modal,
     .logic-modal,
     .modal-container {
-        width: 92% !important;
-        max-width: 340px !important;
+        width: 266px !important;
         padding: 15px !important;
         top: 50% !important;
         left: 50% !important;

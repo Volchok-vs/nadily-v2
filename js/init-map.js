@@ -153,7 +153,7 @@ function renderParcelPopup(layer, p, isAdmin, isAuth, currentUserId) {
                         `<p style="font-size:11px; color:orange; text-align:center;">Увійдіть, щоб взяти</p>`)
                 ) : 
                 ((isAdmin || (isAuth && String(p.taken_by_id) === String(currentUserId))) ? 
-                    `<button class="popup-btn" style="border:1px solid #dc3545; color:#dc3545;" onclick="window.returnParcel(${p.id})">🔙 Здати дільницю</button>` : 
+                    `<button class="popup-btn" style="border:1px solid #a4696f; color:#dc3545;" onclick="window.returnParcel(${p.id})">🔙 Здати дільницю</button>` : 
                     `<div style="text-align:center; font-size:11px; color:#666;">Взяв: ${p.taken_by || 'Невідомо'}</div>`)
             }
         </div>`;

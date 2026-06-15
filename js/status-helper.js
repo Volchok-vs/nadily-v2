@@ -41,11 +41,11 @@ export function getDurationText(startDate, endDate = null) {
 
     const totalMonths = (years * 12) + months;
 
-    if (totalMonths === 0 && days === 0) return "(0 дн.)";
-    if (totalMonths === 0) return `(${days} дн.)`;
-    if (days === 0) return `(${totalMonths} міс.)`;
+    if (totalMonths === 0 && days === 0) return "0 дн.";
+    if (totalMonths === 0) return `${days} дн.`;
+    if (days === 0) return `${totalMonths} міс.`;
     
-    return `(${totalMonths} міс. ${days} дн.)`;
+    return `${totalMonths} міс. ${days} дн.`;
 }
 
 /**

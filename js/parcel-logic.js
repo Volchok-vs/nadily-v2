@@ -1,3 +1,131 @@
+// Універсальна функція для показу кастомного модального вікна підтвердження
+// Підтримує два формати виклику:
+// 1. showCustomConfirm(title, message, onConfirm, icon, yesBtnBg, yesBtnText)
+// 2. showCustomConfirm({ title, text, confirmText, cancelText }) - повертає Promise
+export function showCustomConfirm(...args) {
+    console.log('🔍 showCustomConfirm викликана з аргументами:', args);
+    const modal = document.getElementById('customConfirmModal');
+    if (!modal) {
+        console.error('❌ Модальне вікно customConfirmModal не знайдено');
+        return;
+    }
+    console.log('✅ Модальне вікно customConfirmModal знайдено');
+    console.log('🔍 Поточний display модального вікна:', window.getComputedStyle(modal).display);
+
+    // Визначаємо формат виклику
+    const isObjectFormat = args.length === 1 && typeof args[0] === 'object';
+    
+    let title, message, onConfirm, icon, yesBtnBg, yesBtnText, cancelText;
+    
+    if (isObjectFormat) {
+        // Формат об'єкта (для profile.html)
+        const options = args[0];
+        title = options.title;
+        message = options.text;
+        yesBtnText = options.confirmText || "Так";
+        cancelText = options.cancelText || "Скасувати";
+        icon = "⚠️";
+        yesBtnBg = "#dc3545";
+
+        // Повертаємо Promise для підтримки async/await в profile.html
+        return new Promise((resolve) => {
+            const btnYes = document.getElementById('confirmBtnYes');
+            const btnNo = document.getElementById('confirmBtnNo');
+
+            if (btnYes) btnYes.textContent = yesBtnText;
+            if (btnNo) btnNo.textContent = cancelText;
+
+            modal.style.display = 'flex';
+            console.log('✅ Модальне вікно показано (display: flex) - об\'єктний формат');
+
+            const cleanup = (result) => {
+                modal.style.display = 'none';
+                console.log('✅ Модальне вікно приховано (display: none) - об\'єктний формат');
+                if (btnYes) btnYes.onclick = null;
+                if (btnNo) btnNo.onclick = null;
+                resolve(result);
+            };
+
+            if (btnYes) btnYes.onclick = () => cleanup(true);
+            if (btnNo) btnNo.onclick = () => cleanup(false);
+        });
+    } else {
+        // Формат окремих параметрів (для index.html та parcel-details.html)
+        [title, message, onConfirm, icon, yesBtnBg, yesBtnText] = args;
+        icon = icon || "⚠️";
+        yesBtnBg = yesBtnBg || "#dc3545";
+        yesBtnText = yesBtnText || "Так, виконати";
+        
+        const titleEl = document.getElementById('confirmModalTitle');
+        // Підтримка обох варіантів: confirmModalMessage (index, parcel-details) та confirmModalText (profile)
+        const messageEl = document.getElementById('confirmModalMessage') || document.getElementById('confirmModalText');
+        const iconEl = document.getElementById('confirmModalIcon');
+        const btnYes = document.getElementById('confirmBtnYes');
+        const btnNo = document.getElementById('confirmBtnNo');
+
+        if (titleEl) titleEl.textContent = title;
+        if (messageEl) messageEl.textContent = message;
+        if (iconEl) iconEl.textContent = icon;
+
+        if (btnYes) {
+            btnYes.textContent = yesBtnText;
+            btnYes.style.backgroundColor = yesBtnBg;
+        }
+
+        // Показуємо модальне вікно через display: flex
+        modal.style.display = 'flex';
+        console.log('✅ Модальне вікно показано (display: flex)');
+
+        // Клонування кнопок для очищення старих подій
+        const newBtnYes = btnYes ? btnYes.cloneNode(true) : null;
+        const newBtnNo = btnNo ? btnNo.cloneNode(true) : null;
+
+        if (btnYes && newBtnYes) btnYes.parentNode.replaceChild(newBtnYes, btnYes);
+        if (btnNo && newBtnNo) btnNo.parentNode.replaceChild(newBtnNo, btnNo);
+
+        if (newBtnYes) {
+            newBtnYes.addEventListener('click', async () => {
+                modal.style.display = 'none';
+                console.log('✅ Модальне вікно приховано (display: none)');
+                if (onConfirm) await onConfirm();
+            });
+        }
+
+        if (newBtnNo) {
+            newBtnNo.addEventListener('click', () => {
+                modal.style.display = 'none';
+                console.log('✅ Модальне вікно приховано (display: none)');
+            });
+        }
+    }
+}
+
+// Універсальна функція для здачі дільниці з кастомним модальним вікном
+export function triggerReturnParcelWithCustomModal(id, name, supabase, callback) {
+    console.log('🔍 triggerReturnParcelWithCustomModal викликана з параметрами:', { id, name, hasSupabase: !!supabase, hasCallback: !!callback });
+    showCustomConfirm(
+        "Здати дільницю",
+        `Ви впевнені, що хочете здати дільницю №${name}? Вона перейде в статус вільної, а до журналу запишеться дата здачі.`,
+        async () => {
+            console.log('✅ Користувач підтвердив здачу дільниці');
+            // Тимчасово підміняємо стандартні alert та confirm, щоб придушити нативні вікна всередині модуля
+            const originalConfirm = window.confirm;
+            const originalAlert = window.alert;
+            window.confirm = () => true;
+            window.alert = () => {}; // глушимо нативний alert
+
+            returnParcel(id, name, supabase, async () => {
+                window.confirm = originalConfirm;
+                window.alert = originalAlert;
+                if (callback) await callback();
+            });
+        },
+        "📩",
+        "#28a745",
+        "Так, здати"
+    );
+}
+
 // Функція фокусування на дільниці за параметром в URL
 export function handleUrlParams() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -268,6 +396,9 @@ function showReturnParcelLogs() {
 }
 
 export async function returnParcel(id, name, supabase, callback) {
+    console.log('🔍 returnParcel викликана з параметрами:', { id, name, hasSupabase: !!supabase, hasCallback: !!callback });
+    // Використовуємо стандартний confirm для зворотної сумісності
+    // (triggerReturnParcelWithCustomModal викликається ззовні для кастомного модального вікна)
     if (!confirm(`Здати дільницю №${name}?`)) return;
 
     // Масив для збереження логів

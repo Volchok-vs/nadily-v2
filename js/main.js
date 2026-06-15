@@ -1,11 +1,103 @@
 // main.js
 
-// 2. Спільні змінні
-export const userRole = localStorage.getItem('userRole');
-export const currentUserId = localStorage.getItem('userId');
-export const userFullName = localStorage.getItem('userFullName');
-export const isAdmin = (userRole === 'admin' || userRole === 'super_admin');
 
+// Безпечна ініціалізація глобальних змінних з fallback значеннями
+// Це дозволяє синхронним перевіркам працювати до завершення асинхронного виклику до бази
+window.userRole = localStorage.getItem('userRole') || 'user';
+window.currentUserId = localStorage.getItem('userId');
+window.userFullName = localStorage.getItem('userName');
+window.isAdmin = (window.userRole === 'admin' || window.userRole === 'super-admin' || window.userRole === 'super_admin');
+window.isSuperAdmin = (window.userRole === 'super-admin' || window.userRole === 'super_admin');
+
+// Експортуємо для сумісності з існуючим кодом
+export const userRole = window.userRole;
+export const currentUserId = window.currentUserId;
+export const userFullName = window.userFullName;
+export const isAdmin = window.isAdmin;
+export const isSuperAdmin = window.isSuperAdmin;
+
+console.log(`[Main] Права завантажено глобально. Роль: ${window.userRole}, Admin: ${window.isAdmin}, SuperAdmin: ${window.isSuperAdmin}`);
+
+// Централізована функція ініціалізації сесії користувача з перевіркою ролі з бази даних
+window.initUserSession = async () => {
+    console.log("🔐 [Session] Починаємо ініціалізацію сесії користувача...");
+
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+        console.error("❌ [Session] userId відсутній в localStorage!");
+        return { role: 'user', isAdmin: false, isSuperAdmin: false };
+    }
+
+    try {
+        // Отримуємо роль з бази даних
+        const { data, error } = await supabase
+            .from('publishers')
+            .select('role, name, last_name')
+            .eq('id', userId)
+            .single();
+
+        if (error) {
+            console.error("❌ [Session] Помилка отримання ролі з бази:", error);
+            // Використовуємо кешовані значення як fallback
+            const cachedRole = localStorage.getItem('userRole') || 'user';
+            const cachedIsAdmin = (cachedRole === 'admin' || cachedRole === 'super-admin' || cachedRole === 'super_admin');
+            const cachedIsSuperAdmin = (cachedRole === 'super-admin' || cachedRole === 'super_admin');
+
+            window.userRole = cachedRole;
+            window.isAdmin = cachedIsAdmin;
+            window.isSuperAdmin = cachedIsSuperAdmin;
+
+            return { role: cachedRole, isAdmin: cachedIsAdmin, isSuperAdmin: cachedIsSuperAdmin };
+        }
+
+        if (!data) {
+            console.error("❌ [Session] Користувача не знайдено в базі за userId:", userId);
+            return { role: 'user', isAdmin: false, isSuperAdmin: false };
+        }
+
+        // Оновлюємо глобальні змінні на основі даних з бази
+        const role = data.role || 'user';
+        const isAdmin = (role === 'admin' || role === 'super-admin' || role === 'super_admin');
+        const isSuperAdmin = (role === 'super-admin' || role === 'super_admin');
+
+        window.userRole = role;
+        window.isAdmin = isAdmin;
+        window.isSuperAdmin = isSuperAdmin;
+        window.userFullName = `${data.last_name || ''} ${data.name || ''}`.trim();
+
+        // Кешуємо значення в localStorage для швидкого доступу при наступних завантаженнях
+        localStorage.setItem('userRole', role);
+        localStorage.setItem('userName', window.userFullName);
+
+        console.log("✅ [Session] Сесія успішно ініціалізована:", { role, isAdmin, isSuperAdmin });
+
+        return { role, isAdmin, isSuperAdmin };
+
+    } catch (err) {
+        console.error("❌ [Session] Критична помилка при ініціалізації сесії:", err);
+        // Використовуємо кешовані значення як fallback
+        const cachedRole = localStorage.getItem('userRole') || 'user';
+        const cachedIsAdmin = (cachedRole === 'admin' || cachedRole === 'super-admin' || cachedRole === 'super_admin');
+        const cachedIsSuperAdmin = (cachedRole === 'super-admin' || cachedRole === 'super_admin');
+
+        window.userRole = cachedRole;
+        window.isAdmin = cachedIsAdmin;
+        window.isSuperAdmin = cachedIsSuperAdmin;
+
+        return { role: cachedRole, isAdmin: cachedIsAdmin, isSuperAdmin: cachedIsSuperAdmin };
+    }
+};
+
+// Допоміжні функції для отримання ролі з fallback
+window.getUserRole = () => window.userRole || localStorage.getItem('userRole') || 'user';
+window.checkIsAdmin = () => {
+    const role = window.getUserRole();
+    return role === 'admin' || role === 'super-admin' || role === 'super_admin';
+};
+window.checkIsSuperAdmin = () => {
+    const role = window.getUserRole();
+    return role === 'super-admin' || role === 'super_admin';
+};
 
 // Функція застосування фільтрів
 window.applyFilters = () => {
@@ -72,7 +164,7 @@ document.addEventListener('change', (e) => {
 // ... ваші експорти та логіка фільтрів ...
 
 export function initToolControl(mapInstance) {
-    if (!mapInstance) return;
+    if (!mapInstance || typeof mapInstance.addControl !== 'function') return;
 
     const ToolControl = L.Control.extend({
         options: { position: 'topleft' },
@@ -83,7 +175,7 @@ export function initToolControl(mapInstance) {
             L.DomEvent.disableClickPropagation(container);
 
             const createBtn = (html, title, onClickAction) => {
-                const btn = L.DomUtil.create('button', '', container);
+                const btn = L.DomUtil.create('button', 'leaflet-custom-btn', container);
                 btn.innerHTML = html;
                 btn.title = title;
                 btn.style.cssText = 'cursor:pointer; border:none; display:block; border-bottom:1px solid #ccc;';
@@ -117,16 +209,6 @@ export function initToolControl(mapInstance) {
     mapInstance.addControl(new ToolControl());
 }
 
-// Автозапуск контролів
-const checkMap = setInterval(() => {
-    if (window.map) {
-        initToolControl(window.map);
-        clearInterval(checkMap);
-    }
-}, 100);
-
-
-
 // Функція для оновлення цифр у меню фільтрів
 window.updateFilterCounters = () => {
     if (!window.allParcelLayers) return;
@@ -147,7 +229,7 @@ window.updateFilterCounters = () => {
         // Рахуємо "Вільні" (якщо статус не "taken")
         if (data.status !== 'taken') {
             counts.free++;
-        } 
+        }
         // Рахуємо "На руках"
         else {
             counts.taken++;

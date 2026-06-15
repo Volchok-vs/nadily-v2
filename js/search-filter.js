@@ -107,18 +107,6 @@ function attachEvents(menu, map, layers) {
     const apply = () => {
         const searchVal = searchInput.value.trim().toLowerCase();
 
-        // Логування пошуку
-        if (searchVal !== "") {
-            import('./analytics.js').then(({ logSearch }) => {
-                const found = layers.some(item => {
-                    const p = item.data || {};
-                    const pName = (p.name || "").toString().toLowerCase();
-                    return pName === searchVal;
-                });
-                logSearch(searchVal, found);
-            });
-        }
-
         // Перевіряємо, який режим активний
         const isVillageMode = currentFilterMode === 'village';
 

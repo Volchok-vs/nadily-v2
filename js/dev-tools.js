@@ -1,6 +1,6 @@
 // js/dev-tools.js
 
-(function() {
+(function () {
     window.addEventListener('load', () => {
         setTimeout(() => {
             // 1. ЧИТАННЯ НАЛАШТУВАНЬ
@@ -12,7 +12,7 @@
                 if (nav) {
                     const timeMs = Math.round(nav.duration);
                     const timeSec = (timeMs / 1000).toFixed(2);
-                    
+
                     console.log(`%c ⏱ Швидкість завантаження: ${timeMs}ms `, 'background: #222; color: #00ff00; font-weight: bold;');
                     renderLoadTimer(timeMs, timeSec);
                 }
@@ -48,10 +48,10 @@
                         masterMode: masterToggle.checked,
                         showTimer: timerToggle.checked
                     };
-                    
+
                     // Зберігаємо основний конфіг
                     localStorage.setItem('app_dev_configs', JSON.stringify(newConfig));
-                    
+
                     // Зберігаємо налаштування виходу (щоб index.html його бачив)
                     if (logoutToggle) {
                         localStorage.setItem('showQuickLogout', logoutToggle.checked);
@@ -173,4 +173,28 @@
 
     // Експортуємо функцію для використання в інших файлах
     window.initZoomWidget = initZoomWidget;
+
+    // Глобальна функція швидкого виходу для головної карти
+    window.quickLogout = async () => {
+        try {
+            // 1. Очищаємо локальні дані авторизації та сесії
+            localStorage.removeItem('sb-access-token'); // або просто localStorage.clear(), якщо потрібно скинути все
+            localStorage.removeItem('sb-refresh-token');
+            sessionStorage.clear();
+
+            // 2. Якщо підключено Supabase Auth, викликаємо офіційний signOut
+            if (typeof supabase !== 'undefined' && supabase.auth) {
+                await supabase.auth.signOut();
+            }
+
+            console.log("Швидкий вихід виконано успішно.");
+
+            // 3. Перезавантажуємо сторінку, щоб скинути стан інтерфейсу та знову показати вікно входу
+            window.location.reload();
+        } catch (error) {
+            console.error("Помилка під час швидкого виходу:", error);
+            // Альтернативний варіант, якщо Supabase видав помилку мережі, все одно перезавантажуємо сторінку
+            window.location.reload();
+        }
+    };
 })();

@@ -533,9 +533,9 @@
                             <th>Здано</th>
                             <th>Час</th>
                             <script>
-                                if (localStorage.getItem('userRole') === 'admin' || localStorage.getItem('userRole') === 'super_admin') {
-                                    document.write('<th id="adminGear" style="cursor: pointer; user-select: none;">⚙️</th>');
-                                }
+                               if (localStorage.getItem('userRole') === 'admin' || localStorage.getItem('userRole') === 'super_admin' || localStorage.getItem('userRole') === 'super-admin') {
+    document.write('<th id="adminGear" style="cursor: pointer; user-select: none;">⚙️</th>');
+}
                             </script>
                         </tr>
                     </thead>
@@ -546,14 +546,14 @@
     </div>
 
     <!-- Модалка кастомного Confirm -->
-    <div id="customConfirmModal" class="hidden">
-        <div class="modal-content" style="max-width: 400px; text-align: center; padding: 30px 20px;">
+    <div id="customConfirmModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 9999;">
+        <div class="modal-content" style="max-width: 400px; text-align: center; padding: 30px 20px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);">
             <div id="confirmModalIcon" style="font-size: 40px; margin-bottom: 15px;">⚠️</div>
             <h3 id="confirmModalTitle" style="margin: 0 0 15px 0; font-size: 18px; color: #333;">Підтвердження дії</h3>
             <p id="confirmModalMessage" style="margin: 0 0 25px 0; font-size: 14px; color: #666; line-height: 1.5;"></p>
             <div style="display: flex; gap: 12px;">
-                <button id="confirmBtnYes" style="flex: 1; background: #dc3545; color: white; padding: 12px; font-weight: bold; border-radius: 8px;">Так, виконати</button>
-                <button id="confirmBtnNo" style="flex: 1; background: #6c757d; color: white; padding: 12px; font-weight: bold; border-radius: 8px;">Скасувати</button>
+                <button id="confirmBtnYes" style="flex: 1; background: #dc3545; color: white; padding: 12px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer;">Так, виконати</button>
+                <button id="confirmBtnNo" style="flex: 1; background: #6c757d; color: white; padding: 12px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer;">Скасувати</button>
             </div>
         </div>
     </div>
@@ -613,7 +613,7 @@
                 style="display:none; background:#fff3cd; color:#856404; padding:10px; border-radius:6px; margin-bottom:15px; font-size:14px;">
             </div>
 
-            <div id="assign-date-edit-container" style="display:none; margin-bottom:15px;">
+            <div id="assign-date-edit-container" style="display:none;">
                 <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
                     <input type="checkbox" id="assign-enable-date-edit">
                     <span>Змінити дату отримання:</span>
@@ -645,7 +645,7 @@
         import { supabase } from "./js/config.js";
         import { isAdmin, currentUserId } from "./js/main.js";
         import { formatStatusHTML, getDurationText } from "./js/status-helper.js";
-        import { returnParcel } from './js/parcel-logic.js';
+        import { returnParcel, showCustomConfirm, triggerReturnParcelWithCustomModal } from './js/parcel-logic.js';
 
         window.getCurrentDate = () => new Date();
 
@@ -657,43 +657,81 @@
         let allComments = [];
 
         async function init() {
-            if (!parcelId) return (window.location.href = 'index.html');
-
-            const { data: parcel } = await supabase.from('parcels').select('status, taken_by_id').eq('id', parcelId).single();
-            if (parcel && parcel.status === 'free' && !isAdmin) {
-                showToast("Доступ заборонено: тільки адміни можуть переглядати вільні картки", true);
-                setTimeout(() => { window.location.href = 'profile.html'; }, 1500);
+            const urlParams = new URLSearchParams(window.location.search);
+            const parcelId = urlParams.get('id');
+            
+            console.log("🔍 [Деталі] Зчитано ID дільниці з URL:", parcelId);
+            
+            if (!parcelId) {
+                console.error("❌ [Деталі] ID дільниці відсутній в URL сторінки!");
                 return;
             }
-
-            if (urlParams.get('nav') === 'true' || urlParams.get('from')) {
-                document.getElementById('backBtn')?.classList.add('hidden');
-                document.getElementById('toMapBtn')?.classList.remove('hidden');
-                document.getElementById('toProfileBtn')?.classList.remove('hidden');
-            }
-
-            if (isAdmin) {
-                const adminCard = document.getElementById('adminCard');
-                if (adminCard) adminCard.style.display = 'block';
-            }
-
-            const addManualBtn = document.querySelector('button[onclick="showManualLogModal()"]');
-            if (addManualBtn && !isAdmin) {
-                addManualBtn.style.display = 'none';
-            }
-
-            await loadParcelInfo();
-            await loadHistory();
-            await loadComments();
-
-            document.addEventListener('change', (e) => {
-                if (e.target.id === 'editSectorCheck') {
-                    document.getElementById('sectorTypeSelect').disabled = !e.target.checked;
+            
+            try {
+                console.log(" [Деталі] Запит до таблиці 'parcels' за id =", Number(parcelId));
+                
+                // Використовуємо звичайний масив замість .single(), щоб уникнути помилки 406
+                const { data, error } = await supabase
+                    .from('parcels')
+                    .select('*')
+                    .eq('id', Number(parcelId));
+                    
+                if (error) {
+                    console.error("❌ [Деталі] Помилка Supabase при отриманні дільниці:", error);
+                    alert("Помилка завантаження даних: " + error.message);
+                    return;
                 }
-                if (e.target.id === 'editDateCheck') {
-                    document.getElementById('lastProcessedDate').disabled = !e.target.checked;
+                
+                console.log("✅ [Деталі] Результат запиту (масив):", data);
+                
+                if (!data || data.length === 0) {
+                    console.error("⚠️ [Деталі] Дільницю з системним id " + parcelId + " не знайдено в базі або RLS блокує її читання.");
+                    alert("Дільницю з ID " + parcelId + " не знайдено.");
+                    return;
                 }
-            });
+                
+                // Беремо перший елемент масиву
+                const parcelData = data[0];
+                console.log("📦 [Деталі] Дані об'єкта дільниці для відображення:", parcelData);
+                
+                // Перевіряємо доступ для вільних дільниць
+                if (parcelData && parcelData.status === 'free' && !isAdmin) {
+                    showToast("Доступ заборонено: тільки адміни можуть переглядати вільні картки", true);
+                    setTimeout(() => { window.location.href = 'profile.html'; }, 1500);
+                    return;
+                }
+
+                if (urlParams.get('nav') === 'true' || urlParams.get('from')) {
+                    document.getElementById('backBtn')?.classList.add('hidden');
+                    document.getElementById('toMapBtn')?.classList.remove('hidden');
+                    document.getElementById('toProfileBtn')?.classList.remove('hidden');
+                }
+
+                if (isAdmin) {
+                    const adminCard = document.getElementById('adminCard');
+                    if (adminCard) adminCard.style.display = 'block';
+                }
+
+                const addManualBtn = document.querySelector('button[onclick="showManualLogModal()"]');
+                if (addManualBtn && !isAdmin) {
+                    addManualBtn.style.display = 'none';
+                }
+
+                await loadParcelInfo();
+                await loadHistory();
+                await loadComments();
+
+                document.addEventListener('change', (e) => {
+                    if (e.target.id === 'editSectorCheck') {
+                        document.getElementById('sectorTypeSelect').disabled = !e.target.checked;
+                    }
+                    if (e.target.id === 'editDateCheck') {
+                        document.getElementById('lastProcessedDate').disabled = !e.target.checked;
+                    }
+                });
+            } catch (err) {
+                console.error("❌ [Деталі] Критична помилка всередині init():", err);
+            }
         }
 
         window.saveGeneralChanges = async () => {
@@ -799,7 +837,7 @@
 
             const currentUserId = localStorage.getItem('userId');
             const userRole = localStorage.getItem('userRole');
-            const isAdminLocal = (userRole === 'admin' || userRole === 'super_admin');
+            const isAdminLocal = (userRole === 'admin' || userRole === 'super_admin' || userRole === 'super-admin');
 
             let query = supabase.from('parcels').select('id, name');
             if (!isAdminLocal) {
@@ -1078,7 +1116,11 @@
 
             if (p.status === 'taken' && returnBtn && isAdmin) {
                 returnBtn.style.display = 'inline-block';
-                returnBtn.onclick = () => window.triggerReturnParcelWithCustomModal(p.id, p.name);
+                returnBtn.onclick = () => window.triggerReturnParcelWithCustomModal(p.id, p.name, supabase, async () => {
+                    await loadParcelInfo();
+                    await loadHistory();
+                    showToast(`Дільницю №${p.name} успішно здано!`);
+                });
             } else if (returnBtn) {
                 returnBtn.style.display = 'none';
             }
@@ -1106,14 +1148,15 @@
 
         async function loadHistory() {
             const historyBody = document.getElementById('historyBody');
-            const userRole = localStorage.getItem('userRole');
-            const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+            // Читаємо роль безпосередньо з localStorage для уникнення race conditions
+            const savedRole = localStorage.getItem('userRole') || '';
+            const isActualAdmin = (savedRole === 'admin' || savedRole === 'super-admin' || savedRole === 'super_admin' || userRole === 'super-admin');
             const currentUserId = localStorage.getItem('userId');
 
             const { data: logs, error } = await supabase
                 .from('territory_logs')
                 .select('*')
-                .eq('parcel_id', parcelId)
+                .eq('parcel_id', Number(parcelId))
                 .order('returned_at', { ascending: false });
 
             if (error) {
@@ -1121,25 +1164,31 @@
                 return;
             }
 
-            const filteredLogs = isAdmin
-                ? logs
-                : logs.filter(log => String(log.publisher_id) === String(currentUserId));
-
             historyBody.innerHTML = '';
 
-            if (filteredLogs.length === 0) {
-                historyBody.innerHTML = `<tr><td colspan="${isAdmin ? 5 : 4}" style="text-align:center; padding:20px; color:gray;">Історія порожня або записів не знайдено</td></tr>`;
+            if (!logs || logs.length === 0) {
+                historyBody.innerHTML = `<tr><td colspan="${isActualAdmin ? 5 : 4}" style="text-align:center; padding:20px; color:gray;">Історія порожня або записів не знайдено</td></tr>`;
                 return;
             }
 
-            filteredLogs.forEach(log => {
-                const row = document.createElement('tr');
-                const dateIn = log.taken_at ? new Date(log.taken_at).toLocaleDateString('uk-UA') : '--';
-                const dateOut = log.returned_at ? new Date(log.returned_at).toLocaleDateString('uk-UA') : '--';
+            // Функція для форматування дати
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '-';
+                return new Date(dateStr).toLocaleDateString('uk-UA');
+            };
+
+            logs.forEach(log => {
+                // Фільтр безпеки: пропускаємо тільки якщо адмін або власний запис
+                if (!isActualAdmin && String(log.publisher_id) !== String(currentUserId)) {
+                    return;
+                }
+
+                const dateIn = formatDate(log.taken_at);
+                const dateOut = formatDate(log.returned_at);
 
                 let rowContent = `
                     <td>
-                        ${isAdmin && selectionMode ? `<input type="checkbox" class="log-checkbox" value="${log.id}" onchange="updateBulkCount()">` : ''}
+                        ${isActualAdmin && selectionMode ? `<input type="checkbox" class="log-checkbox" value="${log.id}" onchange="updateBulkCount()">` : ''}
                         <b>${log.publisher_name || '--'}</b>
                     </td>
                     <td>${dateIn}</td>
@@ -1147,11 +1196,11 @@
                     <td><span class="badge">${log.duration_text || '-'}</span></td>
                 `;
 
-                if (isAdmin) {
+                if (isActualAdmin) {
                     if (editMode) {
                         rowContent += `
                             <td style="text-align: center;">
-                                <button onclick="showManualLogModal(${log.id})" 
+                                <button onclick="showManualLogModal(${log.id})"
                                         style="background:none; color:#007bff; width:auto; padding:0; border:none; cursor:pointer; font-size:16px;"
                                         title="Редагувати запис">
                                     ✏️
@@ -1161,7 +1210,7 @@
                     } else {
                         rowContent += `
                             <td style="text-align: center;">
-                                <button onclick="deleteLogRecord(${log.id}, '${log.returned_at}')" 
+                                <button onclick="deleteLogRecord(${log.id}, '${log.returned_at}')"
                                         style="background:none; color:red; width:auto; padding:0; border:none; cursor:pointer; font-size:16px;"
                                         title="Видалити запис">
                                     🗑️
@@ -1171,11 +1220,10 @@
                     }
                 }
 
-                row.innerHTML = rowContent;
-                historyBody.appendChild(row);
+                historyBody.innerHTML += `<tr>${rowContent}</tr>`;
             });
 
-            if (isAdmin) {
+            if (isActualAdmin) {
                 setTimeout(() => {
                     if (typeof initAdminEasterEgg === "function") {
                         initAdminEasterEgg();
@@ -1266,7 +1314,7 @@
         };
 
         window.closeCommentModal = () => document.getElementById('commentModal').classList.add('hidden');
-        
+
         window.deleteComment = async (id) => {
             window.showCustomConfirm("Видалення коментаря", "Ви впевнені, що хочете видалити цей коментар?", async () => {
                 await supabase.from('parcel_comments').delete().eq('id', id);
@@ -1396,61 +1444,10 @@
 
         window.hideManualLogModal = () => document.getElementById('manualLogModal').classList.add('hidden');
 
-        // Глобальна розширена функція виклику кастомного Confirm модального вікна
-        window.showCustomConfirm = (title, message, onConfirm, icon = "⚠️", yesBtnBg = "#dc3545", yesBtnText = "Так, виконати") => {
-            const modal = document.getElementById('customConfirmModal');
-            document.getElementById('confirmModalTitle').textContent = title;
-            document.getElementById('confirmModalMessage').textContent = message;
-            document.getElementById('confirmModalIcon').textContent = icon;
-            
-            const btnYes = document.getElementById('confirmBtnYes');
-            btnYes.textContent = yesBtnText;
-            btnYes.style.backgroundColor = yesBtnBg;
-
-            modal.classList.remove('hidden');
-
-            const btnNo = document.getElementById('confirmBtnNo');
-
-            const newBtnYes = btnYes.cloneNode(true);
-            const newBtnNo = btnNo.cloneNode(true);
-            btnYes.parentNode.replaceChild(newBtnYes, btnYes);
-            btnNo.parentNode.replaceChild(newBtnNo, btnNo);
-
-            newBtnYes.addEventListener('click', async () => {
-                modal.classList.add('hidden');
-                if (onConfirm) await onConfirm();
-            });
-
-            newBtnNo.addEventListener('click', () => {
-                modal.classList.add('hidden');
-            });
-        };
-
-        // Функція-перехоплювач процесу здачі картки (БЕЗ alert чи confirm!)
-        window.triggerReturnParcelWithCustomModal = (id, name) => {
-            window.showCustomConfirm(
-                "Здати дільницю", 
-                `Ви впевнені, що хочете здати дільницю №${name}? Вона перейде в статус вільної, а до журналу запишеться дата здачі.`, 
-                async () => {
-                    // Тимчасово підміняємо стандартні alert та confirm, щоб придушити нативні вікна всередині модуля
-                    const originalConfirm = window.confirm;
-                    const originalAlert = window.alert;
-                    window.confirm = () => true;
-                    window.alert = () => {}; // глушимо нативний alert
-                    
-                    returnParcel(id, name, supabase, async () => {
-                        window.confirm = originalConfirm; 
-                        window.alert = originalAlert;
-                        await loadParcelInfo();
-                        await loadHistory();
-                        showToast(`Дільницю №${name} успішно здано!`); // Наш красивий кастомний Toast сповіщувач
-                    });
-                },
-                "📩", 
-                "#28a745", 
-                "Так, здати"
-            );
-        };
+        // Експортуємо функції в window для глобального доступу
+        window.showCustomConfirm = showCustomConfirm;
+        window.triggerReturnParcelWithCustomModal = triggerReturnParcelWithCustomModal;
+        console.log('✅ Функції showCustomConfirm та triggerReturnParcelWithCustomModal додані в window');
 
         window.deleteLogRecord = async (id, recordDateStr) => {
             window.showCustomConfirm("Видалення запису", "Ви впевнені, що хочете видалити цей запис з історії?", async () => {
@@ -1498,8 +1495,8 @@
             if (ids.length === 0) return;
 
             window.showCustomConfirm(
-                "Масове видалення", 
-                `Видалити обрані записи (${ids.length} шт.)? Цю дію не можна буде скасувати.`, 
+                "Масове видалення",
+                `Видалити обрані записи (${ids.length} шт.)? Цю дію не можна буде скасувати.`,
                 async () => {
                     const { error } = await supabase.from('territory_logs').delete().in('id', ids);
 
