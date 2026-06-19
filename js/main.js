@@ -29,6 +29,29 @@ window.initUserSession = async () => {
     }
 
     try {
+        // DB Reality Check: Перевіряємо роль користувача в таблиці profiles
+        const { data: dbProfile, error: dbError } = await supabase
+            .from('profiles')
+            .select('id, name, last_name, role')
+            .eq('id', userId)
+            .single();
+
+        console.log("📊 [DATABASE REALITY CHECK] How PostgreSQL actually sees you:");
+        if (dbError) {
+            console.error("❌ Failed to fetch database profile info:", dbError);
+        } else if (dbProfile) {
+            console.log(`- ID in DB: ${dbProfile.id}`);
+            console.log(`- Name in DB: ${dbProfile.name} ${dbProfile.last_name}`);
+            console.log(`- ROLE IN DB TABLE: %c${dbProfile.role}`, "color: yellow; background: black; font-weight: bold; padding: 2px 5px;");
+
+            // Safety sync: If the DB role differs from the token, warn the admin
+            if (dbProfile.role !== 'super-admin' && dbProfile.role !== 'super_admin' && dbProfile.role !== 'admin') {
+                console.warn("⚠️ WARNING: Your frontend token says you are an Admin, but the database profiles table marks you as a regular USER. Database updates (RLS) WILL FAIL!");
+            }
+        } else {
+            console.warn("⚠️ No profile row found in 'profiles' table for this authenticated user ID!");
+        }
+
         // Отримуємо роль з бази даних
         const { data, error } = await supabase
             .from('publishers')
