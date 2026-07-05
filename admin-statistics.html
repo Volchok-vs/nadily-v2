@@ -262,12 +262,9 @@
             .main-content {
                 padding: 20px 15px;
             }
-
-            
         }
 
         @media (max-width: 480px) {
-
             .stats-container {
                 padding: 0px;
             }
@@ -295,7 +292,6 @@
                 justify-content: center;
             }
         }
-
         
         .stat-value {
             font-size: 24px;
@@ -308,8 +304,6 @@
         .campaign-card {
             padding: 12px;
         }
-
-        
 
         .campaign-stat-value {
             font-size: 20px;
@@ -331,8 +325,8 @@
             padding: 8px 12px;
             font-size: 14px;
         }
-        
     </style>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 
 <body>
@@ -360,15 +354,13 @@
                 <p>Статистика по кампаніях та загальна статистика за теократичний рік</p>
             </div>
 
-            <!-- Статистика по кампаніях -->
             <div class="section collapsible">
-                <h2 class="collapsible-header">🎯 Статистика по кампаніях (Місто) <span class="toggle-icon">▼</span></h2>
+                <h2 class="collapsible-header">🎯 Статистика по кампаніях <span class="toggle-icon">▼</span></h2>
                 <div id="campaignsStats" class="collapsible-content">
                     <div class="loading">Завантаження...</div>
                 </div>
             </div>
 
-            <!-- Загальна статистика за теократичний рік -->
             <div class="section">
                 <h2>📈 Загальна статистика за теократичний рік</h2>
 
@@ -404,6 +396,11 @@
                             <div class="stat-value" id="cityCampaignProcessed">0</div>
                             <div class="stat-label">Опрацьовано під час кампаній</div>
                         </div>
+                        <div class="stat-card">
+                            <h3>Всього записів</h3>
+                            <div class="stat-value" id="cityTotalLogs">0</div>
+                            <div class="stat-label">Логів за тео-рік</div>
+                        </div>
                     </div>
                     <div class="chart-container">
                         <canvas id="cityChart"></canvas>
@@ -436,6 +433,11 @@
                             <h3>Під час кампаній</h3>
                             <div class="stat-value" id="villageCampaignProcessed">0</div>
                             <div class="stat-label">Опрацьовано під час кампаній</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Всього записів</h3>
+                            <div class="stat-value" id="villageTotalLogs">0</div>
+                            <div class="stat-label">Логів за тео-рік</div>
                         </div>
                     </div>
                     <div class="chart-container">

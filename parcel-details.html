@@ -430,6 +430,7 @@
         }
     </style>
     <link rel="stylesheet" href="css/responsive.css">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 
 <body>
@@ -908,6 +909,50 @@
             dIn = fixYear(dIn);
             dOut = fixYear(dOut);
 
+            // ПОШУК РЕЛЕВАНТНИХ КАМПАНІЙ
+            let isCampaignLog = false;
+            let campaignId = null;
+            let campaignName = null;
+
+            const { data: campaigns } = await supabase
+                .from('campaigns')
+                .select('*')
+                .lte('campaign_start', dOut)
+                .gte('campaign_end', dIn);
+
+            if (campaigns && campaigns.length > 0) {
+                const activeCampaign = campaigns[0];
+                const taken = new Date(dIn);
+                const returned = new Date(dOut);
+                const campaignStart = new Date(activeCampaign.campaign_start);
+                const campaignEnd = new Date(activeCampaign.campaign_end);
+
+                const takenDuringCampaign = taken >= campaignStart && taken <= campaignEnd;
+                const returnedDuringCampaign = returned >= campaignStart && returned <= campaignEnd;
+                const campaignOverlapsWorkPeriod = campaignStart >= taken && campaignEnd <= returned;
+
+                // Сценарій 1 (Автоматично true): Якщо і взято, і здано під час кампанії
+                if (takenDuringCampaign && returnedDuringCampaign) {
+                    isCampaignLog = true;
+                    campaignId = activeCampaign.id;
+                    campaignName = activeCampaign.name;
+                } else {
+                    // Сценарії 2 та 3 (Запитання до адміна): Якщо період перетинає межі кампанії
+                    const needToAsk = (!takenDuringCampaign && returnedDuringCampaign) ||
+                                      (takenDuringCampaign && !returnedDuringCampaign) ||
+                                      campaignOverlapsWorkPeriod;
+
+                    if (needToAsk && window.showCampaignModal) {
+                        const currentParcelName = document.getElementById('parcelNameTitle')?.textContent || '';
+                        isCampaignLog = await window.showCampaignModal(activeCampaign.name, currentParcelName);
+                        if (isCampaignLog) {
+                            campaignId = activeCampaign.id;
+                            campaignName = activeCampaign.name;
+                        }
+                    }
+                }
+            }
+
             const durationText = getDurationText(dIn, dOut);
             const modal = document.getElementById('manualLogModal');
             const editLogId = modal.dataset.editId;
@@ -928,7 +973,9 @@
                         publisher_name: publisherName,
                         taken_at: dIn,
                         returned_at: dOut,
-                        duration_text: durationText
+                        duration_text: durationText,
+                        campaign_id: campaignId,
+                        campaign_name: campaignName
                     })
                     .eq('id', editLogId);
 
@@ -970,7 +1017,9 @@
                     publisher_name: publisherName,
                     taken_at: dIn,
                     returned_at: dOut,
-                    duration_text: durationText
+                    duration_text: durationText,
+                    campaign_id: campaignId,
+                    campaign_name: campaignName
                 }]);
 
                 if (logError) {

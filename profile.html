@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/profile-style.css" />
     <link rel="stylesheet" href="css/responsive.css">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 
 <body>
@@ -161,45 +162,7 @@
                 <h3>Активні дільниці вісника</h3>
                 <div id="detailUserParcels"></div>
             </div>
-            <div id="admin-settings-block" class="admin-settings-container">
-
-                <div class="admin-card">
-                    <h3 class="admin-card-title">👤 Основні дані</h3>
-
-                    <div class="admin-grid">
-                        <div class="form-group">
-                            <label class="form-label">Ім'я та Прізвище</label>
-                            <div class="input-row">
-                                <input type="text" id="edit-pub-first-name" class="admin-input" placeholder="Ім'я"
-                                    oninput="validateUniqueName('edit-pub-first-name', 'edit-pub-last-name')">
-                                <input type="text" id="edit-pub-last-name" class="admin-input"
-                                    placeholder="Прізвище (необов'язково)">
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Походження (Група)</label>
-                            <select id="edit-pub-group-tag" class="admin-select">
-                                <option value="Липовець">🏠 Липовець</option>
-                                <option value="Іллінці">🚗 Іллінці</option>
-                                <option value="Гості">👣 Гості</option>
-                            </select>
-                        </div>
-
-                        <div style="display: flex; gap: 10px; margin-top: 10px;">
-                            <button id="save-main-data-btn" class="btn-admin btn-main" style="flex: 2; margin: 0;">
-                                Оновити профіль
-                            </button>
-
-                            <button id="delete-user-btn" class="btn-admin btn-delete"
-                                style="flex: 1; margin: 0; padding: 10px;">
-                                🗑️ Видалити
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
+            
         </div>
 
         <div id="tab-all-territories" class="tab-content hidden">
@@ -1156,106 +1119,6 @@
             currentTargetUserId = targetUserId;
 
             document.getElementById('admin-settings-block').style.display = 'block';
-
-            const editLastName = document.getElementById('edit-pub-last-name');
-            const editFirstName = document.getElementById('edit-pub-first-name');
-            const editGroupTag = document.getElementById('edit-pub-group-tag');
-            editLastName.value = targetUserData.last_name || '';
-            editFirstName.value = targetUserData.name || '';
-            editGroupTag.value = targetUserData.group_tag || 'Липовець';
-
-            // --- МОДЕРНІЗОВАНЕ ВИДАЛЕННЯ ВІСНИКА ЧЕРЕЗ КАСТОМНІ ВІКНА ---
-            const deleteBtn = document.getElementById('delete-user-btn');
-            if (deleteBtn) {
-                deleteBtn.onclick = async () => {
-                    const uName = targetUserData.name;
-                    const uLastName = targetUserData.last_name || '';
-
-                    // Перший крок підтвердження
-                    const firstConfirm = await showCustomConfirm({
-                        title: "Видалення вісника",
-                        text: `Ви впевнені, що хочете видалити вісника <b>${uLastName} ${uName}</b>?`,
-                        confirmText: "Так, видалити",
-                        cancelText: "Скасувати"
-                    });
-                    if (!firstConfirm) return;
-
-                    // Другий крок підтвердження
-                    const secondConfirm = await showCustomConfirm({
-                        title: "⚠️ ВАЖЛИВЕ ПОПЕРЕДЖЕННЯ",
-                        text: "Усі активні дільниці цього вісника будуть автоматично <b>ЗДАНІ</b> в систему.<br>Продовжити видалення?",
-                        confirmText: "Продовжити",
-                        cancelText: "Ні, зупинити"
-                    });
-                    if (!secondConfirm) return;
-
-                    try {
-                        const { data: activeParcels, error: fetchError } = await supabase
-                            .from('parcels').select('id, name').eq('taken_by_id', targetUserId);
-
-                        if (fetchError) throw fetchError;
-
-                        if (activeParcels && activeParcels.length > 0) {
-                            const nowISO = new Date().toISOString().split('T')[0];
-                            for (const parcel of activeParcels) {
-                                await supabase.from('parcels').update({
-                                    status: 'free', taken_by_id: null, taken_by: null,
-                                    taken_at: null, last_returned: nowISO
-                                }).eq('id', parcel.id);
-                            }
-                        }
-
-                        const { error: deleteError } = await supabase.from('publishers').delete().eq('id', targetUserId);
-                        if (deleteError) throw deleteError;
-
-                        showToast(`Вісника ${uLastName} ${uName} видалено.`);
-                        setTimeout(() => {
-                            window.location.href = window.location.pathname + '?tab=group-cards';
-                        }, 1200);
-                    } catch (err) {
-                        showToast("Сталася помилка при видаленні: " + err.message, true);
-                    }
-                };
-            }
-
-            const saveMainDataBtn = document.getElementById('save-main-data-btn');
-            if (saveMainDataBtn) {
-                saveMainDataBtn.onclick = async () => {
-                    const newName = editFirstName.value.trim();
-                    const newLastName = editLastName.value.trim();
-                    const newGroupTag = editGroupTag.value;
-
-                    if (!newName) {
-                        showToast("Ім'я не може бути порожнім", true);
-                        return;
-                    }
-
-                    const nameExists = allUsers.some(u =>
-                        u.name.toLowerCase() === newName.toLowerCase() && u.id !== targetUserId
-                    );
-
-                    if (nameExists && !newLastName) {
-                        showToast(`Вісник з ім'ям "${newName}" вже є в системі. Будь ласка, вкажіть прізвище.`, true);
-                        return;
-                    }
-
-                    const { error } = await supabase.from('publishers').update({
-                        name: newName,
-                        last_name: newLastName || null,
-                        group_tag: newGroupTag
-                    }).eq('id', targetUserId);
-
-                    if (!error) {
-                        showToast("Дані вісника оновлено!");
-                        setTimeout(() => {
-                            const activeTab = document.querySelector('.tab-content:not(.hidden)')?.id || 'group-cards';
-                            window.location.href = window.location.pathname + '?tab=' + activeTab;
-                        }, 1200);
-                    } else {
-                        showToast("Помилка: " + error.message, true);
-                    }
-                };
-            }
         }
 
         // Ініціалізація сторінки

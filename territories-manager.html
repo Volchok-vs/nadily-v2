@@ -1754,6 +1754,7 @@
     </style>
     <link rel="stylesheet" href="css/profile-style.css" />
     <link rel="stylesheet" href="css/responsive.css">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 
 <body>
@@ -1840,7 +1841,7 @@
                     <table class="report-table" id="publishersAdminTable">
                         <thead>
                             <tr>
-                                <th id="thNameContainer">Ім'я та Прізвище</th>
+                                <th id="thNameContainer">Прізвище та Ім'я</th>
                                 <th>Роль користувача</th>
                                 <th>Походження</th>
                                 <th style="text-align: center;">Пароль</th>
@@ -1936,7 +1937,8 @@
                     <span id="copyStatusText"
                         style="font-size: 13px; color: #28a745; font-weight: 600; opacity: 0; transition: opacity 0.2s; font-family: 'Segoe UI', sans-serif;">Скопійовано!</span>
                     <div style="display: flex; gap: 8px;">
-                        <button id="btnShareCredentials" class="btn-primary" style="background-color: #28a745;">🔗 Поділитися</button>
+                        <button id="btnShareCredentials" class="btn-primary" style="background-color: #28a745;">🔗
+                            Поділитися</button>
                         <button id="btnCopyAuthData" class="btn-primary">📋 Копіювати дані</button>
                     </div>
                 </div>
@@ -5614,15 +5616,28 @@
             console.log("🔄 [Admin List] Початок завантаження списку вісників...");
             toggleSystemLoader(true);
             try {
+                // ЗМІНЕНО: Прибрали сортування з бази (.order), забираємо чисті дані
                 const { data: publishers, error } = await window.supabase
                     .from('publishers')
-                    .select('id, name, last_name, role, group_tag')
-                    .order('name', { ascending: true });
+                    .select('id, name, last_name, role, group_tag');
 
                 if (error) throw error;
 
-                allPublishersData = publishers || [];
-                console.log(`✅ [Admin List] Отримано ${allPublishersData.length} записів з бази даних.`);
+                // СОРТУВАННЯ: Спочатку порівнюємо за Прізвищем (last_name), якщо однакові — за Ім'ям (name)
+                const sortedPublishers = (publishers || []).sort((a, b) => {
+                    const lastNameA = (a.last_name || '').trim();
+                    const lastNameB = (b.last_name || '').trim();
+                    const compareLastName = lastNameA.localeCompare(lastNameB, 'uk', { sensitivity: 'base' });
+
+                    if (compareLastName !== 0) return compareLastName;
+
+                    const nameA = (a.name || '').trim();
+                    const nameB = (b.name || '').trim();
+                    return nameA.localeCompare(nameB, 'uk', { sensitivity: 'base' });
+                });
+
+                allPublishersData = sortedPublishers;
+                console.log(`✅ [Admin List] Отримано та відсортовано за алфавітом ${allPublishersData.length} записів.`);
 
                 const tbody = document.getElementById('publishersAdminList');
                 tbody.innerHTML = '';
@@ -5632,7 +5647,8 @@
                 const isUserSuper = (localRole === 'super-admin' || localRole === 'super_admin' || (window.userSession && window.userSession.isSuperAdmin === true));
                 console.log(`🔐 [Admin List] Права поточного користувача: SuperAdmin = ${isUserSuper}`);
 
-                publishers.forEach(pub => {
+                // ЗМІНЕНО: тепер перебираємо відсортований масив sortedPublishers замість publishers
+                sortedPublishers.forEach(pub => {
                     const tr = document.createElement('tr');
                     const fullName = `${pub.name || ''} ${pub.last_name || ''}`.trim() || 'Без імені';
 
@@ -5644,7 +5660,7 @@
                     tr.innerHTML = `
                 <td style="font-weight: 500; color: #374151; display: flex; align-items: center; gap: 8px;">
                     <input type="checkbox" class="bulk-checkbox" data-id="${pub.id}" style="margin: 0; cursor: pointer;">
-                    <span id="name-display-${pub.id}">${pub.name} ${pub.last_name || ''}</span>
+                    <span id="name-display-${pub.id}">${pub.last_name || ''} ${pub.name}</span>
                     <button class="edit-user-name-btn" data-id="${pub.id}" data-name="${pub.name}" data-lastname="${pub.last_name || ''}" style="background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 14px; margin-left: auto;" title="Редагувати ім'я та прізвище">✏️</button>
                 </td>
                 <td>
@@ -5662,7 +5678,7 @@
                     </select>
                 </td>
                 <td style="text-align: center;">
-                    <button class="btn-edit-campaign" style="font-size: 1.3rem; padding: 2px 8px; border: none; background: transparent; cursor: pointer;" onclick="handlePasswordCabinetClick('${pub.id}', '${fullName}')">
+                    <button class="btn-edit-campaign" style="font-size: 1.3rem; padding: 2px 8px; border: none; background: transparent; cursor: pointer;" onclick="handlePasswordCabinetClick('${pub.id}', '${pub.name}', '${fullName}')">
                         🔑
                     </button>
                 </td>
@@ -6160,29 +6176,58 @@
         });
 
 
-        window.handlePasswordCabinetClick = function (userId, publisherName) {
-            const currentTime = Date.now();
-            const timeDiff = currentTime - lastClickTime;
+        window.handlePasswordCabinetClick = function (userId, userName, fullName) {
+            // Відкриваємо модальне вікно підтвердження
+            const modal = document.getElementById('customConfirmModal');
+            const title = document.getElementById('confirmModalTitle');
+            const text = document.getElementById('confirmModalText');
+            const btnYes = document.getElementById('confirmBtnYes');
+            const btnNo = document.getElementById('confirmBtnNo');
 
-            if (timeDiff < 400) clickCount += 1;
-            else clickCount = 1;
-            lastClickTime = currentTime;
-            selectedPublisherForAction = { userId, publisherName };
+            // Динамічно оновлюємо тексти модалки
+            title.textContent = '🔑 Скидання та генерація пароля';
+            text.textContent = `Ви дійсно хочете згенерувати новий пароль для вісника ${fullName}? Старий пароль перестане працювати.`;
+            btnYes.textContent = 'Так, згенерувати';
+            btnNo.textContent = 'Скасувати';
 
-            if (clickCount === 4) {
-                clickCount = 0;
-                clearTimeout(passwordClickTimer);
-                openManualPasswordModal(userId, publisherName);
-                return;
-            }
+            // Перепризначаємо обробник події для кнопки "Так"
+            btnYes.onclick = function() {
+                modal.style.display = 'none';
+                // Виконуємо оригінальну логіку генерації пароля
+                const currentTime = Date.now();
+                const timeDiff = currentTime - lastClickTime;
 
-            clearTimeout(passwordClickTimer);
-            passwordClickTimer = setTimeout(() => {
-                if (clickCount > 0 && clickCount < 4) {
-                    processAutoPassword(userId, publisherName);
+                if (timeDiff < 400) clickCount += 1;
+                else clickCount = 1;
+                lastClickTime = currentTime;
+                selectedPublisherForAction = { userId, userName, fullName };
+
+                if (clickCount === 4) {
+                    clickCount = 0;
+                    clearTimeout(passwordClickTimer);
+                    openManualPasswordModal(userId, userName);
+                    return;
                 }
-                clickCount = 0;
-            }, 400);
+
+                clearTimeout(passwordClickTimer);
+                passwordClickTimer = setTimeout(() => {
+                    if (clickCount > 0 && clickCount < 4) {
+                        processAutoPassword(userId, userName);
+                    }
+                    clickCount = 0;
+                }, 400);
+            };
+
+            // Обробник для кнопки "Скасувати"
+            btnNo.onclick = function() {
+                modal.style.display = 'none';
+                // Очищаємо тимчасові обробники подій
+                btnYes.onclick = null;
+                btnNo.onclick = null;
+            };
+
+            // Відкриваємо модальне вікно
+            modal.style.display = 'flex';
         };
 
         function processAutoPassword(userId, publisherName) {
@@ -6300,7 +6345,7 @@
                 return;
             }
             window.closePublisherModal('manualPasswordModal');
-            await changeUserPassword(selectedPublisherForAction.userId, selectedPublisherForAction.publisherName, pass);
+            await changeUserPassword(selectedPublisherForAction.userId, selectedPublisherForAction.userName, pass);
         });
 
         document.getElementById('btnCopyAuthData').addEventListener('click', () => {
