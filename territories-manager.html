@@ -585,7 +585,8 @@
             text-align: center;
         }
 
-        .export-import-section {
+        .export-import-section,
+        .analytics-report-section {
             background: white;
             padding: 1.5rem;
             border-radius: 10px;
@@ -2221,6 +2222,8 @@
         <!-- ТАБ: ЕКСПОРТ ТА ІМПОРТ -->
         <div id="tab-export-import" class="tab-content hidden">
             <h1 class="tab-title">💾 Експорт та Імпорт</h1>
+
+            <!-- Блок Експорту S-13 -->
             <div class="export-import-section">
                 <h2 class="section-title-lg">📊 Експорт звіту S-13</h2>
                 <p class="summary-text">
@@ -2234,6 +2237,20 @@
                     </button>
                     <button onclick="exportS13Excel()" class="btn-primary">
                         📊 Експорт в Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Блок Аналітичного Звіту (Тепер повністю ідентичний за стилями) -->
+            <div class="analytics-report-section">
+                <h2 class="section-title-lg">📊 Аналітичний звіт</h2>
+                <p class="summary-text">
+                    Генерація агрегованих даних щодо опрацювання ділянок та логів територій. Вибір періоду (тиждень,
+                    місяць, службовий рік або власні дати) доступний у процесі формування.
+                </p>
+                <div class="filter-actions">
+                    <button id="btn-trigger-embedded-report" class="btn-primary">
+                        Сформувати звіт
                     </button>
                 </div>
             </div>
@@ -2574,6 +2591,20 @@
             }
         };
 
+        // Допоміжна функція для форматування днів у період (роки, місяці, дні)
+        function formatDaysToPeriod(days) {
+            const years = Math.floor(days / 365);
+            const months = Math.floor((days % 365) / 30);
+            const remainingDays = Math.floor((days % 365) % 30);
+
+            const parts = [];
+            if (years > 0) parts.push(`${years} р.`);
+            if (months > 0) parts.push(`${months} міс.`);
+            if (remainingDays > 0 || (years === 0 && months === 0)) parts.push(`${remainingDays} днів`);
+
+            return parts.join(' ');
+        }
+
         // Функція для аналізу територій на руках
         async function generateOnHandsReport() {
             const reportContainer = document.getElementById('on-hands-report');
@@ -2672,6 +2703,7 @@
                                     number: territory.name,
                                     dateTaken: territory.taken_at,
                                     daysHeld: daysHeld,
+                                    formattedPeriod: formatDaysToPeriod(daysHeld),
                                     id: territory.id
                                 });
 
@@ -2744,7 +2776,7 @@
                         <div class="info-item">
                             <span class="info-label">⏱️ Днів на руках</span>
                             <span class="info-value">
-                                <span class="days-badge ${daysClass}">${result.daysHeld} днів</span>
+                                <span class="days-badge ${daysClass}">${result.formattedPeriod}</span>
                             </span>
                         </div>
                     </div>
@@ -6191,7 +6223,7 @@
             btnNo.textContent = 'Скасувати';
 
             // Перепризначаємо обробник події для кнопки "Так"
-            btnYes.onclick = function() {
+            btnYes.onclick = function () {
                 modal.style.display = 'none';
                 // Виконуємо оригінальну логіку генерації пароля
                 const currentTime = Date.now();
@@ -6219,7 +6251,7 @@
             };
 
             // Обробник для кнопки "Скасувати"
-            btnNo.onclick = function() {
+            btnNo.onclick = function () {
                 modal.style.display = 'none';
                 // Очищаємо тимчасові обробники подій
                 btnYes.onclick = null;
@@ -6425,6 +6457,9 @@
 
     <script src="js/s13-export.js"></script>
     <script src="js/dev-tools.js"></script>
+    <!-- Інші твої скрипти (Leaflet, Supabase init тощо) -->
+    <script src="js/analytics-reporter.js"></script>
+</body>
 </body>
 
 </html>
