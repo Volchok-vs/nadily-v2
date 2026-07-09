@@ -162,7 +162,7 @@
                 <h3>Активні дільниці вісника</h3>
                 <div id="detailUserParcels"></div>
             </div>
-            
+
         </div>
 
         <div id="tab-all-territories" class="tab-content hidden">
@@ -1047,6 +1047,41 @@
             }
         }
 
+        // Допоміжна функція для форматування днів у період (роки, місяці, дні)
+        function formatDaysToPeriod(days) {
+            const years = Math.floor(days / 365);
+            const months = Math.floor((days % 365) / 30);
+            const remainingDays = Math.floor((days % 365) % 30);
+
+            const parts = [];
+            if (years > 0) parts.push(`${years} р.`);
+            if (months > 0) parts.push(`${months} міс.`);
+            if (remainingDays > 0 || (years === 0 && months === 0)) parts.push(`${remainingDays} дн.`);
+
+            return parts.join(' ');
+        }
+
+        // Допоміжна функція для отримання стилю попереджувального обрамлення
+        function getBorderWarningStyle(days) {
+            const startWarn = 90;  // 3 місяці (початок появи помаранчевої рамки)
+            const maxWarn = 120;   // 4 місяці (рамка стає повністю червоною)
+
+            if (days < startWarn) {
+                return ''; // Стандартна нейтральна рамка
+            }
+
+            // Обчислюємо прогрес від 0.0 (на 90-й день) до 1.0 (на 120-й день)
+            const progress = Math.min(Math.max((days - startWarn) / (maxWarn - startWarn), 0), 1);
+
+            // Перехід Hue від 35 (Помаранчевий) до 0 (Червоний)
+            const hue = Math.round(35 - (progress * 35));
+
+            // Товщина рамки плавно змінюється від 2px до 3px
+            const borderWidth = 2 + progress;
+
+            return `border: ${borderWidth}px solid hsl(${hue}, 100%, 45%); box-shadow: 0 0 6px rgba(255, 0, 0, ${0.1 + progress * 0.3});`;
+        }
+
         function renderParcelList(parcels, containerId, isMyCard) {
             const container = document.getElementById(containerId);
             if (!container) return;
@@ -1059,17 +1094,20 @@
             }
 
             container.innerHTML = parcels.map(p => {
-                const days = Math.floor((new Date() - new Date(p.taken_at)) / (1000 * 60 * 60 * 24));
+                const rawDays = p.taken_at ? Math.max(0, Math.floor((new Date() - new Date(p.taken_at)) / (1000 * 60 * 60 * 24))) : 0;
+                const timeBadgeText = formatDaysToPeriod(rawDays);
+                const borderStyle = getBorderWarningStyle(rawDays);
                 const showReturnBtn = isMyCard || isAdmin;
 
                 const prefix = p.category === 'Село' ? ': ' : ' №';
+                const badgeStyle = rawDays >= 90 ? 'background: #ff6b6b; color: white;' : '';
 
                 return `
-        <div style="border:1px solid #eee; padding:15px; margin-bottom:10px; border-radius:8px; cursor:pointer;" 
+        <div style="${borderStyle} padding:15px; margin-bottom:10px; border-radius:8px; cursor:pointer; border: 1px solid #eee;"
              onclick="window.location.href='parcel-details.html?id=${p.id}&from=${isMyCard ? 'my' : 'all'}'">
             <div style="display:flex; justify-content:space-between;">
                 <strong>Дільниця${prefix}${p.name}</strong>
-                <span class="badge">${days} дн.</span>
+                <span class="badge" style="${badgeStyle}">${timeBadgeText}</span>
             </div>
             <p style="font-size:0.9rem; color:#666; margin:10px 0;">${p.notes || '—'}</p>
             ${showReturnBtn ? `
