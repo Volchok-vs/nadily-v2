@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="css/profile-style.css" />
     <link rel="stylesheet" href="css/responsive.css">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1565C0">
 </head>
 
 <body>
@@ -1266,8 +1268,16 @@
         };
 
     </script>
-
     <script src="js/dev-tools.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('✅ Service Worker зареєстровано успішно:', reg.scope))
+                    .catch(err => console.error('❌ Помилка реєстрації Service Worker:', err));
+            });
+        }
+    </script>
 </body>
 
 </html>

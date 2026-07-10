@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="uk">
+
 <head>
     <meta charset="utf-8" />
     <title>Карта дільниць</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1565C0">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body {
@@ -135,7 +138,7 @@
             font-size: 14px;
             cursor: pointer;
         }
-        
+
         .popup-container {
             min-width: 200px;
             text-align: center;
@@ -1134,127 +1137,127 @@
         };
         // --- 4. ЗАВАНТАЖЕННЯ ДІЛЬНИЦЬ ---
         async function loadParcels() {
-    // Очищуємо старі шари з карти перед завантаженням нових
-    if (window.allParcelLayers && window.allParcelLayers.length > 0) {
-        window.allParcelLayers.forEach(item => {
-            // Видаляємо групу полігонів з карти
-            if (item.layer && window.map.hasLayer(item.layer)) {
-                window.map.removeLayer(item.layer);
+            // Очищуємо старі шари з карти перед завантаженням нових
+            if (window.allParcelLayers && window.allParcelLayers.length > 0) {
+                window.allParcelLayers.forEach(item => {
+                    // Видаляємо групу полігонів з карти
+                    if (item.layer && window.map.hasLayer(item.layer)) {
+                        window.map.removeLayer(item.layer);
+                    }
+                    // Видаляємо текстову мітку з карти
+                    if (item.label && window.map.hasLayer(item.label)) {
+                        window.map.removeLayer(item.label);
+                    }
+                });
             }
-            // Видаляємо текстову мітку з карти
-            if (item.label && window.map.hasLayer(item.label)) {
-                window.map.removeLayer(item.label);
-            }
-        });
-    }
-    window.allParcelLayers = [];
+            window.allParcelLayers = [];
 
-    // --- ЗМІНА ТУТ: ПЕРЕВІРКА АВТОРИЗАЦІЇ ДЛЯ ВИБОРУ ТАБЛИЦІ ---
-    // Перевіряємо статус входу так само, як і на кроці з ярликами
-    const isAuth = !!localStorage.getItem('userId');
-    const targetSource = isAuth ? 'parcels' : 'public_parcels_map_mirror';
+            // --- ЗМІНА ТУТ: ПЕРЕВІРКА АВТОРИЗАЦІЇ ДЛЯ ВИБОРУ ТАБЛИЦІ ---
+            // Перевіряємо статус входу так само, як і на кроці з ярликами
+            const isAuth = !!localStorage.getItem('userId');
+            const targetSource = isAuth ? 'parcels' : 'public_parcels_map_mirror';
 
-    // Завантажуємо дані з динамічно обраного джерела
-    const { data: parcels, error } = await window.supabase.from(targetSource).select('*');
-    // --------------------------------------------------------
+            // Завантажуємо дані з динамічно обраного джерела
+            const { data: parcels, error } = await window.supabase.from(targetSource).select('*');
+            // --------------------------------------------------------
 
-    if (error) return console.error(error);
+            if (error) return console.error(error);
 
-    // Проходимо циклом по кожному об'єкту дільниці (p) з отриманого масиву parcels
-    parcels.forEach(p => {
-        // 1. ПЕРЕВІРКА ГЕОМЕТРІЇ
-        if (!p.geom) return;
-        // 2. ДЕКОДУВАННЯ
-        const geoData = (typeof p.geom === 'string') ? JSON.parse(p.geom) : p.geom;
-        // 3. СТВОРЕННЯ ШАРУ (Спочатку створюємо сам полігон)
-        // Тимчасово передаємо p для стилю, поки preparedData не готова
-        const polygonLayer = L.geoJSON(geoData, {
-            style: () => window.getStyle ? window.getStyle(p) : { color: '#a1a1a1' }
-        });
+            // Проходимо циклом по кожному об'єкту дільниці (p) з отриманого масиву parcels
+            parcels.forEach(p => {
+                // 1. ПЕРЕВІРКА ГЕОМЕТРІЇ
+                if (!p.geom) return;
+                // 2. ДЕКОДУВАННЯ
+                const geoData = (typeof p.geom === 'string') ? JSON.parse(p.geom) : p.geom;
+                // 3. СТВОРЕННЯ ШАРУ (Спочатку створюємо сам полігон)
+                // Тимчасово передаємо p для стилю, поки preparedData не готова
+                const polygonLayer = L.geoJSON(geoData, {
+                    style: () => window.getStyle ? window.getStyle(p) : { color: '#a1a1a1' }
+                });
 
-        // 4. ВИЗНАЧЕННЯ ЯКОРЯ (Тепер polygonLayer вже існує, тому помилки не буде)
-        const anchorPoint = (p.label_pos && p.label_pos.length === 2)
-            ? L.latLng(p.label_pos[0], p.label_pos[1])
-            : polygonLayer.getBounds().getCenter();
-        // 5. ПІДГОТОВКА ДАНИХ (Тепер додаємо coordinates якоря)
-        const preparedData = {
-            ...p,
-            center_lat: anchorPoint.lat,
-            center_lng: anchorPoint.lng,
-            last_returned: p.last_returned ? new Date(p.last_returned) : null,
-            status: p.status || 'free',
-            category: p.category || 'Приватний сектор',
-            name: (p.name || '').toString()
-        };
+                // 4. ВИЗНАЧЕННЯ ЯКОРЯ (Тепер polygonLayer вже існує, тому помилки не буде)
+                const anchorPoint = (p.label_pos && p.label_pos.length === 2)
+                    ? L.latLng(p.label_pos[0], p.label_pos[1])
+                    : polygonLayer.getBounds().getCenter();
+                // 5. ПІДГОТОВКА ДАНИХ (Тепер додаємо coordinates якоря)
+                const preparedData = {
+                    ...p,
+                    center_lat: anchorPoint.lat,
+                    center_lng: anchorPoint.lng,
+                    last_returned: p.last_returned ? new Date(p.last_returned) : null,
+                    status: p.status || 'free',
+                    category: p.category || 'Приватний сектор',
+                    name: (p.name || '').toString()
+                };
 
-        // 6. ПРИВ'ЯЗКА ДАНИХ ДО ШАРУ ТА ПОПАПУ
-        polygonLayer.options.parcelData = preparedData;
-        // Оновлюємо стиль вже з повними даними
-        if (window.getStyle) polygonLayer.setStyle(window.getStyle(preparedData));
-        polygonLayer.bindPopup(() => {
-            return window.createPopupContent(polygonLayer.options.parcelData);
-        }, {
-            maxWidth: 280,         // Оптимально для мобільних екранів
-            autoPan: true,         // Карта сама підсунеться, щоб попап вліз
-            autoPanPadding: [20, 80], // Великий відступ зверху (80), щоб попап не ховався під верхню панель/пошук
-            closeButton: true,
-            className: 'modern-popup' // Можна додати свій клас для CSS
-        });
+                // 6. ПРИВ'ЯЗКА ДАНИХ ДО ШАРУ ТА ПОПАПУ
+                polygonLayer.options.parcelData = preparedData;
+                // Оновлюємо стиль вже з повними даними
+                if (window.getStyle) polygonLayer.setStyle(window.getStyle(preparedData));
+                polygonLayer.bindPopup(() => {
+                    return window.createPopupContent(polygonLayer.options.parcelData);
+                }, {
+                    maxWidth: 280,         // Оптимально для мобільних екранів
+                    autoPan: true,         // Карта сама підсунеться, щоб попап вліз
+                    autoPanPadding: [20, 80], // Великий відступ зверху (80), щоб попап не ховався під верхню панель/пошук
+                    closeButton: true,
+                    className: 'modern-popup' // Можна додати свій клас для CSS
+                });
 
-        // 7. СТВОРЕННЯ ГРУПИ ТА ДОДАВАННЯ ПОЛІГОНУ
-        const parcelGroup = L.featureGroup();
-        polygonLayer.addTo(parcelGroup);
-        // 8. ЛОГІКА ПУНКТИРУ (Використовуємо вже існуючі anchorPoint та preparedData)
-        if (geoData.type === 'MultiPolygon' || geoData.type === 'Multipolygon') {
-            const style = window.getStyle ? window.getStyle(preparedData) : { fillColor: '#a1a1a1' };
-            geoData.coordinates.forEach((polyCoords) => {
-                const coords = polyCoords[0].map(coord => [coord[1], coord[0]]);
-                const partPolygon = L.polygon(coords);
-                const partCenter = partPolygon.getBounds().getCenter();
-                const isAnchorInside = partPolygon.getBounds().contains(anchorPoint);
-                if (!isAnchorInside) {
-                    L.polyline([partCenter, anchorPoint], {
-                        color: style.fillColor || style.color || '#a1a1a1',
-                        weight: 3,
-                        dashArray: '10, 15',
-                        opacity: 0.7,
-                        interactive: false,
-                        pane: 'markerPane'
-                    }).addTo(parcelGroup);
+                // 7. СТВОРЕННЯ ГРУПИ ТА ДОДАВАННЯ ПОЛІГОНУ
+                const parcelGroup = L.featureGroup();
+                polygonLayer.addTo(parcelGroup);
+                // 8. ЛОГІКА ПУНКТИРУ (Використовуємо вже існуючі anchorPoint та preparedData)
+                if (geoData.type === 'MultiPolygon' || geoData.type === 'Multipolygon') {
+                    const style = window.getStyle ? window.getStyle(preparedData) : { fillColor: '#a1a1a1' };
+                    geoData.coordinates.forEach((polyCoords) => {
+                        const coords = polyCoords[0].map(coord => [coord[1], coord[0]]);
+                        const partPolygon = L.polygon(coords);
+                        const partCenter = partPolygon.getBounds().getCenter();
+                        const isAnchorInside = partPolygon.getBounds().contains(anchorPoint);
+                        if (!isAnchorInside) {
+                            L.polyline([partCenter, anchorPoint], {
+                                color: style.fillColor || style.color || '#a1a1a1',
+                                weight: 3,
+                                dashArray: '10, 15',
+                                opacity: 0.7,
+                                interactive: false,
+                                pane: 'markerPane'
+                            }).addTo(parcelGroup);
+                        }
+                    });
                 }
+
+                // 9. СТВОРЕННЯ ЯРЛИКА (тільки для авторизованих користувачів)
+                let label = null;
+                if (isAuth) {
+                    label = L.marker(anchorPoint, {
+                        icon: L.divIcon({
+                            className: 'parcel-label',
+                            html: `<b style="color:white; text-shadow: 2px 2px 3px black;">${preparedData.name}</b>`,
+                            iconSize: [40, 20],
+                            iconAnchor: [20, 10]
+                        }),
+                        interactive: false
+                    }).addTo(window.map);
+                }
+
+                // 10. ВІДОБРАЖЕННЯ ТА РЕЄСТРАЦІЯ
+                parcelGroup.addTo(window.map);
+                window.allParcelLayers.push({
+                    id: p.id,
+                    name: preparedData.name.toLowerCase(),
+                    data: preparedData,
+                    layer: parcelGroup,
+                    label: label
+                });
             });
+
+            // Оновлюємо UI фільтри після завершення завантаження дільниць
+            if (window.updateFilterCounters) {
+                window.updateFilterCounters();
+            }
         }
-
-        // 9. СТВОРЕННЯ ЯРЛИКА (тільки для авторизованих користувачів)
-        let label = null;
-        if (isAuth) {
-            label = L.marker(anchorPoint, {
-                icon: L.divIcon({
-                    className: 'parcel-label',
-                    html: `<b style="color:white; text-shadow: 2px 2px 3px black;">${preparedData.name}</b>`,
-                    iconSize: [40, 20],
-                    iconAnchor: [20, 10]
-                }),
-                interactive: false
-            }).addTo(window.map);
-        }
-
-        // 10. ВІДОБРАЖЕННЯ ТА РЕЄСТРАЦІЯ
-        parcelGroup.addTo(window.map);
-        window.allParcelLayers.push({
-            id: p.id,
-            name: preparedData.name.toLowerCase(),
-            data: preparedData,
-            layer: parcelGroup,
-            label: label
-        });
-    });
-
-    // Оновлюємо UI фільтри після завершення завантаження дільниць
-    if (window.updateFilterCounters) {
-        window.updateFilterCounters();
-    }
-}
 
         // Слухаємо зміни в таблиці в реальному часі
         supabase
@@ -1606,5 +1609,15 @@
         </div>
     </div>
     <script src="js/dev-tools.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('✅ Service Worker зареєстровано успішно:', reg.scope))
+                    .catch(err => console.error('❌ Помилка реєстрації Service Worker:', err));
+            });
+        }
+    </script>
 </body>
+
 </html>

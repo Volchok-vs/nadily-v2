@@ -2,6 +2,9 @@
  * Модуль для роботи з геолокацією користувача на карті Leaflet.
  * Додає синю точку, коло точності та інформаційне віконце.
  */
+/**
+ * Модуль для роботи з геолокацією користувача на карті Leaflet.
+ */
 export function initGeolocation(map) {
     let userLocationMarker = null;
     let userAccuracyCircle = null;
@@ -17,7 +20,7 @@ export function initGeolocation(map) {
             bottom: '25px',
             left: '50%',
             transform: 'translateX(-50%)',
-            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
             color: '#fff',
             padding: '8px 18px',
             borderRadius: '25px',
@@ -37,19 +40,10 @@ export function initGeolocation(map) {
     createAccuracyBox();
 
     window.locateMe = function() {
-        // Показуємо індикатор пошуку супутників
-        if (accuracyBox) {
-            accuracyBox.style.display = 'block';
-            accuracyBox.style.opacity = '1';
-            accuracyBox.innerHTML = `🛰️ Пошук GPS-супутників...`;
-        }
-
         map.locate({
             setView: true,
             maxZoom: 17,
-            enableHighAccuracy: true, // Вмикає апаратний GPS
-            timeout: 20000,           // Даємо GPS 20 секунд на пошук супутників (важливо для офлайн)
-            maximumAge: 0             // Не використовувати застарілі кешовані дані
+            enableHighAccuracy: true 
         });
     };
 
@@ -65,7 +59,7 @@ export function initGeolocation(map) {
             map.removeLayer(userAccuracyCircle);
         }
 
-        // Логіка відліку (7 секунд)
+        // Логіка відліку (наприклад, 7 секунд)
         let secondsLeft = 7;
         accuracyBox.style.display = 'block';
         accuracyBox.style.opacity = '1';
@@ -115,23 +109,9 @@ export function initGeolocation(map) {
 
     map.on('locationerror', function(e) {
         if (accuracyBox) accuracyBox.style.display = 'none';
-
-        let errorMsg = "Помилка визначення місцезнаходження.";
-
-        switch (e.code) {
-            case 1: // PERMISSION_DENIED
-                errorMsg = "Доступ до геолокації заборонено в налаштуваннях браузера.";
-                break;
-            case 2: // POSITION_UNAVAILABLE
-                errorMsg = "Не вдалося отримати сигнал GPS. Перевірте, чи увімкнено геопозицію в системі та чи ви не в приміщенні.";
-                break;
-            case 3: // TIMEOUT
-                errorMsg = "Час очікування GPS вичерпано. Переконайся, що ви перебуваєте на відкритій місцевості.";
-                break;
-            default:
-                errorMsg = "Помилка GPS: " + e.message;
-        }
-
+        const errorMsg = (e.code === 1) 
+            ? "Доступ до геолокації заборонено."
+            : "Помилка GPS: " + e.message;
         alert(errorMsg);
     });
 }

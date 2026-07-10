@@ -714,8 +714,9 @@ async function runAnalyticsModalFlow() {
                 const scrollY = window.scrollY;
                 const scrollX = window.scrollX;
 
-                activeTooltip.style.top = (rect.top + scrollY - activeTooltip.offsetHeight - 8) + 'px';
-                activeTooltip.style.left = (rect.left + scrollX + (rect.width / 2) - (activeTooltip.offsetWidth / 2)) + 'px';
+                activeTooltip.style.top = (rect.top + scrollY - activeTooltip.offsetHeight - 5) + 'px';
+                // Лівий край елемента мінус ширина підказки і мінус відступ в 8px
+activeTooltip.style.left = (rect.left + scrollX - activeTooltip.offsetWidth - 1) + 'px';
             }
 
             function removeTooltip() {
