@@ -164,7 +164,7 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
                 `;
                 modalContent.appendChild(selectZone);
 
-                // --- 2. ЧЕКБОКСИ ШАРІВ ---
+                // --- 2. ЧЕКБОКСИ ШАРІВ (Без примусового виділення) ---
                 const labelLayers = document.createElement('div');
                 labelLayers.innerHTML = '<small style="color:#666;">2. Шари карти:</small>';
                 labelLayers.style.marginBottom = '5px';
@@ -187,7 +187,8 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
 
                     const chk = document.createElement('input');
                     chk.type = 'checkbox';
-                    chk.checked = (p.id === 'osm');
+                    // За замовчуванням жоден чекбокс не активний — користувач обирає комплектацію сам
+                    chk.checked = false;
 
                     row.appendChild(chk);
                     row.appendChild(document.createTextNode(p.label));
@@ -206,7 +207,7 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
                 });
                 modalContent.appendChild(sizeInfoBox);
 
-                // --- 🌟 4. БЛОК ІСТОРІЇ ЗБЕРЕЖЕНИХ ЗОН (ГАРАНТОВАНО ДОДАЄТЬСЯ) ---
+                // --- 4. БЛОК ІСТОРІЇ ЗБЕРЕЖЕНИХ ЗОН ---
                 historyBox = document.createElement('div');
                 historyBox.id = 'downloaded-zones-history';
                 Object.assign(historyBox.style, {
@@ -235,6 +236,12 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
                     const targetZone = selectZone.value;
                     const targetZoneLabel = selectZone.options[selectZone.selectedIndex].text;
                     const selectedProviders = Object.keys(checkboxes).filter(id => checkboxes[id].checked);
+                    
+                    if (selectedProviders.length === 0) {
+                        alert('⚠️ Будь ласка, оберіть хоча б один шар комплектації!');
+                        return;
+                    }
+
                     if (selectedProviders.includes('satellite')) {
                         selectedProviders.push('labels');
                     }
@@ -312,21 +319,57 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
                 });
             };
 
-            // Логіка оновлення розміру
-            const currentSelect = document.getElementById('offline-zone-select');
-            if (currentSelect) {
-                currentSelect.onchange = () => {
-                    // тут виконується логіка розрахунку ваги, якщо потрібна
-                };
-            }
+            // Функція оновлення калькулятора розміру та стану кнопки
+            const updateEstimatedSize = () => {
+                const targetZone = selectZone.value;
+                const selectedProviders = Object.keys(checkboxes).filter(id => checkboxes[id].checked);
 
-            // 2. Відкриття модального вікна та ОНОВЛЕННЯ СПИСКУ ІСТОРІЇ
+                if (selectedProviders.length === 0) {
+                    sizeInfoBox.innerHTML = '❌ Оберіть хоча б один шар карти для комплектації';
+                    downloadBtn.disabled = true;
+                    downloadBtn.style.opacity = '0.5';
+                    downloadBtn.style.cursor = 'not-allowed';
+                    return;
+                }
+
+                downloadBtn.disabled = false;
+                downloadBtn.style.opacity = '1';
+                downloadBtn.style.cursor = 'pointer';
+
+                if (typeof estimateCacheSize === 'function' && allParcelsGroup) {
+                    const filteredPolygons = getFilteredPolygons(targetZone);
+
+                    if (filteredPolygons.length === 0) {
+                        sizeInfoBox.innerHTML = '📊 Немає полігонів для прорахунку цієї зони';
+                        return;
+                    }
+
+                    const estimation = estimateCacheSize(
+                        filteredPolygons,
+                        [13, 14, 15, 16, 17],
+                        selectedProviders
+                    );
+
+                    sizeInfoBox.innerHTML = `📊 Оцінка: ~<strong>${estimation.sizeMB} МБ</strong><br><small style="color:#666;">Тайлів до скачування: ${estimation.totalTiles} шт.</small>`;
+                } else {
+                    sizeInfoBox.innerHTML = '📊 Розрахунок розміру готується...';
+                }
+            };
+
+            // Прив'язуємо події на зміну селекта та чекбоксів
+            selectZone.onchange = updateEstimatedSize;
+            Object.values(checkboxes).forEach(chk => {
+                chk.onchange = updateEstimatedSize;
+            });
+
+            // 2. Відкриття модального вікна та оновлення даних
             L.DomEvent.on(button, 'click', function (e) {
                 L.DomEvent.stopPropagation(e);
                 L.DomEvent.preventDefault(e);
                 modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
 
-                // ✨ Оновлюємо історію щоразу при відкритті вікна
+                // Оновлюємо стан калькулятора та історію при кожному відкритті
+                updateEstimatedSize();
                 renderDownloadedZonesList();
             });
 
