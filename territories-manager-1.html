@@ -585,8 +585,7 @@
             text-align: center;
         }
 
-        .export-import-section,
-        .analytics-report-section {
+        .export-import-section {
             background: white;
             padding: 1.5rem;
             border-radius: 10px;
@@ -1755,7 +1754,6 @@
     </style>
     <link rel="stylesheet" href="css/profile-style.css" />
     <link rel="stylesheet" href="css/responsive.css">
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 
 <body>
@@ -1842,7 +1840,7 @@
                     <table class="report-table" id="publishersAdminTable">
                         <thead>
                             <tr>
-                                <th id="thNameContainer">Прізвище та Ім'я</th>
+                                <th id="thNameContainer">Ім'я та Прізвище</th>
                                 <th>Роль користувача</th>
                                 <th>Походження</th>
                                 <th style="text-align: center;">Пароль</th>
@@ -1938,8 +1936,7 @@
                     <span id="copyStatusText"
                         style="font-size: 13px; color: #28a745; font-weight: 600; opacity: 0; transition: opacity 0.2s; font-family: 'Segoe UI', sans-serif;">Скопійовано!</span>
                     <div style="display: flex; gap: 8px;">
-                        <button id="btnShareCredentials" class="btn-primary" style="background-color: #28a745;">🔗
-                            Поділитися</button>
+                        <button id="btnShareCredentials" class="btn-primary" style="background-color: #28a745;">🔗 Поділитися</button>
                         <button id="btnCopyAuthData" class="btn-primary">📋 Копіювати дані</button>
                     </div>
                 </div>
@@ -2222,8 +2219,6 @@
         <!-- ТАБ: ЕКСПОРТ ТА ІМПОРТ -->
         <div id="tab-export-import" class="tab-content hidden">
             <h1 class="tab-title">💾 Експорт та Імпорт</h1>
-
-            <!-- Блок Експорту S-13 -->
             <div class="export-import-section">
                 <h2 class="section-title-lg">📊 Експорт звіту S-13</h2>
                 <p class="summary-text">
@@ -2237,20 +2232,6 @@
                     </button>
                     <button onclick="exportS13Excel()" class="btn-primary">
                         📊 Експорт в Excel
-                    </button>
-                </div>
-            </div>
-
-            <!-- Блок Аналітичного Звіту (Тепер повністю ідентичний за стилями) -->
-            <div class="analytics-report-section">
-                <h2 class="section-title-lg">📊 Аналітичний звіт</h2>
-                <p class="summary-text">
-                    Генерація агрегованих даних щодо опрацювання ділянок та логів територій. Вибір періоду (тиждень,
-                    місяць, службовий рік або власні дати) доступний у процесі формування.
-                </p>
-                <div class="filter-actions">
-                    <button id="btn-trigger-embedded-report" class="btn-primary">
-                        Сформувати звіт
                     </button>
                 </div>
             </div>
@@ -2591,20 +2572,6 @@
             }
         };
 
-        // Допоміжна функція для форматування днів у період (роки, місяці, дні)
-        function formatDaysToPeriod(days) {
-            const years = Math.floor(days / 365);
-            const months = Math.floor((days % 365) / 30);
-            const remainingDays = Math.floor((days % 365) % 30);
-
-            const parts = [];
-            if (years > 0) parts.push(`${years} р.`);
-            if (months > 0) parts.push(`${months} міс.`);
-            if (remainingDays > 0 || (years === 0 && months === 0)) parts.push(`${remainingDays} днів`);
-
-            return parts.join(' ');
-        }
-
         // Функція для аналізу територій на руках
         async function generateOnHandsReport() {
             const reportContainer = document.getElementById('on-hands-report');
@@ -2703,7 +2670,6 @@
                                     number: territory.name,
                                     dateTaken: territory.taken_at,
                                     daysHeld: daysHeld,
-                                    formattedPeriod: formatDaysToPeriod(daysHeld),
                                     id: territory.id
                                 });
 
@@ -2776,7 +2742,7 @@
                         <div class="info-item">
                             <span class="info-label">⏱️ Днів на руках</span>
                             <span class="info-value">
-                                <span class="days-badge ${daysClass}">${result.formattedPeriod}</span>
+                                <span class="days-badge ${daysClass}">${result.daysHeld} днів</span>
                             </span>
                         </div>
                     </div>
@@ -5648,28 +5614,15 @@
             console.log("🔄 [Admin List] Початок завантаження списку вісників...");
             toggleSystemLoader(true);
             try {
-                // ЗМІНЕНО: Прибрали сортування з бази (.order), забираємо чисті дані
                 const { data: publishers, error } = await window.supabase
                     .from('publishers')
-                    .select('id, name, last_name, role, group_tag');
+                    .select('id, name, last_name, role, group_tag')
+                    .order('name', { ascending: true });
 
                 if (error) throw error;
 
-                // СОРТУВАННЯ: Спочатку порівнюємо за Прізвищем (last_name), якщо однакові — за Ім'ям (name)
-                const sortedPublishers = (publishers || []).sort((a, b) => {
-                    const lastNameA = (a.last_name || '').trim();
-                    const lastNameB = (b.last_name || '').trim();
-                    const compareLastName = lastNameA.localeCompare(lastNameB, 'uk', { sensitivity: 'base' });
-
-                    if (compareLastName !== 0) return compareLastName;
-
-                    const nameA = (a.name || '').trim();
-                    const nameB = (b.name || '').trim();
-                    return nameA.localeCompare(nameB, 'uk', { sensitivity: 'base' });
-                });
-
-                allPublishersData = sortedPublishers;
-                console.log(`✅ [Admin List] Отримано та відсортовано за алфавітом ${allPublishersData.length} записів.`);
+                allPublishersData = publishers || [];
+                console.log(`✅ [Admin List] Отримано ${allPublishersData.length} записів з бази даних.`);
 
                 const tbody = document.getElementById('publishersAdminList');
                 tbody.innerHTML = '';
@@ -5679,8 +5632,7 @@
                 const isUserSuper = (localRole === 'super-admin' || localRole === 'super_admin' || (window.userSession && window.userSession.isSuperAdmin === true));
                 console.log(`🔐 [Admin List] Права поточного користувача: SuperAdmin = ${isUserSuper}`);
 
-                // ЗМІНЕНО: тепер перебираємо відсортований масив sortedPublishers замість publishers
-                sortedPublishers.forEach(pub => {
+                publishers.forEach(pub => {
                     const tr = document.createElement('tr');
                     const fullName = `${pub.name || ''} ${pub.last_name || ''}`.trim() || 'Без імені';
 
@@ -5692,7 +5644,7 @@
                     tr.innerHTML = `
                 <td style="font-weight: 500; color: #374151; display: flex; align-items: center; gap: 8px;">
                     <input type="checkbox" class="bulk-checkbox" data-id="${pub.id}" style="margin: 0; cursor: pointer;">
-                    <span id="name-display-${pub.id}">${pub.last_name || ''} ${pub.name}</span>
+                    <span id="name-display-${pub.id}">${pub.name} ${pub.last_name || ''}</span>
                     <button class="edit-user-name-btn" data-id="${pub.id}" data-name="${pub.name}" data-lastname="${pub.last_name || ''}" style="background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 14px; margin-left: auto;" title="Редагувати ім'я та прізвище">✏️</button>
                 </td>
                 <td>
@@ -5710,7 +5662,7 @@
                     </select>
                 </td>
                 <td style="text-align: center;">
-                    <button class="btn-edit-campaign" style="font-size: 1.3rem; padding: 2px 8px; border: none; background: transparent; cursor: pointer;" onclick="handlePasswordCabinetClick('${pub.id}', '${pub.name}', '${fullName}')">
+                    <button class="btn-edit-campaign" style="font-size: 1.3rem; padding: 2px 8px; border: none; background: transparent; cursor: pointer;" onclick="handlePasswordCabinetClick('${pub.id}', '${fullName}')">
                         🔑
                     </button>
                 </td>
@@ -6208,66 +6160,30 @@
         });
 
 
-        window.handlePasswordCabinetClick = function (userId, userName, fullName) {
+        window.handlePasswordCabinetClick = function (userId, publisherName) {
             const currentTime = Date.now();
             const timeDiff = currentTime - lastClickTime;
 
             if (timeDiff < 400) clickCount += 1;
             else clickCount = 1;
             lastClickTime = currentTime;
-            selectedPublisherForAction = { userId, userName, fullName };
+            selectedPublisherForAction = { userId, publisherName };
 
-            // 1. Перевіряємо пасхалку на 4 кліки одразу на початку
             if (clickCount === 4) {
                 clickCount = 0;
                 clearTimeout(passwordClickTimer);
-                openManualPasswordModal(userId, userName);
-                return; // Зупиняємо виконання, щоб звичайне модальне вікно не відкривалося
+                openManualPasswordModal(userId, publisherName);
+                return;
             }
 
-            // 2. Таймер для звичайного (одиничного) кліку
             clearTimeout(passwordClickTimer);
             passwordClickTimer = setTimeout(() => {
                 if (clickCount > 0 && clickCount < 4) {
-                    // Якщо користувач зробив 1, 2 або 3 кліки і зупинився — відкриваємо звичайне модальне вікно
-                    showConfirmModal(userId, userName, fullName);
+                    processAutoPassword(userId, publisherName);
                 }
                 clickCount = 0;
             }, 400);
         };
-
-        // Допоміжна функція для відкриття стандартного модального вікна підтвердження
-        function showConfirmModal(userId, userName, fullName) {
-            const modal = document.getElementById('customConfirmModal');
-            const title = document.getElementById('confirmModalTitle');
-            const text = document.getElementById('confirmModalText');
-            const btnYes = document.getElementById('confirmBtnYes');
-            const btnNo = document.getElementById('confirmBtnNo');
-
-            // Динамічно оновлюємо тексти модалки
-            title.textContent = '🔑 Скидання та генерація пароля';
-            text.textContent = `Ви дійсно хочете згенерувати новий пароль для вісника ${fullName}? Старий пароль перестане працювати.`;
-            btnYes.textContent = 'Так, згенерувати';
-            btnNo.textContent = 'Скасувати';
-
-            // Перепризначаємо обробник події для кнопки "Так"
-            btnYes.onclick = function () {
-                modal.style.display = 'none';
-                btnYes.onclick = null;
-                btnNo.onclick = null;
-                processAutoPassword(userId, userName);
-            };
-
-            // Обробник для кнопки "Скасувати"
-            btnNo.onclick = function () {
-                modal.style.display = 'none';
-                btnYes.onclick = null;
-                btnNo.onclick = null;
-            };
-
-            // Відкриваємо модальне вікно
-            modal.style.display = 'flex';
-        }
 
         function processAutoPassword(userId, publisherName) {
             const generatedPassword = generateRandomPassword();
@@ -6384,7 +6300,7 @@
                 return;
             }
             window.closePublisherModal('manualPasswordModal');
-            await changeUserPassword(selectedPublisherForAction.userId, selectedPublisherForAction.userName, pass);
+            await changeUserPassword(selectedPublisherForAction.userId, selectedPublisherForAction.publisherName, pass);
         });
 
         document.getElementById('btnCopyAuthData').addEventListener('click', () => {
@@ -6464,9 +6380,6 @@
 
     <script src="js/s13-export.js"></script>
     <script src="js/dev-tools.js"></script>
-    <!-- Інші твої скрипти (Leaflet, Supabase init тощо) -->
-    <script src="js/analytics-reporter.js"></script>
-</body>
 </body>
 
 </html>

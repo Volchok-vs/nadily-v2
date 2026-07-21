@@ -1,6 +1,6 @@
 // main.js
 
-
+//import { initOfflineDownloadControl } from './offline-menu.js';
 // Безпечна ініціалізація глобальних змінних з fallback значеннями
 // Це дозволяє синхронним перевіркам працювати до завершення асинхронного виклику до бази
 window.userRole = localStorage.getItem('userRole') || 'user';

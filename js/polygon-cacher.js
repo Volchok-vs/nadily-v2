@@ -3,10 +3,10 @@
  */
 
 // Конфігурація URL-шаблонів для ваших підкладок
-export const TILE_PROVIDERS = {
+const TILE_PROVIDERS = {
     osm: {
         name: '🗺️ Схема (OSM)',
-        url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', // або з {s}, скрипт автоматично замінить на a/b/c якщо треба, але openstreetmap підтримує і прямий url
+        url: 'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
         avgSizeKb: 25
     },
     topo: {
@@ -16,13 +16,14 @@ export const TILE_PROVIDERS = {
     },
     satellite: {
         name: '🛰️ Супутник (знімки)',
+        // УВАГА: Для Esri ArcGIS в URL іде спочатку Y, а потім X ({z}/{y}/{x})
         url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
         avgSizeKb: 35
     },
     labels: {
         name: '🏷️ Назви вулиць (Гібрид)',
-        url: 'https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png', // {r} зазвичай не обов'язковий для рендерингу тайлів назв
-        avgSizeKb: 6 // Дуже легкі прозорі тайли
+        url: 'https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png',
+        avgSizeKb: 6
     }
 };
 
@@ -36,13 +37,25 @@ function lat2tile(lat, zoom) {
 
 /**
  * Генерує унікальний список URLs тайлів для масиву полігонів та обраних провайдерів
+ * Підтримує як передачу одного ключа ('osm'), так і масиву ключів (['osm', 'topo'])
  */
-function getTileUrlsForLayers(layers, zooms, providersKeys) {
+function getTileUrlsForPolygons(layers, zooms, providersKeys) {
     const tileSet = new Set();
+    
+    // Якщо передано один рядок замість масиву, загортаємо його в масив
+    const keys = Array.isArray(providersKeys) ? providersKeys : [providersKeys];
+
+    if (!layers || !Array.isArray(layers) || layers.length === 0) {
+        console.warn('[PolygonCacher] Масив шарів/полігонів порожній!');
+        return [];
+    }
 
     layers.forEach(layer => {
-        if (!layer.getBounds) return;
+        // Підтримка як Leaflet Layer (.getBounds()), так і сирих полігонів
+        if (!layer || typeof layer.getBounds !== 'function') return;
+        
         const bounds = layer.getBounds();
+        if (!bounds || !bounds.isValid()) return;
 
         zooms.forEach(zoom => {
             const minX = long2tile(bounds.getWest(), zoom);
@@ -52,12 +65,15 @@ function getTileUrlsForLayers(layers, zooms, providersKeys) {
 
             for (let x = minX; x <= maxX; x++) {
                 for (let y = minY; y <= maxY; y++) {
-                    providersKeys.forEach(key => {
+                    keys.forEach(key => {
+                        if (!TILE_PROVIDERS[key]) return;
+
                         const template = TILE_PROVIDERS[key].url;
                         const url = template
                             .replace('{z}', zoom)
                             .replace('{x}', x)
                             .replace('{y}', y);
+                        
                         tileSet.add(url);
                     });
                 }
@@ -68,20 +84,23 @@ function getTileUrlsForLayers(layers, zooms, providersKeys) {
     return Array.from(tileSet);
 }
 
+// Псевдонім для зворотної сумісності (якщо десь у коді залишився виклик getTileUrlsForLayers)
+const getTileUrlsForLayers = getTileUrlsForPolygons;
+
 /**
  * Оцінює кількість тайлів та вагу в МБ залежно від обраних шарів
- * @param {Array} polygons - Масив полігонів
- * @param {Array} zooms - Рівні зуму
- * @param {Array<string>} providersKeys - Наприклад, ['osm'], ['satellite'] або ['osm', 'satellite']
  */
-export function estimateCacheSize(polygons, zooms = [13, 14, 15, 16, 17], providersKeys = ['osm']) {
+function estimateCacheSize(polygons, zooms = [13, 14, 15, 16, 17], providersKeys = ['osm']) {
     let totalTiles = 0;
     let totalSizeKB = 0;
 
-    providersKeys.forEach(key => {
+    const keys = Array.isArray(providersKeys) ? providersKeys : [providersKeys];
+
+    keys.forEach(key => {
         const provider = TILE_PROVIDERS[key];
-        // Рахуємо унікальні тайли суто для цього провайдера
-        const urls = getTileUrlsForLayers(polygons, zooms, [key]);
+        if (!provider) return;
+
+        const urls = getTileUrlsForPolygons(polygons, zooms, [key]);
         
         totalTiles += urls.length;
         totalSizeKB += urls.length * provider.avgSizeKb;
@@ -91,36 +110,4 @@ export function estimateCacheSize(polygons, zooms = [13, 14, 15, 16, 17], provid
         totalTiles,
         sizeMB: (totalSizeKB / 1024).toFixed(1)
     };
-}
-
-/**
- * Завантажує тайли у кеш браузера
- */
-export async function cachePolygonsTiles(polygons, zooms = [13, 14, 15, 16, 17], providersKeys = ['osm'], onProgress = null) {
-    const urls = getTileUrlsForLayers(polygons, zooms, providersKeys);
-    const total = urls.length;
-    let completed = 0;
-
-    if (total === 0) return;
-
-    const cache = await caches.open('map-tiles-v1');
-
-    for (const url of urls) {
-        try {
-            const match = await cache.match(url);
-            if (!match) {
-                const response = await fetch(url, { mode: 'cors' });
-                if (response.ok) {
-                    await cache.put(url, response);
-                }
-            }
-        } catch (err) {
-            console.warn(`[Offline] Не вдалося скачати тайл: ${url}`, err);
-        }
-
-        completed++;
-        if (onProgress) {
-            onProgress(completed, total);
-        }
-    }
 }

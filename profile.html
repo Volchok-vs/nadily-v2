@@ -27,6 +27,7 @@
     <div class="sidebar">
         <h2 id="displayRole">Кабінет</h2>
         <div class="nav-item active" onclick="switchTab('my-card')">👤 Моя картка</div>
+        <div class="nav-item" onclick="switchTab('recommended-parcels')">📍 Рекомендовані ділянки</div>
         <div id="adminMenu" class="hidden">
             <div class="nav-item" onclick="switchTab('group-cards')">👥 Вісники</div>
             <div class="nav-item" onclick="switchTab('all-territories')">📋 S-13</div>
@@ -84,6 +85,66 @@
                 </div>
                 <div id="historyContent" class="hidden" style="margin-top:12px;">
                     <div id="myHistory">Завантаження історії...</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-recommended-parcels" class="tab-content hidden">
+            <div id="recommended-parcels-container">
+                <div
+                    style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px;">
+                    <div>
+                        <h1 class="page-header" style="margin: 0 0 6px 0;">📍 Рекомендовані ділянки (Місто)</h1>
+                        <p style="color: #64748b; font-size: 0.9rem; margin: 0;">
+                            Дільниці міста з найбільшим часом простою, згруповані за відстанню.
+                        </p>
+                    </div>
+
+                    <!-- Панель фільтрів -->
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+                        <!-- Фільтр Простою -->
+                        <div
+                            style="display: flex; align-items: center; gap: 6px; background: #fff; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                            <label for="idle-select"
+                                style="font-size: 0.88rem; font-weight: 600; color: #334155; white-space: nowrap;">⏳
+                                Простій:</label>
+                            <select id="idle-select" onchange="loadRecommendedParcels(null, this.value)"
+                                style="padding: 6px 10px; border-radius: 6px; border: 1px solid #94a3b8; font-size: 0.9rem; font-weight: 600; color: #1e293b; cursor: pointer; background: #f8fafc;">
+                                <option value="auto" selected>Авто (12 / 10 міс.)</option>
+                                <option value="12">Понад 12 місяців</option>
+                                <option value="10">Понад 10 місяців</option>
+                                <option value="8">Понад 8 місяців</option>
+                                <option value="6">Понад 6 місяців</option>
+                            </select>
+                        </div>
+
+                        <!-- Фільтр Радіуса -->
+                        <div
+                            style="display: flex; align-items: center; gap: 6px; background: #fff; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                            <label for="radius-select"
+                                style="font-size: 0.88rem; font-weight: 600; color: #334155; white-space: nowrap;">🎯
+                                Радіус:</label>
+                            <select id="radius-select" onchange="loadRecommendedParcels(this.value, null)"
+                                style="padding: 6px 10px; border-radius: 6px; border: 1px solid #94a3b8; font-size: 0.9rem; font-weight: 600; color: #1e293b; cursor: pointer; background: #f8fafc;">
+                                <option value="100">100 м</option>
+                                <option value="200">200 м</option>
+                                <option value="300">300 м</option>
+                                <option value="400" selected>400 м</option>
+                                <option value="500">500 м</option>
+                                <option value="600">600 м</option>
+                                <option value="700">700 м</option>
+                                <option value="800">800 м</option>
+                                <option value="900">900 м</option>
+                                <option value="1000">1 км</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="recommended-parcels-content">
+                    <div style="text-align: center; padding: 40px; color: #64748b;">
+                        Завантаження даних...
+                    </div>
                 </div>
             </div>
         </div>
@@ -261,6 +322,7 @@
             const mobileTitle = document.getElementById('mobile-title');
             const titles = {
                 'my-card': '👤 Моя картка',
+                'recommended-parcels': '📍 Рекомендовані', // ➕ Додано
                 'group-cards': '👥 Вісники',
                 'all-territories': '📋 S-13',
                 'user-details': '👤 Картка вісника'
@@ -292,6 +354,12 @@
 
                 if (tabName === 'all-territories') {
                     loadAllTerritoriesGrid();
+                }
+
+                if (tabName === 'recommended-parcels') {
+                    if (typeof loadRecommendedParcels === 'function') {
+                        loadRecommendedParcels();
+                    }
                 }
             }
 
@@ -1268,6 +1336,7 @@
         };
 
     </script>
+    <script src="js/recommended-parcels.js"></script>
     <script src="js/dev-tools.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
