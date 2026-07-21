@@ -3,7 +3,7 @@
  * Використовує категорії, статус "Зайнята", Карантин та логіку старіння (8+ місяців)
  */
 export function getParcelStyle(pData) {
-    
+
     // 1. КОНФІГУРАЦІЯ БАЗОВИХ КОЛЬОРІВ
     // Беремо кольори з бази (якщо завантажені), інакше — стандартні
     const config = (window.mapConfig && window.mapConfig.colors) ? window.mapConfig.colors : {
@@ -15,10 +15,10 @@ export function getParcelStyle(pData) {
         taken: '#163e25',     // Темно-зелений (Зайнята)
         quarantine: '#808080' // Сірий
     };
-    
+
     // МІКС кольорів для приватного сектора
     const privateSectorMix = [
-        '#008000', '#50C878', '#A020F0', '#0BDA51', '#FC0FC0', 
+        '#008000', '#50C878', '#A020F0', '#0BDA51', '#FC0FC0',
         '#93C572', '#710193', '#85BB65', '#FFF200', '#98FF98', '#DA70D6'
     ];
 
@@ -37,21 +37,21 @@ export function getParcelStyle(pData) {
 
     // 2. ВИБІР КОЛЬОРУ ЗА КАТЕГОРІЄЮ
     switch (currentCategory) {
-        case 'Поверхівки': 
-            baseColor = config.highrise; 
+        case 'Поверхівки':
+            baseColor = config.highrise;
             break;
-        case 'Змішані': 
-            baseColor = config.mixed; 
-            strokeColor = '#000000'; 
+        case 'Змішані':
+            baseColor = config.mixed;
+            strokeColor = '#000000';
             break;
-        case 'Ділова': 
-            baseColor = config.business; 
+        case 'Ділова':
+            baseColor = config.business;
             break;
-        case 'Село': 
-            baseColor = config.village; 
+        case 'Село':
+            baseColor = config.village;
             break;
         case 'Приватний сектор':
-        default: 
+        default:
             const hash = getCoordHash(pData);
             const colorIndex = hash % privateSectorMix.length;
             baseColor = privateSectorMix[colorIndex];
@@ -75,33 +75,39 @@ export function getParcelStyle(pData) {
     }
 
     // 5. ЛОГІКА СТАРІННЯ (6, 7, 8+ МІСЯЦІВ)
-    let finalOpacity = 0.3; 
+    let finalOpacity = 0.3;
     let weight = 1.5;
 
     if (pData.status !== 'taken' && diffMonths >= 6) {
         if (diffMonths < 7) {
-            const progress = diffMonths - 6; 
+            const progress = diffMonths - 6;
             baseColor = interpolateColor(baseColor, '#FF0000', progress);
-        } 
+        }
         else if (diffMonths < 8) {
             const progress = diffMonths - 7;
             baseColor = '#FF0000';
             strokeColor = interpolateColor('#FFFFFF', '#FF0000', progress);
-        } 
+        }
         else {
             baseColor = '#FF0000';
             strokeColor = '#FF0000';
             // Прозорість плавно зростає від 0.2 до 0.9 (до 12-го місяця)
-            finalOpacity = diffMonths <= 12 
-                ? 0.2 + ((diffMonths - 8) / 4 * 0.7) 
+            finalOpacity = diffMonths <= 12
+                ? 0.2 + ((diffMonths - 8) / 4 * 0.7)
                 : 0.9;
         }
     }
 
+    // --- ЗМІНА ТУТ: Зменшення заливки на 50% в офлайн-режимі ---
+    const isOffline = !navigator.onLine;
+    if (isOffline) {
+        finalOpacity = finalOpacity * 0.5;
+    }
+
     return {
         fillColor: baseColor,
-        fillOpacity: finalOpacity,
-        color: strokeColor,
+        fillOpacity: finalOpacity, // Стає вдвічі прозорішим без зміни контуру
+        color: strokeColor,        // Контур залишається повністю незмінним
         weight: weight,
         opacity: 1
     };
@@ -115,15 +121,15 @@ function interpolateColor(color1, color2, factor) {
     const r1 = parseInt(color1.substring(1, 3), 16);
     const g1 = parseInt(color1.substring(3, 5), 16);
     const b1 = parseInt(color1.substring(5, 7), 16);
-    
+
     const r2 = parseInt(color2.substring(1, 3), 16);
     const g2 = parseInt(color2.substring(3, 5), 16);
     const b2 = parseInt(color2.substring(5, 7), 16);
-    
+
     const r = Math.round(r1 + factor * (r2 - r1));
     const g = Math.round(g1 + factor * (g2 - g1));
     const b = Math.round(b1 + factor * (b2 - b1));
-    
+
     return `#${hex(r)}${hex(g)}${hex(b)}`;
 }
 
