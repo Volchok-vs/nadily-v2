@@ -273,12 +273,35 @@
             padding-top: 4px;
         }
 
-        .color-1 { background: #C8E6C9; border-left: 5px solid #4CAF50; }
-        .color-2 { background: #FFECB3; border-left: 5px solid #FFB300; }
-        .color-3 { background: #FFCDD2; border-left: 5px solid #E53935; }
-        .color-4 { background: #E1BEE7; border-left: 5px solid #8E24AA; }
-        .color-5 { background: #B3E5FC; border-left: 5px solid #039BE5; }
-        .color-6 { background: #CFD8DC; border-left: 5px solid #546E7A; }
+        .color-1 {
+            background: #C8E6C9;
+            border-left: 5px solid #4CAF50;
+        }
+
+        .color-2 {
+            background: #FFECB3;
+            border-left: 5px solid #FFB300;
+        }
+
+        .color-3 {
+            background: #FFCDD2;
+            border-left: 5px solid #E53935;
+        }
+
+        .color-4 {
+            background: #E1BEE7;
+            border-left: 5px solid #8E24AA;
+        }
+
+        .color-5 {
+            background: #B3E5FC;
+            border-left: 5px solid #039BE5;
+        }
+
+        .color-6 {
+            background: #CFD8DC;
+            border-left: 5px solid #546E7A;
+        }
 
         /* Стиль для плаваючого сповіщення */
         .toast-notification {
@@ -296,12 +319,19 @@
             gap: 10px;
             z-index: 9999;
             animation: slideIn 0.6s ease-out;
-           
+
         }
 
         @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
 
         .toast-notification.error {
@@ -388,8 +418,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateX(-10px); }
-            to { opacity: 1; transform: translateX(0); }
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
 
         .selection-mode tbody tr:hover {
@@ -534,9 +571,9 @@
                             <th>Здано</th>
                             <th>Час</th>
                             <script>
-                               if (localStorage.getItem('userRole') === 'admin' || localStorage.getItem('userRole') === 'super_admin' || localStorage.getItem('userRole') === 'super-admin') {
-    document.write('<th id="adminGear" style="cursor: pointer; user-select: none;">⚙️</th>');
-}
+                                if (localStorage.getItem('userRole') === 'admin' || localStorage.getItem('userRole') === 'super_admin' || localStorage.getItem('userRole') === 'super-admin') {
+                                    document.write('<th id="adminGear" style="cursor: pointer; user-select: none;">⚙️</th>');
+                                }
                             </script>
                         </tr>
                     </thead>
@@ -547,14 +584,19 @@
     </div>
 
     <!-- Модалка кастомного Confirm -->
-    <div id="customConfirmModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 9999;">
-        <div class="modal-content" style="max-width: 400px; text-align: center; padding: 30px 20px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);">
+    <div id="customConfirmModal"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 9999;">
+        <div class="modal-content"
+            style="max-width: 400px; text-align: center; padding: 30px 20px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);">
             <div id="confirmModalIcon" style="font-size: 40px; margin-bottom: 15px;">⚠️</div>
             <h3 id="confirmModalTitle" style="margin: 0 0 15px 0; font-size: 18px; color: #333;">Підтвердження дії</h3>
             <p id="confirmModalMessage" style="margin: 0 0 25px 0; font-size: 14px; color: #666; line-height: 1.5;"></p>
             <div style="display: flex; gap: 12px;">
-                <button id="confirmBtnYes" style="flex: 1; background: #dc3545; color: white; padding: 12px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer;">Так, виконати</button>
-                <button id="confirmBtnNo" style="flex: 1; background: #6c757d; color: white; padding: 12px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer;">Скасувати</button>
+                <button id="confirmBtnYes"
+                    style="flex: 1; background: #dc3545; color: white; padding: 12px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer;">Так,
+                    виконати</button>
+                <button id="confirmBtnNo"
+                    style="flex: 1; background: #6c757d; color: white; padding: 12px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer;">Скасувати</button>
             </div>
         </div>
     </div>
@@ -659,42 +701,48 @@
 
         async function init() {
             const urlParams = new URLSearchParams(window.location.search);
-            const parcelId = urlParams.get('id');
-            
-            console.log("🔍 [Деталі] Зчитано ID дільниці з URL:", parcelId);
-            
-            if (!parcelId) {
-                console.error("❌ [Деталі] ID дільниці відсутній в URL сторінки!");
+            const rawId = urlParams.get('id') || urlParams.get('parcel');
+
+            console.log("🔍 [Деталі] Зчитано ID дільниці з URL:", rawId);
+
+            if (!rawId || rawId === 'undefined') {
+                console.error("❌ [Деталі] ID дільниці відсутній або некоректний в URL сторінки!");
+                alert("Помилка: не вказано ID дільниці");
                 return;
             }
-            
+
+            const currentParcelId = Number(rawId);
+
             try {
-                console.log(" [Деталі] Запит до таблиці 'parcels' за id =", Number(parcelId));
-                
-                // Використовуємо звичайний масив замість .single(), щоб уникнути помилки 406
+                // 1. Чекаємо відновлення сесії Supabase (щоб RLS перевірив права без збоїв)
+                const { data: { session } } = await supabase.auth.getSession();
+
+                console.log(" [Деталі] Запит до таблиці 'parcels' за id =", currentParcelId);
+
+                // 2. Виконуємо запит до БД
                 const { data, error } = await supabase
                     .from('parcels')
                     .select('*')
-                    .eq('id', Number(parcelId));
-                    
+                    .eq('id', currentParcelId);
+
                 if (error) {
                     console.error("❌ [Деталі] Помилка Supabase при отриманні дільниці:", error);
                     alert("Помилка завантаження даних: " + error.message);
                     return;
                 }
-                
+
                 console.log("✅ [Деталі] Результат запиту (масив):", data);
-                
+
                 if (!data || data.length === 0) {
-                    console.error("⚠️ [Деталі] Дільницю з системним id " + parcelId + " не знайдено в базі або RLS блокує її читання.");
-                    alert("Дільницю з ID " + parcelId + " не знайдено.");
+                    console.error("⚠️ [Деталі] Дільницю з системним id " + currentParcelId + " не знайдено в базі або RLS блокує її читання.");
+                    alert("Дільницю з ID " + currentParcelId + " не знайдено.");
                     return;
                 }
-                
-                // Беремо перший елемент масиву
+
+                // 3. Зберігаємо отриманий об'єкт
                 const parcelData = data[0];
                 console.log("📦 [Деталі] Дані об'єкта дільниці для відображення:", parcelData);
-                
+
                 // Перевіряємо доступ для вільних дільниць
                 if (parcelData && parcelData.status === 'free' && !isAdmin) {
                     showToast("Доступ заборонено: тільки адміни можуть переглядати вільні картки", true);
@@ -718,7 +766,8 @@
                     addManualBtn.style.display = 'none';
                 }
 
-                await loadParcelInfo();
+                // 4. Передаємо вже завантажені дані в loadParcelInfo, щоб уникнути повторного запиту
+                await loadParcelInfo(parcelData);
                 await loadHistory();
                 await loadComments();
 
@@ -939,8 +988,8 @@
                 } else {
                     // Сценарії 2 та 3 (Запитання до адміна): Якщо період перетинає межі кампанії
                     const needToAsk = (!takenDuringCampaign && returnedDuringCampaign) ||
-                                      (takenDuringCampaign && !returnedDuringCampaign) ||
-                                      campaignOverlapsWorkPeriod;
+                        (takenDuringCampaign && !returnedDuringCampaign) ||
+                        campaignOverlapsWorkPeriod;
 
                     if (needToAsk && window.showCampaignModal) {
                         const currentParcelName = document.getElementById('parcelNameTitle')?.textContent || '';
@@ -1150,8 +1199,29 @@
             gear.style.userSelect = 'none';
         };
 
-        async function loadParcelInfo() {
-            const { data: p } = await supabase.from('parcels').select('*').eq('id', parcelId).single();
+        async function loadParcelInfo(cachedParcel = null) {
+            let p = cachedParcel;
+
+            // Якщо об'єкт не передано напряму (наприклад, при повторному виклику після оновлення даних)
+            if (!p) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const rawId = urlParams.get('id') || urlParams.get('parcel');
+
+                if (!rawId) return;
+
+                const { data, error } = await supabase
+                    .from('parcels')
+                    .select('*')
+                    .eq('id', Number(rawId));
+
+                if (error || !data || data.length === 0) {
+                    console.error("❌ Помилка завантаження даних дільниці в loadParcelInfo:", error);
+                    return;
+                }
+
+                p = data[0];
+            }
+
             if (!p) return;
 
             const prefix = p.category === 'Село' ? ': ' : ' №';
@@ -1166,7 +1236,7 @@
             if (p.status === 'taken' && returnBtn && isAdmin) {
                 returnBtn.style.display = 'inline-block';
                 returnBtn.onclick = () => window.triggerReturnParcelWithCustomModal(p.id, p.name, supabase, async () => {
-                    await loadParcelInfo();
+                    await loadParcelInfo(); // При повторному виклику запитає свіжі дані з БД
                     await loadHistory();
                     showToast(`Дільницю №${p.name} успішно здано!`);
                 });
