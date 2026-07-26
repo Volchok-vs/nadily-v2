@@ -70,6 +70,15 @@ self.addEventListener('activate', (event) => {
 
 // 3. Перехоплення мережевих запитів (Fetch)
 self.addEventListener('fetch', (event) => {
+    // 1. Фільтруємо запити: кешувати можна тільки HTTP/HTTPS та тільки GET-запити.
+    // Це позбавить від помилок з 'chrome-extension://', Supabase API (POST/PATCH) тощо.
+    if (!event.request.url.startsWith('http://') && !event.request.url.startsWith('https://')) {
+        return;
+    }
+    if (event.request.method !== 'GET') {
+        return;
+    }
+
     const url = new URL(event.request.url);
 
     // Перевіряємо, чи це запит тайлу OpenStreetMap
@@ -96,7 +105,6 @@ self.addEventListener('fetch', (event) => {
                 // Оновлюємо ресурс у кеші у фоновому режимі (Stale-While-Revalidate)
                 fetch(event.request).then((networkResponse) => {
                     if (networkResponse && networkResponse.status === 200) {
-                        // Використовуємо правильну змінну 'url' замість неіснуючої 'requestUrl'
                         const cacheToUse = url.pathname.includes('/tile/') || url.hostname.includes('tile.') ? TILE_CACHE_NAME : CACHE_NAME;
                         caches.open(cacheToUse).then((cache) => cache.put(event.request, networkResponse));
                     }
@@ -113,7 +121,6 @@ self.addEventListener('fetch', (event) => {
                 
                 if (networkResponse.type === 'basic' || networkResponse.type === 'cors') {
                     const responseToCache = networkResponse.clone();
-                    // Використовуємо правильну змінну 'url' замість неіснуючої 'requestUrl'
                     const cacheToUse = url.pathname.includes('/tile/') || url.hostname.includes('tile.') ? TILE_CACHE_NAME : CACHE_NAME;
                     caches.open(cacheToUse).then((cache) => {
                         cache.put(event.request, responseToCache);
@@ -125,7 +132,6 @@ self.addEventListener('fetch', (event) => {
         })
     );
 });
-
 // 4. ФОНОВЕ ЗАВАНТАЖЕННЯ ТА ТРАНСЛЯЦІЯ ПРОГРЕСУ
 self.addEventListener('message', (event) => {
     // Підтримуємо як "START_DOWNLOAD", так і "DOWNLOAD_TILES"

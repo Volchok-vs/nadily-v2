@@ -303,12 +303,13 @@
         }
 
         /* Для тач-пристроїв (Pixel 7) */
-        .leaflet-touch .leaflet-custom-btn {
+        .leaflet-touch .leaflet-custom-btn,
+        .leaflet-control-offline {
             width: 40px;
             height: 40px;
             font-size: 20px;
             border-radius: 8px;
-            margin-bottom: 10px;
+
         }
 
         .leaflet-touch .leaflet-control-layers,
@@ -1638,37 +1639,45 @@
         };
 
         document.addEventListener('DOMContentLoaded', async () => {
-            // Ініціалізація сесії користувача з перевіркою ролі з бази даних
+            // 1. Ініціалізація сесії користувача з перевіркою ролі з бази даних
             const session = await window.initUserSession();
-            // 2. Спершу карта
+
+            // 2. Спершу ініціалізуємо карту
             initMainMap();
-            // 3. ОДИН РАЗ завантажуємо дані
+
+            // 3. ОДИН РАЗ завантажуємо всі дані з БД
             await loadParcels();
-            // 3. ОДИН РАЗ налаштовуємо пошук, коли дані вже є
-            if (typeof initSearchAndFilters === 'function') {
-                initSearchAndFilters(window.map, window.allParcelLayers);
-            }
-            // 4. ОДИН РАЗ запускаємо інструменти (лінійка і т.д.)
-            initToolControl(window.map);
-            // 5. ОДИН РАЗ обробляємо перехід за посиланням
+
+            // 4. ОДИН РАЗ обробляємо перехід за посиланням (до того, як налаштуємо пошук і фільтри)
             if (typeof handleUrlParams === 'function') {
                 handleUrlParams();
-                // Показуємо кнопку скидання, якщо в URL є дільниця
+
+                // Перевіряємо наявність параметрів 'parcel' АБО 'recommend_ids'
                 const urlParams = new URLSearchParams(window.location.search);
                 const resetBtn = document.getElementById('reset-focus-btn');
-                if (urlParams.has('parcel') && resetBtn) {
+
+                if ((urlParams.has('parcel') || urlParams.has('recommend_ids')) && resetBtn) {
                     resetBtn.style.display = 'block';
                 }
             }
-            // 6. ОДИН РАЗ рахуємо кількість для фільтрів
-            if (typeof updateFilterCounts === 'function') {
-                updateFilterCounts(window.allParcelLayers);
+
+            // 5. ОДИН РАЗ налаштовуємо пошук та фільтри, коли дільниці вже відфільтровані
+            if (typeof initSearchAndFilters === 'function') {
+                initSearchAndFilters(window.map, window.allParcelLayers);
             }
-            // Експортуємо функції в window для глобального доступу
-            window.showCustomConfirm = showCustomConfirm;
-            window.triggerReturnParcelWithCustomModal = triggerReturnParcelWithCustomModal;
-            console.log('✅ Функції showCustomConfirm та triggerReturnParcelWithCustomModal додані в window');
+
+            // 6. ОДИН РАЗ запускаємо інструменти (лінійка і т.д.)
+            initToolControl(window.map);
         });
+
+        // 6. ОДИН РАЗ рахуємо кількість для фільтрів
+        if (typeof updateFilterCounts === 'function') {
+            updateFilterCounts(window.allParcelLayers);
+        }
+        // Експортуємо функції в window для глобального доступу
+        window.showCustomConfirm = showCustomConfirm;
+        window.triggerReturnParcelWithCustomModal = triggerReturnParcelWithCustomModal;
+        console.log('✅ Функції showCustomConfirm та triggerReturnParcelWithCustomModal додані в window');
     </script>
     <!-- Модалка кастомного Confirm -->
     <div id="customConfirmModal"

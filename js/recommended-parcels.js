@@ -3,7 +3,7 @@
  * Формування та відображення гео-блоків рекомендованих ділянок
  */
 
-let currentRadiusMeters = 400;
+let currentRadiusMeters = 500;
 let currentMinIdleMonths = 'auto'; // 'auto' або число (12, 10, 8, 6)
 
 async function getSupabaseInstance() {
@@ -21,7 +21,7 @@ async function getSupabaseInstance() {
 
 async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
     if (radiusMeters) {
-        currentRadiusMeters = parseInt(radiusMeters, 10) || 400;
+        currentRadiusMeters = parseInt(radiusMeters, 10) || 500;
     }
     if (minIdleMonths !== undefined) {
         currentMinIdleMonths = minIdleMonths;
@@ -100,9 +100,9 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
             return !isVillage;
         });
 
-        // Допоміжна функція перевірки простою в місяцях (приблизно 30.44 днів на місяць)
+        // Допоміжна функція перевірки простою в місяцях
         function getIdleMonths(lastReturnedDateStr) {
-            if (!lastReturnedDateStr) return Infinity; // Якщо ніколи не опрацьовувалася — нескінченний простій
+            if (!lastReturnedDateStr) return Infinity;
             const diffMs = now - new Date(lastReturnedDateStr);
             return diffMs / (30.44 * MS_PER_DAY);
         }
@@ -111,7 +111,6 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
         let isAutoExpanded = false;
 
         if (currentMinIdleMonths === 'auto') {
-            // Перевіряємо скільки дільниць > 12 місяців
             const count12 = baseFreeParcels.filter(p => getIdleMonths(p.last_returned) >= 12).length;
             if (count12 < 4) {
                 targetMonths = 10;
@@ -233,12 +232,35 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
             `;
         }
 
+        // 1. Збираємо ID ВСІХ ділянок з усіх гео-блоків для загальної кнопки на index.html
+        const allRecommendedIds = groups.flatMap(group => group.map(p => p.id)).filter(Boolean).join(',');
+
+        let generalMapButtonHtml = '';
+        if (allRecommendedIds.length > 0) {
+            // Вказуємо index.html та звичайні коми
+            const allMapUrl = `index.html?recommend_ids=${allRecommendedIds}`;
+            generalMapButtonHtml = `
+                <div style="margin-bottom: 16px; display: flex; justify-content: flex-end;">
+                    <a href="${allMapUrl}" 
+                       style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: #1565C0; color: #fff; text-decoration: none; border-radius: 8px; font-size: 0.92rem; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.08); transition: background 0.2s;"
+                       onmouseover="this.style.background='#0d47a1'" 
+                       onmouseout="this.style.background='#1565C0'">
+                        🗺️ Показати ВСІ гео-блоки на карті (${filtered.length} дільн.)
+                    </a>
+                </div>
+            `;
+        }
+
         // Генерація HTML
         let globalCounter = 1;
-        let blocksHtml = noticeHtml;
+        let blocksHtml = noticeHtml + generalMapButtonHtml;
 
         groups.forEach((group, groupIndex) => {
             let rowsHtml = "";
+
+            // 2. Формуємо URL до index.html для даного гео-блоку зі звичайними комами
+            const groupParcelIds = group.map(p => p.id).filter(Boolean).join(',');
+            const blockMapUrl = `index.html?recommend_ids=${groupParcelIds}`;
 
             group.forEach((parcel) => {
                 const idleText = calculateIdleTime(parcel.last_returned);
@@ -262,10 +284,20 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
 
             blocksHtml += `
                 <div class="card" style="margin-bottom: 16px; padding: 16px; overflow-x: auto;">
-                    <h3 style="margin: 0 0 12px 0; font-size: 1.05rem; color: #1565C0; display: flex; align-items: center; gap: 8px;">
-                        <span>📍</span> Гео-блок #${groupIndex + 1} 
-                        <span style="font-size: 0.85rem; font-weight: normal; color: #64748b;">(${group.length} дільн. у радіусі ${currentRadiusMeters}м)</span>
-                    </h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                        <h3 style="margin: 0; font-size: 1.05rem; color: #1565C0; display: flex; align-items: center; gap: 8px;">
+                            <span>📍</span> Гео-блок #${groupIndex + 1} 
+                            <span style="font-size: 0.85rem; font-weight: normal; color: #64748b;">(${group.length} дільн. у радіусі ${currentRadiusMeters}м)</span>
+                        </h3>
+                        
+                        <a href="${blockMapUrl}" 
+                           style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; background: #2e7d32; color: #fff; text-decoration: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; transition: background 0.2s;"
+                           onmouseover="this.style.background='#1b5e20'" 
+                           onmouseout="this.style.background='#2e7d32'">
+                            🗺️ Показати цей блок
+                        </a>
+                    </div>
+
                     <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 500px;">
                         <thead>
                             <tr style="background: #f8fafc; color: #475569; border-bottom: 2px solid #e2e8f0; text-align: left;">

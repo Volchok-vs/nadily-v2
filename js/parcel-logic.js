@@ -129,36 +129,82 @@ export function triggerReturnParcelWithCustomModal(id, name, supabase, callback)
 // Функція фокусування на дільниці за параметром в URL
 export function handleUrlParams() {
     const urlParams = new URLSearchParams(window.location.search);
-    const targetParcel = urlParams.get('parcel');
+    const recommendIdsStr = urlParams.get('recommend_ids');
+    const singleParcelName = urlParams.get('parcel');
 
-    if (targetParcel && window.allParcelLayers) {
-        const targetName = targetParcel.toLowerCase().trim();
-        
-        setTimeout(() => {
-            let foundItem = window.allParcelLayers.find(item => 
-                item.name.toString().toLowerCase().trim() === targetName
-            );
+    const resetBtn = document.getElementById('reset-focus-btn');
 
-            if (foundItem) {
-                // Ховаємо всі інші, показуємо цільову (як у твоєму коді)
-                window.allParcelLayers.forEach(item => {
-                    if (item.name.toString().toLowerCase().trim() === targetName) {
-                        item.layer.setStyle({ color: '#ffeb3b', weight: 8, fillOpacity: 0.7 });
-                        item.layer.addTo(window.map);
-                        if (item.label) item.label.addTo(window.map);
-                    } else {
-                        window.map.removeLayer(item.layer);
-                        if (item.label) window.map.removeLayer(item.label);
+    // 1. Обробка параметра рекомендованих ділянок (?recommend_ids=1,2,3)
+    if (recommendIdsStr && window.allParcelLayers) {
+        // Отримуємо масив ID у вигляді рядків для точного порівняння
+        const allowedIds = recommendIdsStr.split(',').map(id => id.trim());
+        const visibleBounds = L.latLngBounds([]);
+
+        window.allParcelLayers.forEach(item => {
+            // Перевіряємо, чи є ID дільниці серед дозволених
+            const isTarget = allowedIds.includes(String(item.id));
+
+            if (isTarget) {
+                // Показуємо полігон та ярлик
+                if (!window.map.hasLayer(item.layer)) {
+                    item.layer.addTo(window.map);
+                }
+                if (item.label && !window.map.hasLayer(item.label)) {
+                    item.label.addTo(window.map);
+                }
+
+                // Збираємо межі видимих полігонів для маштабування
+                item.layer.eachLayer(layer => {
+                    if (layer.getBounds) {
+                        visibleBounds.extend(layer.getBounds());
                     }
                 });
-
-                window.map.fitBounds(foundItem.layer.getBounds(), { padding: [50, 50], maxZoom: 17 });
-                
-                window.map.once('moveend', () => {
-                    foundItem.layer.fire('click');
-                });
+            } else {
+                // Приховуємо всі інші дільниці
+                if (window.map.hasLayer(item.layer)) {
+                    window.map.removeLayer(item.layer);
+                }
+                if (item.label && window.map.hasLayer(item.label)) {
+                    window.map.removeLayer(item.label);
+                }
             }
-        }, 800);
+        });
+
+        // Центруємо та масштабуємо карту під рекомендовані полігони
+        if (visibleBounds.isValid()) {
+            window.map.fitBounds(visibleBounds, { padding: [50, 50] });
+        }
+
+        // Показуємо кнопку скидання фокусу
+        if (resetBtn) resetBtn.style.display = 'block';
+
+        return; // Виходимо, щоб не накладалася логіка одного 'parcel'
+    }
+
+    // 2. Логіка для поодинокої дільниці (?parcel=123)
+    if (singleParcelName && window.allParcelLayers) {
+        const targetParcel = window.allParcelLayers.find(
+            p => p.name.toLowerCase() === singleParcelName.toLowerCase()
+        );
+
+        if (targetParcel) {
+            window.allParcelLayers.forEach(item => {
+                if (item.id !== targetParcel.id) {
+                    if (window.map.hasLayer(item.layer)) window.map.removeLayer(item.layer);
+                    if (item.label && window.map.hasLayer(item.label)) window.map.removeLayer(item.label);
+                }
+            });
+
+            // Фокус на обраній дільниці та відкриття попапу
+            targetParcel.layer.eachLayer(layer => {
+                if (layer.getBounds) {
+                    window.map.fitBounds(layer.getBounds(), { maxZoom: 18, padding: [50, 50] });
+                }
+                if (layer.openPopup) layer.openPopup();
+            });
+
+            if (resetBtn) resetBtn.style.display = 'block';
+        }
     }
 }
 
