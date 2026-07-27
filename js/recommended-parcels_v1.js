@@ -1,13 +1,17 @@
 /**
  * recommended-parcels.js
- * Універсальний модуль для розрахунку та відображення рекомендованих гео-блоків.
+ * Формування та відображення гео-блоків рекомендованих ділянок
  */
 
 let currentRadiusMeters = 500;
 let currentMinIdleMonths = 'auto'; // 'auto' або число (12, 10, 8, 6)
 
 /**
- * Універсальна функція плюралізації (відмінювання іменників за кількістю)
+ * Повертає правильний іменник залежно від кількості
+ * @param {number} count - Кількість
+ * @param {string} one - Форма для 1 (напр. 'дільниця')
+ * @param {string} few - Форма для 2-4 (напр. 'дільниці')
+ * @param {string} many - Форма для 5+ (напр. 'дільниць')
  */
 function getPluralWord(count, one = 'дільниця', few = 'дільниці', many = 'дільниць') {
     const mod10 = count % 10;
@@ -38,169 +42,15 @@ async function getSupabaseInstance() {
     return null;
 }
 
-/**
- * 💡 ОСНОВНА ЧИСТА ЛОГІКА РОЗРАХУНКУ
- * Завантажує дані та повертає структуровані гео-блоки і відфільтровані дільниці.
- */
-async function computeRecommendedParcels(radiusMeters = 500, minIdleMonths = 'auto') {
-    const supabaseClient = await getSupabaseInstance();
-    if (!supabaseClient) {
-        throw new Error("Об'єкт Supabase не знайдено.");
-    }
-
-    const { data: allParcels, error } = await supabaseClient
-        .from('parcels')
-        .select('*');
-
-    if (error) throw error;
-
-    const now = new Date();
-    const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-    function getParcelCentroid(p) {
-        if (p.geom && p.geom.coordinates) {
-            let coords = p.geom.coordinates;
-            while (Array.isArray(coords[0]) && typeof coords[0][0] !== 'number') {
-                coords = coords[0];
-            }
-            if (Array.isArray(coords) && coords.length > 0) {
-                let sumLat = 0, sumLng = 0, count = 0;
-                coords.forEach(pt => {
-                    if (Array.isArray(pt) && pt.length >= 2) {
-                        sumLng += parseFloat(pt[0]);
-                        sumLat += parseFloat(pt[1]);
-                        count++;
-                    }
-                });
-                if (count > 0) return { lat: sumLat / count, lng: sumLng / count };
-            }
-        }
-
-        if (Array.isArray(p.label_pos) && p.label_pos.length >= 2) {
-            const lat = parseFloat(p.label_pos[0]);
-            const lng = parseFloat(p.label_pos[1]);
-            if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
-        }
-
-        return null;
-    }
-
-    // Базова фільтрація: вільні міські дільниці
-    let baseFreeParcels = allParcels.filter(parcel => {
-        const status = (parcel.status || '').toLowerCase().trim();
-        const isFree = status === 'free' || status === 'вільна' || status === 'доступна' || status === '';
-        if (!isFree) return false;
-
-        const name = (parcel.name || '').toLowerCase();
-        const category = (parcel.category || '').toLowerCase();
-        const isVillage = category.includes('село') || name.includes('с.') || category.includes('с.');
-        return !isVillage;
-    });
-
-    function getIdleMonths(lastReturnedDateStr) {
-        if (!lastReturnedDateStr) return Infinity;
-        const diffMs = now - new Date(lastReturnedDateStr);
-        return diffMs / (30.44 * MS_PER_DAY);
-    }
-
-    let targetMonths = 12;
-    let isAutoExpanded = false;
-
-    if (minIdleMonths === 'auto') {
-        const count12 = baseFreeParcels.filter(p => getIdleMonths(p.last_returned) >= 12).length;
-        if (count12 < 4) {
-            targetMonths = 10;
-            isAutoExpanded = true;
-        } else {
-            targetMonths = 12;
-        }
-    } else {
-        targetMonths = parseInt(minIdleMonths, 10) || 12;
-    }
-
-    let filtered = baseFreeParcels.filter(p => getIdleMonths(p.last_returned) >= targetMonths);
-
-    filtered.forEach(p => {
-        p._centroid = getParcelCentroid(p);
-    });
-
-    filtered.sort((a, b) => {
-        if (!a.last_returned) return -1;
-        if (!b.last_returned) return 1;
-        return new Date(a.last_returned) - new Date(b.last_returned);
-    });
-
-    function getDistanceMeters(lat1, lon1, lat2, lon2) {
-        const R = 6371000;
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
-
-    function extractNumberForSort(str) {
-        const match = (str || '').toString().match(/\d+/);
-        return match ? parseInt(match[0], 10) : Infinity;
-    }
-
-    // Групування в гео-блоки
-    const groups = [];
-    const visited = new Set();
-
-    filtered.forEach((item) => {
-        if (visited.has(item.id)) return;
-
-        const currentGroup = [item];
-        visited.add(item.id);
-        const itemCenter = item._centroid;
-
-        if (itemCenter) {
-            filtered.forEach((candidate) => {
-                if (visited.has(candidate.id) || !candidate._centroid) return;
-
-                const dist = getDistanceMeters(
-                    itemCenter.lat, itemCenter.lng,
-                    candidate._centroid.lat, candidate._centroid.lng
-                );
-
-                if (dist <= radiusMeters) {
-                    currentGroup.push(candidate);
-                    visited.add(candidate.id);
-                }
-            });
-        }
-
-        currentGroup.sort((a, b) => {
-            const numA = extractNumberForSort(a.name);
-            const numB = extractNumberForSort(b.name);
-            if (numA !== numB) return numA - numB;
-            return (a.name || '').localeCompare(b.name || '', 'uk', { numeric: true });
-        });
-
-        groups.push(currentGroup);
-    });
-
-    const allRecommendedIds = groups.flatMap(group => group.map(p => p.id)).filter(Boolean);
-
-    return {
-        groups,
-        filtered,
-        allRecommendedIds,
-        isAutoExpanded
-    };
-}
-
-
-/**
- * 🎛️ 1. ФУНКЦІЯ ДЛЯ СТОРІНКИ ПРОФІЛЮ / РЕКОМЕНДАЦІЙ
- * Відображає гео-блоки у вигляді списку списків/ка карток.
- */
 async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
-    if (radiusMeters) currentRadiusMeters = parseInt(radiusMeters, 10) || 500;
-    if (minIdleMonths !== undefined) currentMinIdleMonths = minIdleMonths;
+    if (radiusMeters) {
+        currentRadiusMeters = parseInt(radiusMeters, 10) || 500;
+    }
+    if (minIdleMonths !== undefined) {
+        currentMinIdleMonths = minIdleMonths;
+    }
 
+    // Синхронізуємо елементи керування, якщо вони є на сторінці
     const radiusSelect = document.getElementById('radius-select');
     if (radiusSelect) radiusSelect.value = currentRadiusMeters;
 
@@ -208,7 +58,7 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
     if (idleSelect) idleSelect.value = currentMinIdleMonths;
 
     const contentDiv = document.getElementById('recommended-parcels-content');
-    if (!contentDiv) return; // Якщо на сторінці немає блоку результатів, зупиняємо рендер HTML
+    if (!contentDiv) return;
 
     contentDiv.innerHTML = `
         <div style="text-align: center; padding: 40px; font-family: inherit;">
@@ -219,10 +69,109 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
     `;
 
     try {
-        const { groups, filtered, allRecommendedIds, isAutoExpanded } = 
-            await computeRecommendedParcels(currentRadiusMeters, currentMinIdleMonths);
+        const supabaseClient = await getSupabaseInstance();
+        if (!supabaseClient) {
+            throw new Error("Об'єкт Supabase не знайдено.");
+        }
+
+        const { data: allParcels, error } = await supabaseClient
+            .from('parcels')
+            .select('*');
+
+        if (error) throw error;
 
         const now = new Date();
+        const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+        function getParcelCentroid(p) {
+            if (p.geom && p.geom.coordinates) {
+                let coords = p.geom.coordinates;
+                while (Array.isArray(coords[0]) && typeof coords[0][0] !== 'number') {
+                    coords = coords[0];
+                }
+                if (Array.isArray(coords) && coords.length > 0) {
+                    let sumLat = 0, sumLng = 0, count = 0;
+                    coords.forEach(pt => {
+                        if (Array.isArray(pt) && pt.length >= 2) {
+                            sumLng += parseFloat(pt[0]);
+                            sumLat += parseFloat(pt[1]);
+                            count++;
+                        }
+                    });
+                    if (count > 0) return { lat: sumLat / count, lng: sumLng / count };
+                }
+            }
+
+            if (Array.isArray(p.label_pos) && p.label_pos.length >= 2) {
+                const lat = parseFloat(p.label_pos[0]);
+                const lng = parseFloat(p.label_pos[1]);
+                if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+            }
+
+            return null;
+        }
+
+        // Базова фільтрація: вільні міські дільниці
+        let baseFreeParcels = allParcels.filter(parcel => {
+            const status = (parcel.status || '').toLowerCase().trim();
+            const isFree = status === 'free' || status === 'вільна' || status === 'доступна' || status === '';
+            if (!isFree) return false;
+
+            const name = (parcel.name || '').toLowerCase();
+            const category = (parcel.category || '').toLowerCase();
+            const isVillage = category.includes('село') || name.includes('с.') || category.includes('с.');
+            return !isVillage;
+        });
+
+        // Допоміжна функція перевірки простою в місяцях
+        function getIdleMonths(lastReturnedDateStr) {
+            if (!lastReturnedDateStr) return Infinity;
+            const diffMs = now - new Date(lastReturnedDateStr);
+            return diffMs / (30.44 * MS_PER_DAY);
+        }
+
+        let targetMonths = 12;
+        let isAutoExpanded = false;
+
+        if (currentMinIdleMonths === 'auto') {
+            const count12 = baseFreeParcels.filter(p => getIdleMonths(p.last_returned) >= 12).length;
+            if (count12 < 4) {
+                targetMonths = 10;
+                isAutoExpanded = true;
+            } else {
+                targetMonths = 12;
+            }
+        } else {
+            targetMonths = parseInt(currentMinIdleMonths, 10) || 12;
+        }
+
+        // Остаточна фільтрація за потрібним терміном простою
+        let filtered = baseFreeParcels.filter(p => getIdleMonths(p.last_returned) >= targetMonths);
+
+        filtered.forEach(p => {
+            p._centroid = getParcelCentroid(p);
+        });
+
+        filtered.sort((a, b) => {
+            if (!a.last_returned) return -1;
+            if (!b.last_returned) return 1;
+            return new Date(a.last_returned) - new Date(b.last_returned);
+        });
+
+        function getDistanceMeters(lat1, lon1, lat2, lon2) {
+            const R = 6371000;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        function extractNumberForSort(str) {
+            const match = (str || '').toString().match(/\d+/);
+            return match ? parseInt(match[0], 10) : Infinity;
+        }
 
         function calculateIdleTime(lastDateStr) {
             if (!lastDateStr) return "Ніколи не опрацьовувалась";
@@ -258,6 +207,44 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
             return d.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
+        // Групування в гео-блоки
+        const groups = [];
+        const visited = new Set();
+
+        filtered.forEach((item) => {
+            if (visited.has(item.id)) return;
+
+            const currentGroup = [item];
+            visited.add(item.id);
+            const itemCenter = item._centroid;
+
+            if (itemCenter) {
+                filtered.forEach((candidate) => {
+                    if (visited.has(candidate.id) || !candidate._centroid) return;
+
+                    const dist = getDistanceMeters(
+                        itemCenter.lat, itemCenter.lng,
+                        candidate._centroid.lat, candidate._centroid.lng
+                    );
+
+                    if (dist <= currentRadiusMeters) {
+                        currentGroup.push(candidate);
+                        visited.add(candidate.id);
+                    }
+                });
+            }
+
+            currentGroup.sort((a, b) => {
+                const numA = extractNumberForSort(a.name);
+                const numB = extractNumberForSort(b.name);
+                if (numA !== numB) return numA - numB;
+                return (a.name || '').localeCompare(b.name || '', 'uk', { numeric: true });
+            });
+
+            groups.push(currentGroup);
+        });
+
+        // Інформаційне повідомлення про авто-розширення
         let noticeHtml = '';
         if (isAutoExpanded) {
             const word4 = getPluralWord(4);
@@ -269,9 +256,12 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
             `;
         }
 
+        // 1. Збираємо ID ВСІХ ділянок з усіх гео-блоків для загальної кнопки на index.html
+        const allRecommendedIds = groups.flatMap(group => group.map(p => p.id)).filter(Boolean).join(',');
+
         let generalMapButtonHtml = '';
         if (allRecommendedIds.length > 0) {
-            const allMapUrl = `index.html?recommend_ids=${allRecommendedIds.join(',')}&from=recommended`;
+            const allMapUrl = `index.html?recommend_ids=${allRecommendedIds}&from=recommended`;
             const totalCount = filtered.length;
             const totalWord = getPluralWord(totalCount);
 
@@ -287,11 +277,13 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
             `;
         }
 
+        // Генерація HTML
         let globalCounter = 1;
         let blocksHtml = noticeHtml + generalMapButtonHtml;
 
         groups.forEach((group, groupIndex) => {
             let rowsHtml = "";
+
             const groupParcelIds = group.map(p => p.id).filter(Boolean).join(',');
             const blockMapUrl = `index.html?recommend_ids=${groupParcelIds}&from=recommended`;
 
@@ -362,43 +354,4 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
     }
 }
 
-
-/**
- * 🗺️ 2. ФУНКЦІЯ ДЛЯ СТОРІНКИ КАРТИ
- * Викликається при натисканні на кнопку на карті. Розраховує блоки та відображає їх.
- */
-async function showRecommendedOnMap(radiusMeters = 500, minIdleMonths = 'auto') {
-    try {
-        const { allRecommendedIds } = await computeRecommendedParcels(radiusMeters, minIdleMonths);
-
-        if (!allRecommendedIds || allRecommendedIds.length === 0) {
-            alert('Рекомендованих ділянок за заданими критеріями не знайдено.');
-            return [];
-        }
-
-        // Оновлюємо URL-параметри для збереження стану (опціонально)
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.set('recommend_ids', allRecommendedIds.join(','));
-        newUrl.searchParams.set('from', 'recommended');
-        window.history.pushState({}, '', newUrl);
-
-        // Якщо на карті є ваша функція фільтрації/відображення ділянок — викликаємо її:
-        if (typeof window.applyUrlFilters === 'function') {
-            window.applyUrlFilters();
-        } else if (typeof window.displayParcelsByIds === 'function') {
-            window.displayParcelsByIds(allRecommendedIds);
-        }
-
-        return allRecommendedIds;
-    } catch (err) {
-        console.error("❌ Помилка відображення рекомендованих ділянок на карті:", err);
-        alert("Помилка під час розрахунку гео-блоків: " + err.message);
-        return [];
-    }
-}
-
-// Експортуємо функції у глобальну область видимості
-window.getPluralWord = getPluralWord;
-window.computeRecommendedParcels = computeRecommendedParcels;
 window.loadRecommendedParcels = loadRecommendedParcels;
-window.showRecommendedOnMap = showRecommendedOnMap;

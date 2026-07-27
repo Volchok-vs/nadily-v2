@@ -201,12 +201,12 @@ export function initToolControl(mapInstance) {
                 const btn = L.DomUtil.create('button', 'leaflet-custom-btn', container);
                 btn.innerHTML = html;
                 btn.title = title;
-                btn.style.cssText = 'cursor:pointer; border:none; display:block; border-bottom:1px solid #ccc;';
+                btn.style.cssText = 'cursor:pointer; border:none; display:block; border-bottom:1px solid #ccc; width: 30px; height: 30px; line-height: 30px; text-align: center; background: #fff; font-size: 14px;';
 
                 L.DomEvent.on(btn, 'click', (e) => {
                     L.DomEvent.stopPropagation(e);
                     L.DomEvent.preventDefault(e);
-                    onClickAction(e);
+                    onClickAction(e, btn);
                 });
                 return btn;
             };
@@ -216,7 +216,7 @@ export function initToolControl(mapInstance) {
                 mapInstance.locate({ setView: true, maxZoom: 16 });
             });
 
-            // 🔍 Кнопка фільтрів (ВИПРАВЛЕНО)
+            // 🔍 Кнопка фільтрів
             createBtn('🔍', "Фільтри", () => {
                 if (window.UI && window.UI.toggleModal) {
                     const menu = document.getElementById('filterMenu');
@@ -225,10 +225,42 @@ export function initToolControl(mapInstance) {
                 }
             });
 
+            // 📍 Кнопка рекомендованих ділянок (ОНОВЛЕНО)
+            createBtn('📍', "Показати рекомендовані гео-блоки", async (e, btn) => {
+                if (typeof window.showRecommendedOnMap === 'function') {
+                    const originalHtml = btn.innerHTML;
+                    btn.innerHTML = '⏳'; // Показуємо завантаження
+                    btn.disabled = true;
+
+                    try {
+                        // 1. Формуємо рекомендації (змінює URL)
+                        await window.showRecommendedOnMap(500, 'auto');
+
+                        // 2. КЛЮЧОВИЙ КРОК: Примусово викликаємо фільтрацію карти за новим URL!
+                        if (typeof window.handleUrlParams === 'function') {
+                            window.handleUrlParams();
+                        }
+
+                        // 3. Показуємо кнопку "Показати всі дільниці", якщо вона є
+                        const resetBtn = document.getElementById('reset-focus-btn');
+                        if (resetBtn) {
+                            resetBtn.style.display = 'block';
+                        }
+
+                    } catch (err) {
+                        console.error("Помилка завантаження рекомендованих дільниць:", err);
+                    } finally {
+                        btn.innerHTML = originalHtml;
+                        btn.disabled = false;
+                    }
+                } else {
+                    alert('Модуль рекомендованих ділянок не підключено (recommended-parcels.js).');
+                }
+            });
+
             return container;
         }
     });
-
     mapInstance.addControl(new ToolControl());
 }
 

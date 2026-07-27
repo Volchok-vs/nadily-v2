@@ -650,6 +650,21 @@
             text-align: center;
             margin-left: auto;
         }
+
+        .leaflet-control-zoom-level {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #333;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+            border: 1px solid #ccc;
+            pointer-events: none;
+            /* Щоб віджет не перехоплював кліки по карті */
+            margin-right: 10px !important;
+            margin-bottom: 10px !important;
+        }
     </style>
     <link rel="stylesheet" href="css/style_mod.css">
     <link rel="stylesheet" href="css/responsive.css">
@@ -997,17 +1012,41 @@
                 zoomControl: false,
             });
 
-            // ... далі весь ваш код без змін (L.control.layers, baselayerchange, initGeolocation тощо) ...
-            // Додаємо перемикач
+            // Додаємо перемикач шарів
             L.control.layers(baseMaps, null, {
                 position: 'bottomleft',
                 collapsed: true
             }).addTo(window.map);
-            // 4. ДОДАНО ТУТ: Подія для збереження вибору
+
+            // 4. Подія для збереження обраного шару
             window.map.on('baselayerchange', function (e) {
                 localStorage.setItem('selectedBaseLayer', e.name);
                 console.log("💾 Шар збережено:", e.name);
             });
+
+            // 📍 5. ІНІЦІАЛІЗАЦІЯ ВІДЖЕТА ЗУМУ (Індикатор рівня зуму)
+            if (typeof initZoomWidget === 'function') {
+                initZoomWidget();
+            } else {
+                // Резервна ініціалізація, якщо зовнішня функція відсутня
+                const zoomIndicator = L.control({ position: 'bottomright' });
+
+                zoomIndicator.onAdd = function (map) {
+                    const div = L.DomUtil.create('div', 'leaflet-control-zoom-level');
+                    div.innerHTML = `Zoom: ${map.getZoom()}`;
+                    return div;
+                };
+
+                zoomIndicator.addTo(window.map);
+
+                window.map.on('zoomend', function () {
+                    const el = document.querySelector('.leaflet-control-zoom-level');
+                    if (el) {
+                        el.innerHTML = `Zoom: ${window.map.getZoom()}`;
+                    }
+                });
+            }
+
             // 🌐 ПОДІЯ: Автоматичне перемикання при раптовій втраті інтернету
             window.addEventListener('offline', () => {
                 const savedProviders = JSON.parse(localStorage.getItem('offline_available_providers') || '[]');
@@ -1045,22 +1084,25 @@
                     }
                 }
             });
-            // ... далі ваш код (initGeolocation, AuthControl) ...
+
+            // Модулі геолокації та авторизації
             if (typeof initGeolocation === 'function') initGeolocation(window.map);
-            new AuthControl().addTo(window.map);
-            // 🔍 Ініціалізація віджета зуму
-            if (typeof initZoomWidget === 'function') initZoomWidget();
+            if (typeof AuthControl === 'function') new AuthControl().addTo(window.map);
+
             // 🔍 Логіка приховування ярликів при зумі < 15 (крім сіл)
             window.updateLabelsVisibility = function () {
                 if (!window.allParcelLayers) return;
                 const currentZoom = window.map.getZoom();
                 const showLabels = currentZoom >= 15;
+
                 // Допоміжна функція для перевірки, чи це село
                 const isVillage = (p) => (p.category || p.type || "").toLowerCase().includes('сел');
+
                 window.allParcelLayers.forEach(item => {
                     if (item.label) {
                         const p = item.data || {};
                         const isVillageParcel = isVillage(p);
+
                         // Ярлики сіл завжди видимі, незалежно від зуму
                         if (isVillageParcel) {
                             if (window.map.hasLayer(item.layer) && !window.map.hasLayer(item.label)) {
@@ -1077,8 +1119,10 @@
                     }
                 });
             };
+
             // Додаємо подію на зміну зуму
             window.map.on('zoomend', updateLabelsVisibility);
+
             // Первинний виклик при ініціалізації
             updateLabelsVisibility();
         }
@@ -1697,6 +1741,7 @@
         </div>
     </div>
     <script src="js/dev-tools.js"></script>
+    <script src="js/recommended-parcels.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
