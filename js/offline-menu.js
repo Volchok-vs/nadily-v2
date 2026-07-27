@@ -61,11 +61,11 @@ function renderDownloadedZonesList() {
 }
 
 // Функція видалення конкретної збереженої зони та очищення кешу тайлів
-window.deleteOfflineZone = async function(index) {
+window.deleteOfflineZone = async function (index) {
     if (!confirm('Ви дійсно хочете видалити цю офлайн-карту та очистити кеш?')) return;
 
     let downloadedZones = JSON.parse(localStorage.getItem('offline_downloaded_zones') || '[]');
-    
+
     // Видаляємо елемент із масиву за індексом
     downloadedZones.splice(index, 1);
     localStorage.setItem('offline_downloaded_zones', JSON.stringify(downloadedZones));
@@ -89,300 +89,309 @@ window.deleteOfflineZone = async function(index) {
 };
 
 // =========================================================================
-// 2. ОСНОВНИЙ КОНТРОЛЕР МЕНЮ ОФЛАЙН ЗАВАНТАЖЕННЯ
+// 2. ОСНОВНИЙ КОНТРОЛЕР МЕНЮ ОФЛАЙН ЗАВАНТАЖЕННЯ (ОНОВЛЕНО)
+// =========================================================================
+// =========================================================================
+// 2. ОСНОВНИЙ КОНТРОЛЕР МЕНЮ ОФЛАЙН ЗАВАНТАЖЕННЯ (З ДІАГНОСТИКОЮ)
 // =========================================================================
 function initOfflineDownloadControl(map, allParcelsGroup) {
-    const OfflineControl = L.Control.extend({
-        options: {
-            position: 'topleft'
-        },
+    console.group('🔍 [OfflineControl] Діагностика пошуку контейнерів');
 
-        onAdd: function (map) {
-            const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+    // 1. Перевіряємо всі існуючі бари у верхньому лівому кутку
+    const allBars = document.querySelectorAll('.leaflet-top.leaflet-left .leaflet-bar');
+    console.log('Знайдено існуючих .leaflet-bar у .leaflet-top.leaflet-left:', allBars.length, allBars);
 
-            const button = L.DomUtil.create('a', 'leaflet-control-offline', container);
-            button.innerHTML = '💾';
-            button.href = '#';
-            button.title = 'Завантаження офлайн карти';
-            Object.assign(button.style, {
-                backgroundColor: '#fff', fontSize: '18px', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                width: '34px', height: '34px'
+    let parentBar = document.querySelector('.leaflet-top.leaflet-left .leaflet-bar');
+
+    if (parentBar) {
+        console.log('✅ Успіх: Кнопка 💾 буде додана в існуючий .leaflet-bar:', parentBar);
+    } else {
+        console.warn('⚠️ .leaflet-bar не знайдено! Перевіряємо наявність кутового контейнера .leaflet-top.leaflet-left...');
+        const topLeft = document.querySelector('.leaflet-top.leaflet-left');
+
+        if (topLeft) {
+            console.log('📍 Контейнер .leaflet-top.leaflet-left знайдено. Створюємо НОВИЙ .leaflet-bar:', topLeft);
+            parentBar = L.DomUtil.create('div', 'leaflet-bar leaflet-control', topLeft);
+        } else {
+            console.error('❌ Помилка: Контейнер .leaflet-top.leaflet-left взагалі відсутній у DOM!');
+            console.groupEnd();
+            return;
+        }
+    }
+    console.groupEnd();
+
+    // 2. Створюємо елемент кнопки 💾 та додаємо в parentBar
+    const button = L.DomUtil.create('button', 'leaflet-control-offline leaflet-custom-btn', parentBar);
+    button.type = 'button'; // Явно вказуємо тип, щоб запобігти випадковому відправленню форм (submit)
+    button.innerHTML = '💾';
+    button.title = 'Завантаження офлайн карти';
+
+
+    // --- 1. Створюємо модальне вікно один раз ---
+    let modal = document.getElementById('offline-modal');
+    let historyBox, selectZone, checkboxes = {}, downloadBtn, sizeInfoBox;
+
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'offline-modal';
+        Object.assign(modal.style, {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.5)', zIndex: '9999', display: 'none',
+            alignItems: 'center', justifyContent: 'center'
+        });
+
+        const modalContent = document.createElement('div');
+        Object.assign(modalContent.style, {
+            backgroundColor: '#fff', padding: '20px', borderRadius: '12px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.2)', width: '320px', position: 'relative'
+        });
+
+        // Хрестик для закриття
+        const closeBtn = document.createElement('span');
+        closeBtn.innerHTML = '&times;';
+        Object.assign(closeBtn.style, {
+            position: 'absolute', top: '10px', right: '15px', fontSize: '24px',
+            cursor: 'pointer', color: '#aaa'
+        });
+        closeBtn.onclick = () => { modal.style.display = 'none'; };
+        modalContent.appendChild(closeBtn);
+
+        // Заголовок
+        const title = document.createElement('h3');
+        title.innerHTML = '📥 Офлайн Карта';
+        title.style.margin = '0 0 15px 0';
+        modalContent.appendChild(title);
+
+        // --- 1. СЕЛЕКТ ЗОН ---
+        const labelZone = document.createElement('div');
+        labelZone.innerHTML = '<small style="color:#666;">1. Що завантажити:</small>';
+        labelZone.style.marginBottom = '5px';
+        modalContent.appendChild(labelZone);
+
+        selectZone = document.createElement('select');
+        selectZone.id = 'offline-zone-select';
+        Object.assign(selectZone.style, {
+            width: '100%', padding: '8px', marginBottom: '15px', borderRadius: '6px', border: '1px solid #ccc'
+        });
+        selectZone.innerHTML = `
+            <option value="city" selected>🏙️ Тільки Місто (Липовець)</option>
+            <option value="village">🏡 Тільки Села</option>
+            <option value="all">🗺️ Усі дільниці (Місто + Села)</option>
+            <option value="screen">📱 Поточний вигляд екрана</option>
+        `;
+        modalContent.appendChild(selectZone);
+
+        // --- 2. ЧЕКБОКСИ ШАРІВ ---
+        const labelLayers = document.createElement('div');
+        labelLayers.innerHTML = '<small style="color:#666;">2. Шари карти:</small>';
+        labelLayers.style.marginBottom = '5px';
+        modalContent.appendChild(labelLayers);
+
+        const layersContainer = document.createElement('div');
+        layersContainer.style.marginBottom = '15px';
+
+        const providers = [
+            { id: 'osm', label: '🗺️ Схема (OSM)' },
+            { id: 'topo', label: '⛰️ Рельєф (Topo)' },
+            { id: 'satellite', label: '🛰️ Гібрид (Супутник + Назви)' }
+        ];
+
+        providers.forEach(p => {
+            const row = document.createElement('label');
+            Object.assign(row.style, {
+                display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', cursor: 'pointer'
             });
 
-            // 1. Створюємо модальне вікно один раз
-            let modal = document.getElementById('offline-modal');
-            let historyBox, selectZone, checkboxes = {}, downloadBtn, sizeInfoBox;
+            const chk = document.createElement('input');
+            chk.type = 'checkbox';
+            chk.checked = false;
 
-            if (!modal) {
-                modal = document.createElement('div');
-                modal.id = 'offline-modal';
-                Object.assign(modal.style, {
-                    position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
-                    backgroundColor: 'rgba(0,0,0,0.5)', zIndex: '9999', display: 'none',
-                    alignItems: 'center', justifyContent: 'center'
-                });
+            row.appendChild(chk);
+            row.appendChild(document.createTextNode(p.label));
+            layersContainer.appendChild(row);
 
-                const modalContent = document.createElement('div');
-                Object.assign(modalContent.style, {
-                    backgroundColor: '#fff', padding: '20px', borderRadius: '12px',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.2)', width: '320px', position: 'relative'
-                });
+            checkboxes[p.id] = chk;
+        });
+        modalContent.appendChild(layersContainer);
 
-                // Хрестик для закриття
-                const closeBtn = document.createElement('span');
-                closeBtn.innerHTML = '&times;';
-                Object.assign(closeBtn.style, {
-                    position: 'absolute', top: '10px', right: '15px', fontSize: '24px',
-                    cursor: 'pointer', color: '#aaa'
-                });
-                closeBtn.onclick = () => { modal.style.display = 'none'; };
-                modalContent.appendChild(closeBtn);
+        // --- 3. БЛОК РОЗРАХУНКУ ВАГИ КЕШУ ---
+        sizeInfoBox = document.createElement('div');
+        sizeInfoBox.id = 'offline-size-info';
+        Object.assign(sizeInfoBox.style, {
+            backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '6px',
+            border: '1px solid #e9ecef', marginBottom: '15px', fontSize: '13px', color: '#333'
+        });
+        modalContent.appendChild(sizeInfoBox);
 
-                // Заголовок
-                const title = document.createElement('h3');
-                title.innerHTML = '📥 Офлайн Карта';
-                title.style.margin = '0 0 15px 0';
-                modalContent.appendChild(title);
+        // --- 4. БЛОК ІСТОРІЇ ЗБЕРЕЖЕНИХ ЗОН ---
+        historyBox = document.createElement('div');
+        historyBox.id = 'downloaded-zones-history';
+        Object.assign(historyBox.style, {
+            marginBottom: '15px',
+            padding: '8px',
+            backgroundColor: '#f1f8f5',
+            borderRadius: '6px',
+            border: '1px solid #d4edda'
+        });
+        modalContent.appendChild(historyBox);
 
-                // --- 1. СЕЛЕКТ ЗОН ---
-                const labelZone = document.createElement('div');
-                labelZone.innerHTML = '<small style="color:#666;">1. Що завантажити:</small>';
-                labelZone.style.marginBottom = '5px';
-                modalContent.appendChild(labelZone);
+        // --- 5. КНОПКА ЗАПУСКУ ЗАВАНТАЖЕННЯ ---
+        downloadBtn = document.createElement('button');
+        downloadBtn.innerHTML = 'Завантажити карту';
+        Object.assign(downloadBtn.style, {
+            width: '100%', padding: '10px', backgroundColor: '#007bff', color: '#fff',
+            border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer'
+        });
 
-                selectZone = document.createElement('select');
-                selectZone.id = 'offline-zone-select';
-                Object.assign(selectZone.style, {
-                    width: '100%', padding: '8px', marginBottom: '15px', borderRadius: '6px', border: '1px solid #ccc'
-                });
-                selectZone.innerHTML = `
-                    <option value="city" selected>🏙️ Тільки Місто (Липовець)</option>
-                    <option value="village">🏡 Тільки Села</option>
-                    <option value="all">🗺️ Усі дільниці (Місто + Села)</option>
-                    <option value="screen">📱 Поточний вигляд екрана</option>
-                `;
-                modalContent.appendChild(selectZone);
-
-                // --- 2. ЧЕКБОКСИ ШАРІВ (Без примусового виділення) ---
-                const labelLayers = document.createElement('div');
-                labelLayers.innerHTML = '<small style="color:#666;">2. Шари карти:</small>';
-                labelLayers.style.marginBottom = '5px';
-                modalContent.appendChild(labelLayers);
-
-                const layersContainer = document.createElement('div');
-                layersContainer.style.marginBottom = '15px';
-
-                const providers = [
-                    { id: 'osm', label: '🗺️ Схема (OSM)' },
-                    { id: 'topo', label: '⛰️ Рельєф (Topo)' },
-                    { id: 'satellite', label: '🛰️ Гібрид (Супутник + Назви)' }
-                ];
-
-                providers.forEach(p => {
-                    const row = document.createElement('label');
-                    Object.assign(row.style, {
-                        display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', cursor: 'pointer'
-                    });
-
-                    const chk = document.createElement('input');
-                    chk.type = 'checkbox';
-                    // За замовчуванням жоден чекбокс не активний — користувач обирає комплектацію сам
-                    chk.checked = false;
-
-                    row.appendChild(chk);
-                    row.appendChild(document.createTextNode(p.label));
-                    layersContainer.appendChild(row);
-
-                    checkboxes[p.id] = chk;
-                });
-                modalContent.appendChild(layersContainer);
-
-                // --- 3. БЛОК РОЗРАХУНКУ ВАГИ КЕШУ ---
-                sizeInfoBox = document.createElement('div');
-                sizeInfoBox.id = 'offline-size-info';
-                Object.assign(sizeInfoBox.style, {
-                    backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '6px',
-                    border: '1px solid #e9ecef', marginBottom: '15px', fontSize: '13px', color: '#333'
-                });
-                modalContent.appendChild(sizeInfoBox);
-
-                // --- 4. БЛОК ІСТОРІЇ ЗБЕРЕЖЕНИХ ЗОН ---
-                historyBox = document.createElement('div');
-                historyBox.id = 'downloaded-zones-history';
-                Object.assign(historyBox.style, {
-                    marginBottom: '15px',
-                    padding: '8px',
-                    backgroundColor: '#f1f8f5',
-                    borderRadius: '6px',
-                    border: '1px solid #d4edda'
-                });
-                modalContent.appendChild(historyBox);
-
-                // --- 5. КНОПКА ЗАПУСКУ ЗАВАНТАЖЕННЯ ---
-                downloadBtn = document.createElement('button');
-                downloadBtn.innerHTML = 'Завантажити карту';
-                Object.assign(downloadBtn.style, {
-                    width: '100%', padding: '10px', backgroundColor: '#007bff', color: '#fff',
-                    border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer'
-                });
-
-                downloadBtn.onclick = async () => {
-                    if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) {
-                        alert('⚠️ Service Worker не активний!');
-                        return;
-                    }
-
-                    const targetZone = selectZone.value;
-                    const targetZoneLabel = selectZone.options[selectZone.selectedIndex].text;
-                    const selectedProviders = Object.keys(checkboxes).filter(id => checkboxes[id].checked);
-                    
-                    if (selectedProviders.length === 0) {
-                        alert('⚠️ Будь ласка, оберіть хоча б один шар комплектації!');
-                        return;
-                    }
-
-                    if (selectedProviders.includes('satellite')) {
-                        selectedProviders.push('labels');
-                    }
-
-                    modal.style.display = 'none';
-                    const progressBox = createProgressBox();
-                    progressBox.innerHTML = '⏳ Формування списку тайлів...';
-
-                    try {
-                        const filteredPolygons = getFilteredPolygons(targetZone);
-                        if (filteredPolygons.length === 0) {
-                            progressBox.innerHTML = '❌ Немає полігонів для завантаження.';
-                            setTimeout(() => progressBox.remove(), 3000);
-                            return;
-                        }
-
-                        const zooms = [13, 14, 15, 16, 17];
-                        for (const provider of selectedProviders) {
-                            let urls = [];
-                            if (typeof getTileUrlsForPolygons === 'function') {
-                                urls = getTileUrlsForPolygons(filteredPolygons, zooms, provider);
-                            }
-                            if (urls.length > 0) {
-                                navigator.serviceWorker.controller.postMessage({
-                                    action: 'DOWNLOAD_TILES',
-                                    provider: provider,
-                                    urls: urls
-                                });
-                            }
-                        }
-
-                        // Записуємо в localStorage
-                        const downloadedZones = JSON.parse(localStorage.getItem('offline_downloaded_zones') || '[]');
-                        downloadedZones.push({
-                            zoneName: targetZoneLabel,
-                            providers: selectedProviders,
-                            date: new Date().toLocaleDateString()
-                        });
-                        localStorage.setItem('offline_downloaded_zones', JSON.stringify(downloadedZones));
-
-                        progressBox.innerHTML = '🚀 Завдання передано у фоновий режим!';
-                    } catch (err) {
-                        console.error('Помилка формування списку тайлів:', err);
-                        progressBox.innerHTML = '❌ Помилка підготовки завантаження.';
-                        setTimeout(() => progressBox.remove(), 3000);
-                    }
-                };
-
-                modalContent.appendChild(downloadBtn);
-                modal.appendChild(modalContent);
-                document.body.appendChild(modal);
+        downloadBtn.onclick = async () => {
+            if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) {
+                alert('⚠️ Service Worker не активний!');
+                return;
             }
 
-            // Допоміжна функція фільтрації полігонів
-            const getFilteredPolygons = (zoneValue) => {
-                const allLayers = [];
-                if (!allParcelsGroup) return allLayers;
-                allParcelsGroup.eachLayer(layer => allLayers.push(layer));
+            const targetZone = selectZone.value;
+            const targetZoneLabel = selectZone.options[selectZone.selectedIndex].text;
+            const selectedProviders = Object.keys(checkboxes).filter(id => checkboxes[id].checked);
 
-                if (zoneValue === 'all') return allLayers;
-                if (zoneValue === 'screen') {
-                    const mapBounds = map.getBounds();
-                    return allLayers.filter(layer => typeof layer.getBounds === 'function' && mapBounds.intersects(layer.getBounds()));
-                }
+            if (selectedProviders.length === 0) {
+                alert('⚠️ Будь ласка, оберіть хоча б один шар комплектації!');
+                return;
+            }
 
-                return allLayers.filter(layer => {
-                    const layerId = layer.options?.id || layer.feature?.id || layer.feature?.properties?.id;
-                    const layerName = layer.options?.name || layer.feature?.properties?.name;
-                    const globalData = window.allParcelLayers?.find(i => (layerId && i.id === layerId) || (layerName && i.name === layerName) || i.layer === layer);
-                    const category = globalData?.category || layer.options?.category || layer.feature?.properties?.category;
-                    const isVillage = category === 'Село';
-                    const isCity = !isVillage;
+            if (selectedProviders.includes('satellite')) {
+                selectedProviders.push('labels');
+            }
 
-                    return zoneValue === 'city' ? isCity : isVillage;
-                });
-            };
+            modal.style.display = 'none';
+            const progressBox = createProgressBox();
+            progressBox.innerHTML = '⏳ Формування списку тайлів...';
 
-            // Функція оновлення калькулятора розміру та стану кнопки
-            const updateEstimatedSize = () => {
-                const targetZone = selectZone.value;
-                const selectedProviders = Object.keys(checkboxes).filter(id => checkboxes[id].checked);
-
-                if (selectedProviders.length === 0) {
-                    sizeInfoBox.innerHTML = '❌ Оберіть хоча б один шар карти для комплектації';
-                    downloadBtn.disabled = true;
-                    downloadBtn.style.opacity = '0.5';
-                    downloadBtn.style.cursor = 'not-allowed';
+            try {
+                const filteredPolygons = getFilteredPolygons(targetZone);
+                if (filteredPolygons.length === 0) {
+                    progressBox.innerHTML = '❌ Немає полігонів для завантаження.';
+                    setTimeout(() => progressBox.remove(), 3000);
                     return;
                 }
 
-                downloadBtn.disabled = false;
-                downloadBtn.style.opacity = '1';
-                downloadBtn.style.cursor = 'pointer';
-
-                if (typeof estimateCacheSize === 'function' && allParcelsGroup) {
-                    const filteredPolygons = getFilteredPolygons(targetZone);
-
-                    if (filteredPolygons.length === 0) {
-                        sizeInfoBox.innerHTML = '📊 Немає полігонів для прорахунку цієї зони';
-                        return;
+                const zooms = [13, 14, 15, 16, 17];
+                for (const provider of selectedProviders) {
+                    let urls = [];
+                    if (typeof getTileUrlsForPolygons === 'function') {
+                        urls = getTileUrlsForPolygons(filteredPolygons, zooms, provider);
                     }
-
-                    const estimation = estimateCacheSize(
-                        filteredPolygons,
-                        [13, 14, 15, 16, 17],
-                        selectedProviders
-                    );
-
-                    sizeInfoBox.innerHTML = `📊 Оцінка: ~<strong>${estimation.sizeMB} МБ</strong><br><small style="color:#666;">Тайлів до скачування: ${estimation.totalTiles} шт.</small>`;
-                } else {
-                    sizeInfoBox.innerHTML = '📊 Розрахунок розміру готується...';
+                    if (urls.length > 0) {
+                        navigator.serviceWorker.controller.postMessage({
+                            action: 'DOWNLOAD_TILES',
+                            provider: provider,
+                            urls: urls
+                        });
+                    }
                 }
-            };
 
-            // Прив'язуємо події на зміну селекта та чекбоксів
-            selectZone.onchange = updateEstimatedSize;
-            Object.values(checkboxes).forEach(chk => {
-                chk.onchange = updateEstimatedSize;
-            });
+                const downloadedZones = JSON.parse(localStorage.getItem('offline_downloaded_zones') || '[]');
+                downloadedZones.push({
+                    zoneName: targetZoneLabel,
+                    providers: selectedProviders,
+                    date: new Date().toLocaleDateString()
+                });
+                localStorage.setItem('offline_downloaded_zones', JSON.stringify(downloadedZones));
 
-            // 2. Відкриття модального вікна та оновлення даних
-            L.DomEvent.on(button, 'click', function (e) {
-                L.DomEvent.stopPropagation(e);
-                L.DomEvent.preventDefault(e);
-                modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
+                progressBox.innerHTML = '🚀 Завдання передано у фоновий режим!';
+            } catch (err) {
+                console.error('Помилка формування списку тайлів:', err);
+                progressBox.innerHTML = '❌ Помилка підготовки завантаження.';
+                setTimeout(() => progressBox.remove(), 3000);
+            }
+        };
 
-                // Оновлюємо стан калькулятора та історію при кожному відкритті
-                updateEstimatedSize();
-                renderDownloadedZonesList();
-            });
+        modalContent.appendChild(downloadBtn);
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+    }
 
-            L.DomEvent.disableClickPropagation(container);
-            L.DomEvent.on(modal, 'click', function (e) {
-                if (e.target === modal) modal.style.display = 'none';
-            });
+    // Допоміжна функція фільтрації полігонів
+    const getFilteredPolygons = (zoneValue) => {
+        const allLayers = [];
+        if (!allParcelsGroup) return allLayers;
+        allParcelsGroup.eachLayer(layer => allLayers.push(layer));
 
-            return container;
+        if (zoneValue === 'all') return allLayers;
+        if (zoneValue === 'screen') {
+            const mapBounds = map.getBounds();
+            return allLayers.filter(layer => typeof layer.getBounds === 'function' && mapBounds.intersects(layer.getBounds()));
+        }
+
+        return allLayers.filter(layer => {
+            const layerId = layer.options?.id || layer.feature?.id || layer.feature?.properties?.id;
+            const layerName = layer.options?.name || layer.feature?.properties?.name;
+            const globalData = window.allParcelLayers?.find(i => (layerId && i.id === layerId) || (layerName && i.name === layerName) || i.layer === layer);
+            const category = globalData?.category || layer.options?.category || layer.feature?.properties?.category;
+            const isVillage = category === 'Село';
+            const isCity = !isVillage;
+
+            return zoneValue === 'city' ? isCity : isVillage;
+        });
+    };
+
+    // Оновлення калькулятора розміру
+    const updateEstimatedSize = () => {
+        const targetZone = selectZone.value;
+        const selectedProviders = Object.keys(checkboxes).filter(id => checkboxes[id].checked);
+
+        if (selectedProviders.length === 0) {
+            sizeInfoBox.innerHTML = '❌ Оберіть хоча б один шар карти для комплектації';
+            downloadBtn.disabled = true;
+            downloadBtn.style.opacity = '0.5';
+            downloadBtn.style.cursor = 'not-allowed';
+            return;
+        }
+
+        downloadBtn.disabled = false;
+        downloadBtn.style.opacity = '1';
+        downloadBtn.style.cursor = 'pointer';
+
+        if (typeof estimateCacheSize === 'function' && allParcelsGroup) {
+            const filteredPolygons = getFilteredPolygons(targetZone);
+
+            if (filteredPolygons.length === 0) {
+                sizeInfoBox.innerHTML = '📊 Немає полігонів для прорахунку цієї зони';
+                return;
+            }
+
+            const estimation = estimateCacheSize(
+                filteredPolygons,
+                [13, 14, 15, 16, 17],
+                selectedProviders
+            );
+
+            sizeInfoBox.innerHTML = `📊 Оцінка: ~<strong>${estimation.sizeMB} МБ</strong><br><small style="color:#666;">Тайлів до скачування: ${estimation.totalTiles} шт.</small>`;
+        } else {
+            sizeInfoBox.innerHTML = '📊 Розрахунок розміру готується...';
+        }
+    };
+
+    selectZone.onchange = updateEstimatedSize;
+    Object.values(checkboxes).forEach(chk => {
+        chk.onchange = updateEstimatedSize;
+    });
+
+    // 3. Відкриття модального вікна при кліку на кнопку
+    L.DomEvent.on(button, 'click', function (e) {
+        L.DomEvent.stopPropagation(e);
+        L.DomEvent.preventDefault(e);
+        modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
+
+        updateEstimatedSize();
+        if (typeof renderDownloadedZonesList === 'function') {
+            renderDownloadedZonesList();
         }
     });
 
-    map.addControl(new OfflineControl());
+    L.DomEvent.disableClickPropagation(button);
+    L.DomEvent.on(modal, 'click', function (e) {
+        if (e.target === modal) modal.style.display = 'none';
+    });
 }
 
 function createProgressBox() {

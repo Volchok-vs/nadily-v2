@@ -191,17 +191,24 @@ export function initToolControl(mapInstance) {
 
     const ToolControl = L.Control.extend({
         options: { position: 'topleft' },
-        onAdd: function () {
-            const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+        onAdd: function (mapInstance) {
+            // 1. Шукаємо вже існуючий контейнер контролів у цьому кутку (topleft)
+            const corner = mapInstance._controlCorners ? mapInstance._controlCorners[this.options.position] : null;
+            let container = corner ? corner.querySelector('.leaflet-bar') : null;
 
-            // Зупиняємо передачу кліків з меню на карту
+            // 2. Якщо контейнера ще немає — створюємо новий
+            if (!container) {
+                container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+            }
+
+            // Зупиняємо передачу подій кліку з панелі на карту
             L.DomEvent.disableClickPropagation(container);
 
+            // Допоміжна функція створення кнопки
             const createBtn = (html, title, onClickAction) => {
                 const btn = L.DomUtil.create('button', 'leaflet-custom-btn', container);
                 btn.innerHTML = html;
                 btn.title = title;
-                btn.style.cssText = 'cursor:pointer; border:none; display:block; border-bottom:1px solid #ccc; width: 30px; height: 30px; line-height: 30px; text-align: center; background: #fff; font-size: 14px;';
 
                 L.DomEvent.on(btn, 'click', (e) => {
                     L.DomEvent.stopPropagation(e);
@@ -220,12 +227,14 @@ export function initToolControl(mapInstance) {
             createBtn('🔍', "Фільтри", () => {
                 if (window.UI && window.UI.toggleModal) {
                     const menu = document.getElementById('filterMenu');
-                    const isHidden = window.getComputedStyle(menu).display === 'none';
-                    window.UI.toggleModal('filterMenu', isHidden);
+                    if (menu) {
+                        const isHidden = window.getComputedStyle(menu).display === 'none';
+                        window.UI.toggleModal('filterMenu', isHidden);
+                    }
                 }
             });
 
-            // 📍 Кнопка рекомендованих ділянок (ОНОВЛЕНО)
+            // 📍 Кнопка рекомендованих ділянок
             createBtn('📍', "Показати рекомендовані гео-блоки", async (e, btn) => {
                 if (typeof window.showRecommendedOnMap === 'function') {
                     const originalHtml = btn.innerHTML;
@@ -236,12 +245,12 @@ export function initToolControl(mapInstance) {
                         // 1. Формуємо рекомендації (змінює URL)
                         await window.showRecommendedOnMap(500, 'auto');
 
-                        // 2. КЛЮЧОВИЙ КРОК: Примусово викликаємо фільтрацію карти за новим URL!
+                        // 2. Викликаємо фільтрацію карти за новим URL
                         if (typeof window.handleUrlParams === 'function') {
                             window.handleUrlParams();
                         }
 
-                        // 3. Показуємо кнопку "Показати всі дільниці", якщо вона є
+                        // 3. Показуємо кнопку відновити фокус
                         const resetBtn = document.getElementById('reset-focus-btn');
                         if (resetBtn) {
                             resetBtn.style.display = 'block';
