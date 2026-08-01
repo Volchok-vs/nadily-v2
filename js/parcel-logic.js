@@ -218,6 +218,59 @@ export function handleUrlParams() {
         }
     }
 }
+
+// Автоматичний зум картографічної області під вибрані ділянки
+/**
+ * Універсальний чистий розрахунок зуму:
+ * Обчислює межі (bounds) так, щоб на карті ОДНОЧАСНО помістилися
+ * і всі рекомендовані дільниці, і точка геолокації користувача.
+ */
+export function fitMapToParcelsAndUser(parcelIds = [], userLocation = null) {
+    if (!window.map) return;
+
+    console.group('📐 [fitMapToParcelsAndUser] Діагностика');
+    console.log('🔎 Вхідні Parcel IDs:', parcelIds);
+    console.log('📍 Користувач:', userLocation);
+    console.log('🔍 Zoom DO:', window.map.getZoom());
+
+    const combinedBounds = L.latLngBounds([]);
+
+    if (parcelIds.length > 0 && window.allParcelLayers) {
+        window.allParcelLayers.forEach(item => {
+            if (parcelIds.includes(String(item.id))) {
+                if (item.layer.getBounds) {
+                    combinedBounds.extend(item.layer.getBounds());
+                } else if (item.layer.eachLayer) {
+                    item.layer.eachLayer(l => {
+                        if (l.getBounds) combinedBounds.extend(l.getBounds());
+                    });
+                }
+            }
+        });
+    }
+
+    if (userLocation) {
+        combinedBounds.extend(userLocation);
+    }
+
+    if (combinedBounds.isValid()) {
+        window.map.fitBounds(combinedBounds, {
+            padding: [50, 50],
+            animate: false
+        });
+        console.log('✅ Zoom ПІСЛЯ fitBounds:', window.map.getZoom());
+    } else {
+        console.warn('⚠️ Bounds невалідні!');
+    }
+    console.groupEnd();
+}
+
+// Робимо функцію доступною глобально для інших скриптів (geolocation.js, index.html тощо)
+window.fitMapToParcelsAndUser = fitMapToParcelsAndUser;
+
+// Робимо функцію доступною глобально для інших файлів
+//window.fitMapToParcelIds = fitMapToParcelIds;
+
 // Функція "Поділитися"
 export async function shareParcel(name, link) {
     const shareData = { title: `Дільниця ${name}`, url: link };

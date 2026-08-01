@@ -6,6 +6,21 @@
 let currentRadiusMeters = 500;
 let currentMinIdleMonths = 'auto'; // 'auto' або число (12, 10, 8, 6)
 
+// 🎨 Палітра приємних, виразних кольорів без чистого червоного
+const BLOCK_COLORS = [
+    '#2563eb', // Насичений синій
+    '#059669', // Смарагдово-зелений
+    '#d97706', // Янтарно-помаранчевий
+    '#7c3aed', // Фіолетовий
+    '#0f766e', // Морська хвиля / Slate Teal
+    '#0284c7', // Блакитний
+    '#ea580c', // Глибокий помаранчевий
+    '#4d7c0f'  // Оливково-зелений
+];
+
+// Масив для збереження активних шарів контурів
+window.currentBlockBoundaries = window.currentBlockBoundaries || [];
+
 /**
  * Універсальна функція плюралізації (відмінювання іменників за кількістю)
  */
@@ -192,10 +207,83 @@ async function computeRecommendedParcels(radiusMeters = 500, minIdleMonths = 'au
     };
 }
 
+/**
+ * 🧹 Очищає всі попередні контури гео-блоки з карти
+ */
+function clearBlockBoundaries() {
+    if (window.currentBlockBoundaries.length > 0) {
+        window.currentBlockBoundaries.forEach(layer => {
+            if (window.map && window.map.hasLayer(layer)) {
+                window.map.removeLayer(layer);
+            }
+        });
+        window.currentBlockBoundaries = [];
+    }
+}
+
+/**
+ * 📐 Побудова та малювання кольорового контуру гео-блоку через Turf.js
+ */
+function drawBlockBoundary(groupParcels, color) {
+    if (!window.map || !groupParcels || groupParcels.length === 0) return null;
+    if (typeof turf === 'undefined') {
+        console.warn("⚠️ Бібліотека Turf.js не підключена в index.html. Контури блоків не побудовано.");
+        return null;
+    }
+
+    try {
+        // 1. Формуємо GeoJSON масив полігонів для ділянок блоку
+        const geojsonFeatures = groupParcels.map(p => {
+            if (p.geom) {
+                return {
+                    type: "Feature",
+                    geometry: p.geom,
+                    properties: p
+                };
+            }
+            return null;
+        }).filter(Boolean);
+
+        if (geojsonFeatures.length === 0) return null;
+
+        // 2. Об'єднуємо полігони за допомогою turf.union
+        let combined = geojsonFeatures[0];
+
+        if (geojsonFeatures.length > 1) {
+            combined = geojsonFeatures.reduce((acc, feat) => {
+                if (!acc) return feat;
+                try {
+                    return turf.union(acc, feat);
+                } catch (e) {
+                    return acc;
+                }
+            });
+        }
+
+        // 3. Створюємо шар Leaflet з підібраним кольором
+        const boundaryLayer = L.geoJSON(combined, {
+            style: {
+                color: color,             // Колір лінії контуру
+                weight: 3,                 // Товщина межі
+                opacity: 0.9,              // Прозорість лінії
+                fillColor: color,          // Колір напівпрозорої заливки
+                fillOpacity: 0.15,         // Прозорість заливки
+                dashArray: '6, 6',         // Пунктирна лінія
+                interactive: false         // Щоб контур не заважав клікати по ділянках
+            }
+        });
+
+        boundaryLayer.addTo(window.map);
+        return boundaryLayer;
+
+    } catch (err) {
+        console.error("Помилка створення контуру гео-блоку:", err);
+        return null;
+    }
+}
 
 /**
  * 🎛️ 1. ФУНКЦІЯ ДЛЯ СТОРІНКИ ПРОФІЛЮ / РЕКОМЕНДАЦІЙ
- * Відображає гео-блоки у вигляді списку списків/ка карток.
  */
 async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
     if (radiusMeters) currentRadiusMeters = parseInt(radiusMeters, 10) || 500;
@@ -208,7 +296,7 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
     if (idleSelect) idleSelect.value = currentMinIdleMonths;
 
     const contentDiv = document.getElementById('recommended-parcels-content');
-    if (!contentDiv) return; // Якщо на сторінці немає блоку результатів, зупиняємо рендер HTML
+    if (!contentDiv) return;
 
     contentDiv.innerHTML = `
         <div style="text-align: center; padding: 40px; font-family: inherit;">
@@ -362,31 +450,47 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
     }
 }
 
-
 /**
  * 🗺️ 2. ФУНКЦІЯ ДЛЯ СТОРІНКИ КАРТИ
- * Викликається при натисканні на кнопку на карті. Розраховує блоки та відображає їх.
  */
 async function showRecommendedOnMap(radiusMeters = 500, minIdleMonths = 'auto') {
     try {
-        const { allRecommendedIds } = await computeRecommendedParcels(radiusMeters, minIdleMonths);
+        const { groups, allRecommendedIds } = await computeRecommendedParcels(radiusMeters, minIdleMonths);
 
         if (!allRecommendedIds || allRecommendedIds.length === 0) {
             alert('Рекомендованих ділянок за заданими критеріями не знайдено.');
             return [];
         }
 
-        // Оновлюємо URL-параметри для збереження стану (опціонально)
+        // 1. Оновлюємо URL
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.set('recommend_ids', allRecommendedIds.join(','));
         newUrl.searchParams.set('from', 'recommended');
         window.history.pushState({}, '', newUrl);
 
-        // Якщо на карті є ваша функція фільтрації/відображення ділянок — викликаємо її:
-        if (typeof window.applyUrlFilters === 'function') {
-            window.applyUrlFilters();
+        // 2. Спочатку малюємо самі ділянки на карті
+        if (typeof window.handleUrlParams === 'function') {
+            await window.handleUrlParams();
+        } else if (typeof window.applyUrlFilters === 'function') {
+            await window.applyUrlFilters();
         } else if (typeof window.displayParcelsByIds === 'function') {
             window.displayParcelsByIds(allRecommendedIds);
+        }
+
+        // 3. ТІЛЬКИ ПІСЛЯ ЦЬОГО малюємо кольорові контури блоків!
+        clearBlockBoundaries();
+
+        groups.forEach((group, index) => {
+            const color = BLOCK_COLORS[index % BLOCK_COLORS.length];
+            const boundary = drawBlockBoundary(group, color);
+            if (boundary) {
+                window.currentBlockBoundaries.push(boundary);
+            }
+        });
+
+        // 4. Наводимо зум
+        if (typeof window.fitMapToParcelIds === 'function') {
+            window.fitMapToParcelIds(allRecommendedIds);
         }
 
         return allRecommendedIds;
@@ -402,3 +506,5 @@ window.getPluralWord = getPluralWord;
 window.computeRecommendedParcels = computeRecommendedParcels;
 window.loadRecommendedParcels = loadRecommendedParcels;
 window.showRecommendedOnMap = showRecommendedOnMap;
+window.clearBlockBoundaries = clearBlockBoundaries;
+window.drawBlockBoundary = drawBlockBoundary;
