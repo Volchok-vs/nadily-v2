@@ -41,13 +41,12 @@ export function initGeolocation(map) {
         const width = window.innerWidth;
         const height = window.innerHeight;
 
-        // Для малих екранів (смартфонів) даємо менші відступи, щоб не віддаляти карту занадто сильно
         if (width < 600) {
-            return [Math.round(height * 0.05), Math.round(width * 0.05)]; // 5% від краю
+            return [Math.round(height * 0.05), Math.round(width * 0.05)];
         } else if (width < 1024) {
-            return [Math.round(height * 0.08), Math.round(width * 0.08)]; // 8% для планшетів
+            return [Math.round(height * 0.08), Math.round(width * 0.08)];
         } else {
-            return [50, 50]; // Стандартний відступ для ПК
+            return [50, 50];
         }
     };
 
@@ -73,9 +72,12 @@ export function initGeolocation(map) {
         if (hideTimer) clearTimeout(hideTimer);
         if (countdownInterval) clearInterval(countdownInterval);
 
+        // 🔴 1. Спочатку обов'язково видаляємо старе коло точності з карти!
         if (userLocationMarker) {
             map.removeLayer(userLocationMarker);
             map.removeLayer(userAccuracyCircle);
+            userLocationMarker = null;
+            userAccuracyCircle = null;
         }
 
         // --- 1. ОДЕРЖУЄМО ID РЕКОМЕНДОВАНИХ ДІЛЯНОК З URL ---
@@ -107,6 +109,12 @@ export function initGeolocation(map) {
                         parentLayer.eachLayer(sub => layersToCheck.push(sub));
                     }
                     layersToCheck.forEach(layer => {
+                        // 🛑 Ігноруємо кола точності та маркери геолокації
+                        if (layer instanceof L.Circle || layer instanceof L.CircleMarker) {
+                            return;
+                        }
+
+                        // ✅ ВИПРАВЛЕНО: прибрано пробіли в "layer"
                         const rawId = layer.options?.id ?? layer.feature?.id ?? layer.feature?.properties?.id ?? parentLayer.options?.id;
                         const layerId = String(rawId || '').trim();
 
@@ -119,29 +127,17 @@ export function initGeolocation(map) {
 
             console.log(`🎯 [Geolocation] Знайдено рекомендованих об’єктів: ${targetLayers.length} з ${recommendedIds.length}`);
         } else {
-            // Якщо параметр recommend_ids відсутній — беремо всі шари
-            if (window.allParcelLayers && Array.isArray(window.allParcelLayers)) {
-                window.allParcelLayers.forEach(item => {
-                    if (item.layer) targetLayers.push(item.layer);
-                });
-            }
-
-            if (targetLayers.length === 0 && window.allParcelsGroup) {
-                window.allParcelsGroup.eachLayer(layer => {
-                    targetLayers.push(layer);
-                });
-            }
-
-            console.log('🌐 [Geolocation] Загальний режим (без фільтрації). Знайдено об’єктів:', targetLayers.length);
+            console.log('🌐 [Geolocation] Загальний режим (без фільтрації).');
         }
 
         // --- 3. АДАПТИВНЕ ПОЗИЦІОНУВАННЯ ПІД ДИСПЛЕЙ ---
         const bounds = L.latLngBounds([]);
 
-        // 💡 ОБОВ'ЯЗКОВО додаємо геолокацію користувача у межі
         bounds.extend(e.latlng);
 
-        if (targetLayers.length > 0) {
+        const hasRecommendations = recommendedIds.length > 0;
+
+        if (hasRecommendations && targetLayers.length > 0) {
             targetLayers.forEach(layer => {
                 if (typeof layer.getBounds === 'function') {
                     bounds.extend(layer.getBounds());
@@ -155,23 +151,22 @@ export function initGeolocation(map) {
             });
         }
 
-        if (bounds.isValid()) {
+        // Перевіряємо режим позиціонування
+        if (hasRecommendations && bounds.isValid()) {
             const padding = typeof getAdaptivePadding === 'function' ? getAdaptivePadding() : [50, 50];
 
-            console.log('📐 [GeoDebug] Поточний Zoom перед fitBounds:', map.getZoom());
+            console.log('📐 [GeoDebug] (Фільтр) Zoom перед fitBounds:', map.getZoom());
 
-            // Застосовуємо межі із захистом від занадто близького наближення (maxZoom: 14 або 15)
             map.fitBounds(bounds, {
                 padding: padding,
-                maxZoom: 15, // 🛑 Забороняємо Leaflet наближати далі 15 зуму!
+                maxZoom: 16,
                 animate: false
             });
 
-            console.log('✅ [GeoDebug] Zoom ПІСЛЯ fitBounds:', map.getZoom());
+            console.log('✅ [GeoDebug] (Фільтр) Zoom ПІСЛЯ fitBounds:', map.getZoom());
         } else {
-            // Fallback тільки якщо зовсім немає точок
-            console.warn('⚠️ [GeoDebug] Bounds виявилися невалідними, ставимо дефолтний зум 14');
-            map.setView(e.latlng, 14);
+            console.log('📐 [GeoDebug] (Загальний) Фокусування на користувачі з Zoom 16');
+            map.setView(e.latlng, 16, { animate: false });
         }
 
         // --- 4. МАРКЕРИ ГЕОЛОКАЦІЇ ---
