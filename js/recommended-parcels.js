@@ -63,8 +63,11 @@ async function computeRecommendedParcels(radiusMeters = 500, minIdleMonths = 'au
         throw new Error("Об'єкт Supabase не знайдено.");
     }
 
+    const isAuth = !!localStorage.getItem('userId');
+    const targetSource = isAuth ? 'parcels' : 'public_parcels_map_mirror';
+
     const { data: allParcels, error } = await supabaseClient
-        .from('parcels')
+        .from(targetSource)
         .select('*');
 
     if (error) throw error;
@@ -73,8 +76,9 @@ async function computeRecommendedParcels(radiusMeters = 500, minIdleMonths = 'au
     const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
     function getParcelCentroid(p) {
-        if (p.geom && p.geom.coordinates) {
-            let coords = p.geom.coordinates;
+        if (p.geom) {
+            let geoData = typeof p.geom === 'string' ? JSON.parse(p.geom) : p.geom;
+            let coords = geoData.coordinates;
             while (Array.isArray(coords[0]) && typeof coords[0][0] !== 'number') {
                 coords = coords[0];
             }
@@ -232,12 +236,12 @@ function drawBlockBoundary(groupParcels, color) {
     }
 
     try {
-        // 1. Формуємо GeoJSON масив полігонів для ділянок блоку
         const geojsonFeatures = groupParcels.map(p => {
             if (p.geom) {
+                const geomObj = typeof p.geom === 'string' ? JSON.parse(p.geom) : p.geom;
                 return {
                     type: "Feature",
-                    geometry: p.geom,
+                    geometry: geomObj,
                     properties: p
                 };
             }
@@ -246,7 +250,6 @@ function drawBlockBoundary(groupParcels, color) {
 
         if (geojsonFeatures.length === 0) return null;
 
-        // 2. Об'єднуємо полігони за допомогою turf.union
         let combined = geojsonFeatures[0];
 
         if (geojsonFeatures.length > 1) {
@@ -260,16 +263,15 @@ function drawBlockBoundary(groupParcels, color) {
             });
         }
 
-        // 3. Створюємо шар Leaflet з підібраним кольором
         const boundaryLayer = L.geoJSON(combined, {
             style: {
-                color: color,             // Колір лінії контуру
-                weight: 3,                 // Товщина межі
-                opacity: 0.9,              // Прозорість лінії
-                fillColor: color,          // Колір напівпрозорої заливки
-                fillOpacity: 0.15,         // Прозорість заливки
-                dashArray: '6, 6',         // Пунктирна лінія
-                interactive: false         // Щоб контур не заважав клікати по ділянках
+                color: color,
+                weight: 3,
+                opacity: 0.9,
+                fillColor: color,
+                fillOpacity: 0.15,
+                dashArray: '6, 6',
+                interactive: false
             }
         });
 
@@ -307,7 +309,7 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
     `;
 
     try {
-        const { groups, filtered, allRecommendedIds, isAutoExpanded } = 
+        const { groups, filtered, allRecommendedIds, isAutoExpanded } =
             await computeRecommendedParcels(currentRadiusMeters, currentMinIdleMonths);
 
         const now = new Date();
@@ -359,17 +361,18 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
 
         let generalMapButtonHtml = '';
         if (allRecommendedIds.length > 0) {
-            const allMapUrl = `index.html?recommend_ids=${allRecommendedIds.join(',')}&from=recommended`;
+            // Передаємо 'all' замість масиву ID
+            const allMapUrl = `index.html?recommend_ids=all&from=recommended`;
             const totalCount = filtered.length;
             const totalWord = getPluralWord(totalCount);
 
             generalMapButtonHtml = `
                 <div style="margin-bottom: 16px; display: flex; justify-content: flex-end;">
                     <a href="${allMapUrl}" 
-                       style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: #1565C0; color: #fff; text-decoration: none; border-radius: 8px; font-size: 0.92rem; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.08); transition: background 0.2s;"
-                       onmouseover="this.style.background='#0d47a1'" 
-                       onmouseout="this.style.background='#1565C0'">
-                        🗺️ Показати ВСІ гео-блоки на карті (${totalCount} ${totalWord})
+                    style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: #1565C0; color: #fff; text-decoration: none; border-radius: 8px; font-size: 0.92rem; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.08); transition: background 0.2s;"
+                    onmouseover="this.style.background='#0d47a1'" 
+                    onmouseout="this.style.background='#1565C0'">
+                    🗺️ Показати ВСІ гео-блоки на карті (${totalCount} ${totalWord})
                     </a>
                 </div>
             `;
@@ -390,15 +393,9 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
                 rowsHtml += `
                     <tr style="border-bottom: 1px solid #f1f5f9;">
                         <td style="padding: 10px; text-align: center; font-weight: bold; color: #94a3b8;">${globalCounter++}</td>
-                        <td style="padding: 10px;"><b>Дільниця №${parcel.name || 'без назви'}</b></td>
+                        <td style="padding: 10px;"><b>№${parcel.name || 'без назви'}</b></td>
                         <td style="padding: 10px; text-align: center; white-space: nowrap;">${formattedDate}</td>
                         <td style="padding: 10px; text-align: center; font-weight: 600; color: #d97706; white-space: nowrap;">${idleText}</td>
-                        <td style="padding: 10px; text-align: center;">
-                            <a href="parcel-details.html?id=${parcel.id}&from=all" 
-                               style="display: inline-block; padding: 6px 12px; background: #1565C0; color: #fff; text-decoration: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
-                               Переглянути ↗
-                            </a>
-                        </td>
                     </tr>
                 `;
             });
@@ -407,7 +404,7 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
             const groupWord = getPluralWord(groupCount);
 
             blocksHtml += `
-                <div class="card" style="margin-bottom: 16px; padding: 16px; overflow-x: auto;">
+                <div class="card" style="margin-bottom: 16px; padding: 16px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
                         <h3 style="margin: 0; font-size: 1.05rem; color: #1565C0; display: flex; align-items: center; gap: 8px;">
                             <span>📍</span> Гео-блок #${groupIndex + 1} 
@@ -418,22 +415,22 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
                            style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; background: #2e7d32; color: #fff; text-decoration: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; transition: background 0.2s;"
                            onmouseover="this.style.background='#1b5e20'" 
                            onmouseout="this.style.background='#2e7d32'">
-                            🗺️ Показати цей блок
+                            🗺️ Показати цей блок На карті
                         </a>
                     </div>
-
-                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 500px;">
-                        <thead>
-                            <tr style="background: #f8fafc; color: #475569; border-bottom: 2px solid #e2e8f0; text-align: left;">
-                                <th style="padding: 8px 10px; text-align: center;">№</th>
-                                <th style="padding: 8px 10px;">Дільниця</th>
-                                <th style="padding: 8px 10px; text-align: center;">Останнє опрацювання</th>
-                                <th style="padding: 8px 10px; text-align: center;">Час простою</th>
-                                <th style="padding: 8px 10px; text-align: center;">Дія</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rowsHtml}</tbody>
-                    </table>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="background: #f8fafc; color: #475569; border-bottom: 2px solid #e2e8f0; text-align: left;">
+                                    <th style="padding: 8px 10px; text-align: center;">№</th>
+                                    <th style="padding: 8px 10px;">Дільниця</th>
+                                    <th style="padding: 8px 10px; text-align: center;">Останнє опрацювання</th>
+                                    <th style="padding: 8px 10px; text-align: center;">Час простою</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                    </div>
                 </div>
             `;
         });
@@ -453,7 +450,7 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
 /**
  * 🗺️ 2. ФУНКЦІЯ ДЛЯ СТОРІНКИ КАРТИ
  */
-async function showRecommendedOnMap(radiusMeters = 500, minIdleMonths = 'auto') {
+async function showRecommendedOnMap(radiusMeters = 500, minIdleMonths = 'auto', targetIds = null) {
     try {
         const { groups, allRecommendedIds } = await computeRecommendedParcels(radiusMeters, minIdleMonths);
 
@@ -462,38 +459,47 @@ async function showRecommendedOnMap(radiusMeters = 500, minIdleMonths = 'auto') 
             return [];
         }
 
+        // Визначаємо, які ID малювати: тільки вибраний блок (targetIds) чи всі
+        const activeIds = (Array.isArray(targetIds) && targetIds.length > 0)
+            ? targetIds
+            : allRecommendedIds;
+
         // 1. Оновлюємо URL
         const newUrl = new URL(window.location.href);
-        newUrl.searchParams.set('recommend_ids', allRecommendedIds.join(','));
+        newUrl.searchParams.set('recommend_ids', activeIds.join(','));
         newUrl.searchParams.set('from', 'recommended');
         window.history.pushState({}, '', newUrl);
 
-        // 2. Спочатку малюємо самі ділянки на карті
-        if (typeof window.handleUrlParams === 'function') {
+        // 2. Малюємо тільки потрібні дільниці
+        if (typeof window.displayParcelsByIds === 'function') {
+            window.displayParcelsByIds(activeIds);
+        } else if (typeof window.handleUrlParams === 'function') {
             await window.handleUrlParams();
-        } else if (typeof window.applyUrlFilters === 'function') {
-            await window.applyUrlFilters();
-        } else if (typeof window.displayParcelsByIds === 'function') {
-            window.displayParcelsByIds(allRecommendedIds);
         }
 
-        // 3. ТІЛЬКИ ПІСЛЯ ЦЬОГО малюємо кольорові контури блоків!
+        // 3. Малюємо кольорові контури тільки для тих груп, які містять targetIds
         clearBlockBoundaries();
 
         groups.forEach((group, index) => {
-            const color = BLOCK_COLORS[index % BLOCK_COLORS.length];
-            const boundary = drawBlockBoundary(group, color);
-            if (boundary) {
-                window.currentBlockBoundaries.push(boundary);
+            const groupParcelIds = group.map(p => p.id);
+            // Перевіряємо, чи належить група до targetIds
+            const isTargetGroup = !targetIds || groupParcelIds.some(id => targetIds.includes(id));
+
+            if (isTargetGroup) {
+                const color = BLOCK_COLORS[index % BLOCK_COLORS.length];
+                const boundary = drawBlockBoundary(group, color);
+                if (boundary) {
+                    window.currentBlockBoundaries.push(boundary);
+                }
             }
         });
 
-        // 4. Наводимо зум
+        // 4. МАСШТАБУВАННЯ (ЗУМ): фокусуємося ВИКЛЮЧНО на activeIds
         if (typeof window.fitMapToParcelIds === 'function') {
-            window.fitMapToParcelIds(allRecommendedIds);
+            window.fitMapToParcelIds(activeIds);
         }
 
-        return allRecommendedIds;
+        return activeIds;
     } catch (err) {
         console.error("❌ Помилка відображення рекомендованих ділянок на карті:", err);
         alert("Помилка під час розрахунку гео-блоків: " + err.message);

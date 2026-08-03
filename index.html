@@ -905,7 +905,7 @@
         ⬅️ Показати всі дільниці
     </button>
     <script src="js/polygon-cacher.js"></script>
-  
+
 
     <script src="js/ui-controller.js"></script>
     <script src="js/campaign-modal.js"></script>
@@ -1011,6 +1011,11 @@
                 layers: [initialLayer],
                 zoomControl: false,
             });
+
+            // Створюємо окремий шар (pane) для оверлеїв рекомендацій
+            window.map.createPane('recommendedPane');
+            // Встановлюємо zIndex вище за стандартний overlayPane (400)
+            window.map.getPane('recommendedPane').style.zIndex = 450;
 
             // Додаємо перемикач шарів
             L.control.layers(baseMaps, null, {
@@ -1252,15 +1257,13 @@
             return popupHtml;
         };
         // --- 4. ЗАВАНТАЖЕННЯ ДІЛЬНИЦЬ ---
-        async function loadParcels() {
+        async function loadParcels(targetIds = null) {
             // Очищуємо старі шари з карти перед завантаженням нових
             if (window.allParcelLayers && window.allParcelLayers.length > 0) {
                 window.allParcelLayers.forEach(item => {
-                    // Видаляємо групу полігонів з карти
                     if (item.layer && window.map.hasLayer(item.layer)) {
                         window.map.removeLayer(item.layer);
                     }
-                    // Видаляємо текстову мітку з карти
                     if (item.label && window.map.hasLayer(item.label)) {
                         window.map.removeLayer(item.label);
                     }
@@ -1268,36 +1271,36 @@
             }
             window.allParcelLayers = [];
 
-            // --- ЗМІНА ТУТ: ПЕРЕВІРКА АВТОРИЗАЦІЇ ДЛЯ ВИБОРУ ТАБЛИЦІ ---
-            // Перевіряємо статус входу так само, як і на кроці з ярликами
+            // ПЕРЕВІРКА АВТОРИЗАЦІЇ ДЛЯ ВИБОРУ ТАБЛИЦІ
             const isAuth = !!localStorage.getItem('userId');
             const targetSource = isAuth ? 'parcels' : 'public_parcels_map_mirror';
 
-            // Завантажуємо дані з динамічно обраного джерела
-            const { data: parcels, error } = await window.supabase.from(targetSource).select('*');
-            // --------------------------------------------------------
+            // Формуємо запит до Supabase
+            let query = window.supabase.from(targetSource).select('*');
 
+            // Фільтруємо дільниці на рівні бази даних, якщо передано масив targetIds
+            if (targetIds && Array.isArray(targetIds) && targetIds.length > 0) {
+                query = query.in('id', targetIds);
+            }
+
+            const { data: parcels, error } = await query;
             if (error) return console.error(error);
 
             window.allParcelsGroup = L.featureGroup().addTo(window.map);
 
-            // Проходимо циклом по кожному об'єкту дільниці (p) з отриманого масиву parcels
             parcels.forEach(p => {
-                // 1. ПЕРЕВІРКА ГЕОМЕТРІЇ
                 if (!p.geom) return;
-                // 2. ДЕКОДУВАННЯ
+
                 const geoData = (typeof p.geom === 'string') ? JSON.parse(p.geom) : p.geom;
-                // 3. СТВОРЕННЯ ШАРУ (Спочатку створюємо сам полігон)
-                // Тимчасово передаємо p для стилю, поки preparedData не готова
+
                 const polygonLayer = L.geoJSON(geoData, {
                     style: () => window.getStyle ? window.getStyle(p) : { color: '#a1a1a1' }
                 });
 
-                // 4. ВИЗНАЧЕННЯ ЯКОРЯ (Тепер polygonLayer вже існує, тому помилки не буде)
                 const anchorPoint = (p.label_pos && p.label_pos.length === 2)
                     ? L.latLng(p.label_pos[0], p.label_pos[1])
                     : polygonLayer.getBounds().getCenter();
-                // 5. ПІДГОТОВКА ДАНИХ (Тепер додаємо coordinates якоря)
+
                 const preparedData = {
                     ...p,
                     center_lat: anchorPoint.lat,
@@ -1308,24 +1311,22 @@
                     name: (p.name || '').toString()
                 };
 
-                // 6. ПРИВ'ЯЗКА ДАНИХ ДО ШАРУ ТА ПОПАПУ
                 polygonLayer.options.parcelData = preparedData;
-                // Оновлюємо стиль вже з повними даними
                 if (window.getStyle) polygonLayer.setStyle(window.getStyle(preparedData));
+
                 polygonLayer.bindPopup(() => {
                     return window.createPopupContent(polygonLayer.options.parcelData);
                 }, {
-                    maxWidth: 280,         // Оптимально для мобільних екранів
-                    autoPan: true,         // Карта сама підсунеться, щоб попап вліз
-                    autoPanPadding: [20, 80], // Великий відступ зверху (80), щоб попап не ховався під верхню панель/пошук
+                    maxWidth: 280,
+                    autoPan: true,
+                    autoPanPadding: [20, 80],
                     closeButton: true,
-                    className: 'modern-popup' // Можна додати свій клас для CSS
+                    className: 'modern-popup'
                 });
 
-                // 7. СТВОРЕННЯ ГРУПИ ТА ДОДАВАННЯ ПОЛІГОНУ
                 const parcelGroup = L.featureGroup();
                 polygonLayer.addTo(parcelGroup);
-                // 8. ЛОГІКА ПУНКТИРУ (Використовуємо вже існуючі anchorPoint та preparedData)
+
                 if (geoData.type === 'MultiPolygon' || geoData.type === 'Multipolygon') {
                     const style = window.getStyle ? window.getStyle(preparedData) : { fillColor: '#a1a1a1' };
                     geoData.coordinates.forEach((polyCoords) => {
@@ -1346,7 +1347,6 @@
                     });
                 }
 
-                // 9. СТВОРЕННЯ ЯРЛИКА (тільки для авторизованих користувачів)
                 let label = null;
                 if (isAuth) {
                     label = L.marker(anchorPoint, {
@@ -1360,7 +1360,6 @@
                     }).addTo(window.map);
                 }
 
-                // 10. ВІДОБРАЖЕННЯ ТА РЕЄСТРАЦІЯ
                 parcelGroup.addTo(window.map);
                 parcelGroup.addTo(window.allParcelsGroup);
                 window.allParcelLayers.push({
@@ -1372,12 +1371,10 @@
                 });
             });
 
-            // ДОДАЄМО СЮДИ: ініціалізація віджета офлайн-карти
             if (typeof initOfflineDownloadControl === 'function') {
                 initOfflineDownloadControl(window.map, window.allParcelsGroup);
             }
 
-            // Оновлюємо UI фільтри після завершення завантаження дільниць
             if (window.updateFilterCounters) {
                 window.updateFilterCounters();
             }
@@ -1424,35 +1421,95 @@
             }
         }
 
-        // Функція скидання фокусу
         window.resetMapFocus = function () {
-            // 1. Очищуємо URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-            // 2. Ховаємо кнопку
-            const resetBtn = document.getElementById('reset-focus-btn');
-            if (resetBtn) resetBtn.style.display = 'none';
+            console.group('🧹 [resetMapFocus] Початок скидання фокусу та рекомендацій');
 
-            // 3. Повертаємо видимість та стилі
-            if (window.allParcelLayers) {
-                window.allParcelLayers.forEach(item => {
-                    // Додаємо шар на карту, якщо він був видалений
+            // 1. Очищення URL від параметрів рекомендацій та конкретних дільниць
+            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+
+            // 2. Приховуємо кнопку скидання
+            const resetBtn = document.getElementById('reset-focus-btn');
+            if (resetBtn) {
+                resetBtn.style.display = 'none';
+            }
+
+            // 3. Очищення контурів та оверлей-шарів Turf рекомендацій (з видаленням з карти Leaflet)
+            if (typeof window.clearBlockBoundaries === 'function') {
+                window.clearBlockBoundaries();
+            }
+
+            // Додаткова перевірка: якщо є явний масив з оверлеями рекомендованих блоків, видаляємо їх з карти
+            if (Array.isArray(window.currentBlockBoundaries)) {
+                window.currentBlockBoundaries.forEach(boundaryLayer => {
+                    if (window.map && window.map.hasLayer(boundaryLayer)) {
+                        window.map.removeLayer(boundaryLayer);
+                    }
+                });
+                window.currentBlockBoundaries = [];
+            }
+
+            // 4. Безпечне прибирання елементів з recommendedPane без порушення стану Leaflet
+            if (window.map && typeof window.map.getPane === 'function') {
+                const recPane = window.map.getPane('recommendedPane');
+                if (recPane) {
+                    recPane.innerHTML = '';
+                }
+            }
+
+            // 5. Відновлення та ПЕРЕФАРБУВАННЯ всіх дільниць
+            if (window.allParcelLayers && Array.isArray(window.allParcelLayers)) {
+                window.allParcelLayers.forEach((item) => {
+                    if (!item || !item.layer) return;
+
+                    // Гарантовано повертаємо групу дільниці та мітку на карту
                     if (!window.map.hasLayer(item.layer)) {
                         item.layer.addTo(window.map);
                     }
                     if (item.label && !window.map.hasLayer(item.label)) {
                         item.label.addTo(window.map);
                     }
-                    // ПРИМУСОВО повертаємо стандартний стиль
-                    // Використовуємо window.getStyle, бо саме вона ініціалізована у вашому проекті
-                    if (typeof window.getStyle === 'function') {
-                        const originalStyle = window.getStyle(item.data);
-                        item.layer.setStyle(originalStyle);
+
+                    // Визначаємо стандартний стиль дільниці з завантажених даних
+                    const defaultStyle = (typeof window.getStyle === 'function')
+                        ? window.getStyle(item.data)
+                        : { color: '#a1a1a1', fillColor: '#a1a1a1', fillOpacity: 0.4 };
+
+                    // Рекурсивне/ітеративне відновлення стилів і видалення CSS-класів підсвітки
+                    const cleanAndStyleSubLayer = (subLayer) => {
+                        if (typeof subLayer.setStyle === 'function') {
+                            subLayer.setStyle(defaultStyle);
+                        }
+                        if (subLayer._path) {
+                            subLayer._path.classList.remove('recommended-parcel', 'highlighted-parcel');
+                        }
+                    };
+
+                    if (typeof item.layer.eachLayer === 'function') {
+                        item.layer.eachLayer(cleanAndStyleSubLayer);
+                    } else {
+                        cleanAndStyleSubLayer(item.layer);
+                    }
+
+                    // Очищення класів з текстових ярликів
+                    if (item.label && item.label._element) {
+                        item.label._element.classList.remove('recommended-label', 'highlighted-label');
                     }
                 });
-                // Опціонально: скидаємо зум, щоб побачити всі дільниці
-                // window.map.setView([49.2321, 29.0577], 15);
             }
-        };;
+
+            // 6. Оновлюємо видимість текстових ярликів та лічильники
+            if (typeof window.updateLabelsVisibility === 'function') {
+                window.updateLabelsVisibility();
+            }
+            if (typeof window.updateFilterCounters === 'function') {
+                window.updateFilterCounters();
+            }
+
+            console.log('✅ Всі дільниці успішно відновлено та перефарбовано без оновлення сторінки.');
+            console.groupEnd();
+        };
+
 
         // Функція розблокування для адміна (викликається з чекбокса в попапі)
         window.handleAdminUnlock = function (checkbox, parcelId) {
@@ -1682,36 +1739,101 @@
             });
         };
 
+        let recommendedClickTimer = null;
+
+        function handleRecommendedButtonClick() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const recommendIdsParam = urlParams.get('recommend_ids');
+            const isSingleBlockMode = urlParams.get('single_block') === 'true';
+
+            // Зчитуємо ID з URL, якщо вони є
+            const targetIds = recommendIdsParam ? recommendIdsParam.split(',').map(id => id.trim()).filter(Boolean) : null;
+
+            // Режим окремого блоку активний, якщо є прапорець або передано конкретний список ID (не 'all')
+            const isViewingSingleBlock = isSingleBlockMode || (targetIds && targetIds.length > 0 && recommendIdsParam !== 'all');
+
+            if (isViewingSingleBlock) {
+                if (recommendedClickTimer) {
+                    // --- ДРУГИЙ КЛІК (Double Click) ---
+                    clearTimeout(recommendedClickTimer);
+                    recommendedClickTimer = null;
+
+                    // Оновлюємо URL: прибираємо обмеження по ID, щоб перейти в режим "усі блоки"
+                    urlParams.delete('recommend_ids');
+                    urlParams.delete('single_block');
+                    const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
+                    window.history.replaceState({}, '', newUrl);
+
+                    // Показуємо ВСІ гео-блоки (передаємо null замість true)
+                    showRecommendedOnMap(500, 'auto', null);
+
+                    if (typeof showToast === 'function') {
+                        showToast('🗺️ Відображено всі гео-блоки');
+                    }
+                } else {
+                    // --- ПЕРШИЙ КЛІК ---
+                    recommendedClickTimer = setTimeout(() => {
+                        recommendedClickTimer = null;
+                    }, 400);
+
+                    if (typeof showToast === 'function') {
+                        showToast('💡 Натисніть ще раз (Double Click), щоб показати всі гео-блоки');
+                    } else {
+                        alert('💡 Зробіть подвійний клік, щоб показати всі гео-блоки.');
+                    }
+                }
+
+            } else {
+                // Якщо ми вже в режимі перегляду всіх блоків — відображаємо їх за 1 клік
+                showRecommendedOnMap(500, 'auto', null);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
-            // 1. Ініціалізація сесії користувача з перевіркою ролі з бази даних
-            const session = await window.initUserSession();
-
-            // 2. Спершу ініціалізуємо карту
+            // 1. Ініціалізація карти та сесії
             initMainMap();
+            const session = await window.initUserSession?.();
 
-            // 3. ОДИН РАЗ завантажуємо всі дані з БД
+            // 2. Параметри URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const resetBtn = document.getElementById('reset-focus-btn');
+            const recommendIdsParam = urlParams.get('recommend_ids');
+
+            const targetIds = (recommendIdsParam && recommendIdsParam !== 'all')
+                ? recommendIdsParam.split(',').map(id => id.trim()).filter(Boolean)
+                : null;
+
+            // 3. Завантаження всіх дільниць
             await loadParcels();
 
-            // 4. ОДИН РАЗ обробляємо перехід за посиланням (до того, як налаштуємо пошук і фільтри)
-            if (typeof handleUrlParams === 'function') {
-                handleUrlParams();
+            // 4. Обробка кнопок скидання
+            const hasRecommend = urlParams.has('recommend_ids');
+            const hasParcel = urlParams.has('parcel');
 
-                // Перевіряємо наявність параметрів 'parcel' АБО 'recommend_ids'
-                const urlParams = new URLSearchParams(window.location.search);
-                const resetBtn = document.getElementById('reset-focus-btn');
-
-                if ((urlParams.has('parcel') || urlParams.has('recommend_ids')) && resetBtn) {
-                    resetBtn.style.display = 'block';
-                }
+            if ((hasRecommend || hasParcel) && resetBtn) {
+                resetBtn.style.display = 'block';
             }
 
-            // 5. ОДИН РАЗ налаштовуємо пошук та фільтри, коли дільниці вже відфільтровані
+            // 5. Відображення рекомендацій
+            if (hasRecommend && typeof window.showRecommendedOnMap === 'function') {
+                const radius = urlParams.get('radius') || 500;
+                const idle = urlParams.get('idle') || 'auto';
+
+                // Викликаємо рекомендації (вони самі розфарбують блоки у потрібні кольори)
+                await window.showRecommendedOnMap(radius, idle, targetIds);
+            } else if (typeof handleUrlParams === 'function') {
+                // handleUrlParams викликаємо ТІЛЬКИ якщо це НЕ режим рекомендацій (наприклад, фокус на 1 дільниці ?parcel=ID)
+                await handleUrlParams();
+            }
+
+            // 6. Фільтри та інструменти
             if (typeof initSearchAndFilters === 'function') {
                 initSearchAndFilters(window.map, window.allParcelLayers);
             }
 
-            // 6. ОДИН РАЗ запускаємо інструменти (лінійка і т.д.)
-            initToolControl(window.map);
+            if (typeof initToolControl === 'function') {
+                initToolControl(window.map);
+            }
         });
 
         // 6. ОДИН РАЗ рахуємо кількість для фільтрів
@@ -1740,7 +1862,7 @@
             </div>
         </div>
     </div>
-    
+
     <script src="js/dev-tools.js"></script>
     <script src="js/recommended-parcels.js"></script>
 
