@@ -835,6 +835,7 @@
         async function loadCampaignInfo() {
             const campaignInfoContent = document.getElementById('campaignInfoContent');
             const campaignCard = document.getElementById('campaignInfoCard');
+            const campaignPreview = document.getElementById('campaignPreview');
             if (!campaignInfoContent || !campaignCard) return;
 
             try {
@@ -856,25 +857,38 @@
 
                 const now = new Date();
                 const currentTheoStart = getTheocraticStart();
-                const currentTheoEnd = new Date(currentTheoStart.getFullYear() + 1, 7, 31);
+                const currentTheoEnd = new Date(currentTheoStart.getFullYear() + 1, 7, 31, 23, 59, 59);
 
-                const currentYearCampaigns = campaigns.filter(campaign => {
+                // 2 місяці (60 днів) у мілісекундах
+                const TWO_MONTHS_MS = 60 * 24 * 60 * 60 * 1000;
+
+                // Фільтруємо кампанії:
+                // 1. Всі кампанії поточного теократичного року
+                // 2. АБО кампанії наступного теократичного року, до початку яких залишилося <= 60 днів
+                const filteredCampaigns = campaigns.filter(campaign => {
                     const startDate = new Date(campaign.campaign_start);
                     const endDate = new Date(campaign.campaign_end);
-                    return endDate >= currentTheoStart && startDate <= currentTheoEnd;
+
+                    // Належить до поточного теократичного року
+                    const isCurrentTheoYear = endDate >= currentTheoStart && startDate <= currentTheoEnd;
+
+                    // Кампанія наступного року, до якої залишилося 2 місяці або менше
+                    const isUpcomingNextYear = startDate > currentTheoEnd && (startDate - now) <= TWO_MONTHS_MS;
+
+                    return isCurrentTheoYear || isUpcomingNextYear;
                 });
 
-                const activeCampaigns = currentYearCampaigns.filter(campaign => {
+                const activeCampaigns = filteredCampaigns.filter(campaign => {
                     const startDate = new Date(campaign.campaign_start);
                     const endDate = new Date(campaign.campaign_end);
                     return now >= startDate && now <= endDate;
                 });
 
-                const plannedCampaigns = currentYearCampaigns
+                const plannedCampaigns = filteredCampaigns
                     .filter(campaign => new Date(campaign.campaign_start) > now)
                     .sort((a, b) => new Date(a.campaign_start) - new Date(b.campaign_start));
 
-                const pastCampaigns = currentYearCampaigns
+                const pastCampaigns = filteredCampaigns
                     .filter(campaign => new Date(campaign.campaign_end) < now)
                     .sort((a, b) => new Date(b.campaign_end) - new Date(a.campaign_end));
 
@@ -882,19 +896,21 @@
 
                 if (activeCampaigns.length > 0) {
                     campaignHasActive = true;
-                    campaignPreview.innerHTML = renderCampaignPreview(activeCampaigns);
-                    campaignPreview.classList.remove('hidden');
-                    campaignInfoCard.classList.add('hidden');
+                    if (campaignPreview) {
+                        campaignPreview.innerHTML = renderCampaignPreview(activeCampaigns);
+                        campaignPreview.classList.remove('hidden');
+                    }
+                    campaignCard.classList.add('hidden');
                 } else {
                     campaignHasActive = false;
-                    campaignPreview.classList.add('hidden');
-                    campaignInfoCard.classList.add('hidden');
+                    if (campaignPreview) campaignPreview.classList.add('hidden');
+                    campaignCard.classList.add('hidden');
                 }
 
                 if (plannedCampaigns.length > 0) {
-                    sections.push(renderCampaignSection('Заплановані кампанії цього теократичного року', plannedCampaigns, false, false));
+                    sections.push(renderCampaignSection('Заплановані кампанії', plannedCampaigns, false, false));
                 } else {
-                    sections.push('<p style="color:gray; margin: 0 0 8px 0;">Запланованих кампаній у поточному теократичному році немає.</p>');
+                    sections.push('<p style="color:gray; margin: 0 0 8px 0;">Запланованих кампаній немає.</p>');
                 }
 
                 if (pastCampaigns.length > 0) {

@@ -257,7 +257,6 @@ async function runAnalyticsModalFlow() {
             const report = {
                 "Місто Липовець": {
                     totalTerritories: 0, processedInPeriod: 0, currentlyInProgress: 0,
-                    inProgressRepeatedList: [],
                     noRecords: 0, idle_less_6_months: 0,
                     idle_6_8_months: 0, idle_8_10_months: 0, idle_10_12_months: 0, idle_over_12_months: 0,
                     firstTimeProcessing: 0, repeatedProcessing: 0,
@@ -266,7 +265,6 @@ async function runAnalyticsModalFlow() {
                 },
                 "Села": {
                     totalTerritories: 0, processedInPeriod: 0, currentlyInProgress: 0,
-                    inProgressRepeatedList: [],
                     noRecords: 0, idle_less_6_months: 0,
                     idle_6_8_months: 0, idle_8_10_months: 0, idle_10_12_months: 0, idle_over_12_months: 0,
                     firstTimeProcessing: 0, repeatedProcessing: 0,
@@ -274,6 +272,8 @@ async function runAnalyticsModalFlow() {
                     campaigns: {}
                 }
             };
+
+            // ... усередині generateAggregatedReport(startDate, endDate) після завантаження allParcels та logs ...
 
             allParcels.forEach(parcel => {
                 const pName = (parcel.name || '').toString().trim();
@@ -289,6 +289,11 @@ async function runAnalyticsModalFlow() {
                 const g = report[groupKey];
                 g.totalTerritories += 1;
 
+                const isInProgress = pStatus === 'taken' || pStatus === 'в опрацюванні' || pStatus === 'в роботі';
+                if (isInProgress) {
+                    g.currentlyInProgress += 1;
+                }
+
                 const parcelLogsInPeriod = (logs || []).filter(log =>
                     log.parcel_id === parcel.id && log.returned_at &&
                     new Date(log.returned_at) >= startDate && new Date(log.returned_at) <= endDate
@@ -296,18 +301,8 @@ async function runAnalyticsModalFlow() {
 
                 const hasBeenProcessedInPeriod = parcelLogsInPeriod.length > 0;
 
-                const isInProgress = pStatus === 'taken' || pStatus === 'в опрацюванні' || pStatus === 'в роботі';
-                if (isInProgress) {
-                    g.currentlyInProgress += 1;
-                    // Якщо ділянка в опрацюванні та її вже здавали в цьому періоді — вона може бути опрацьована повторно
-                    if (hasBeenProcessedInPeriod) {
-                        if (!g.inProgressRepeatedList.includes(pName)) {
-                            g.inProgressRepeatedList.push(pName);
-                        }
-                    }
-                }
-
                 if (hasBeenProcessedInPeriod) {
+                    // ФІКС 1: Додаємо сумарну кількість усіх опрацювань (логів), а не +1 за унікальну ділянку
                     g.processedInPeriod += parcelLogsInPeriod.length;
 
                     parcelLogsInPeriod.sort((a, b) => new Date(a.returned_at) - new Date(b.returned_at));
@@ -333,8 +328,10 @@ async function runAnalyticsModalFlow() {
                         }
                     });
 
+                    // Перше опрацювання цієї ділянки у вибраному періоді
                     g.firstTimeProcessing += 1;
 
+                    // Повторні опрацювання цієї ж ділянки
                     if (parcelLogsInPeriod.length > 1) {
                         g.repeatedProcessing += (parcelLogsInPeriod.length - 1);
                         if (!g.repeatedParcelsList.includes(pName)) {
@@ -395,6 +392,7 @@ async function runAnalyticsModalFlow() {
                 if (info.idle_10_12_months > 0) idleRowsHtml += `<div class="data-row sub-row"><span>від 10 до 12 місяців:</span> <span><b>${info.idle_10_12_months}</b></span></div>`;
                 if (info.idle_over_12_months > 0) idleRowsHtml += `<div class="data-row sub-row text-danger"><span>більше 12 місяців (понад рік):</span> <span><b>${info.idle_over_12_months}</b></span></div>`;
 
+                // ФІКС 2: Показуємо розбивку тільки якщо Є повторні опрацювання (repeatedProcessing > 0)
                 let generalBreakdownHtml = "";
                 if (info.repeatedProcessing > 0) {
                     footnoteIndex++;
@@ -420,28 +418,6 @@ async function runAnalyticsModalFlow() {
                     `;
                 }
 
-                // ПІДКАЗКА ТА ВИНОСКА ДЛЯ "ЗАРАЗ В ОПРАЦЮВАННІ"
-                let inProgressValueHtml = `<b>${info.currentlyInProgress}</b>`;
-                if (info.currentlyInProgress > 0 && info.inProgressRepeatedList.length > 0) {
-                    footnoteIndex++;
-                    const supChar = supChars[footnoteIndex] || `<sup>${footnoteIndex}</sup>`;
-                    const inProgressTooltipText = info.inProgressRepeatedList.join(', ');
-
-                    cardFootnotes.push({
-                        num: footnoteIndex,
-                        text: inProgressTooltipText
-                    });
-
-                    inProgressValueHtml = `
-                        <span class="tooltip-container">
-                            <span class="has-tooltip" data-tooltip="${inProgressTooltipText}">
-                                <b>${info.currentlyInProgress}</b><span class="info-icon">ℹ️</span>
-                            </span>
-                            <span class="print-footnote-ref">${supChar}</span>
-                        </span>
-                    `;
-                }
-
                 // Рендер кампаній
                 let campaignsRowsHtml = "";
                 const campaignKeys = Object.keys(info.campaigns);
@@ -451,6 +427,7 @@ async function runAnalyticsModalFlow() {
                     campaignKeys.forEach(camp => {
                         const cData = info.campaigns[camp];
 
+                        // ФІКС 3: У кампаніях також показуємо розбивку тільки якщо cData.repeated > 0
                         let campaignBreakdownHtml = "";
                         if (cData.repeated > 0) {
                             footnoteIndex++;
@@ -506,7 +483,7 @@ async function runAnalyticsModalFlow() {
                             <div class="data-row"><span>Загалом територій / ділянок:</span> <span><b>${info.totalTerritories}</b></span></div>
                             <div class="data-row highlight"><span>Опрацьовано за період:</span> <span><b>${info.processedInPeriod}</b></span></div>
                             ${generalBreakdownHtml}
-                            <div class="data-row"><span>Зараз в опрацюванні:</span> <span>${inProgressValueHtml}</span></div>
+                            <div class="data-row"><span>Зараз в опрацюванні:</span> <span><b>${info.currentlyInProgress}</b></span></div>
                         </div>
                         
                         <div class="stats-group">
@@ -523,7 +500,7 @@ async function runAnalyticsModalFlow() {
                     </section>
                 `;
             }
-
+            // Формуємо документ з фіксом позиціонування
             const reportHtml = `<!DOCTYPE html>
 <html lang="uk">
 <head>
@@ -684,11 +661,12 @@ async function runAnalyticsModalFlow() {
             btn.innerHTML = '⏳ Генерація PDF...';
             btn.disabled = true;
 
+            // Додаємо клас рендеру на ВЕСЬ body, щоб повністю прибрати margin/padding зліва
             document.body.classList.add('pdf-rendering');
             window.scrollTo(0, 0);
 
             const opt = {
-                margin:       [10, 10, 10, 10],
+                margin:       [10, 10, 10, 10], // Всі відступи сторінки контролює сам PDF!
                 filename:     'analytics_report_${fileNameDate}.pdf',
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { 
@@ -737,7 +715,8 @@ async function runAnalyticsModalFlow() {
                 const scrollX = window.scrollX;
 
                 activeTooltip.style.top = (rect.top + scrollY - activeTooltip.offsetHeight - 5) + 'px';
-                activeTooltip.style.left = (rect.left + scrollX - activeTooltip.offsetWidth - 1) + 'px';
+                // Лівий край елемента мінус ширина підказки і мінус відступ в 8px
+activeTooltip.style.left = (rect.left + scrollX - activeTooltip.offsetWidth - 1) + 'px';
             }
 
             function removeTooltip() {
