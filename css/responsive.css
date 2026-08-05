@@ -81,3 +81,9 @@
         margin-bottom: 0;
     }
 }
+
+@media screen and (max-width: 350px) {
+    .leaflet-bar.leaflet-control {
+    margin-top: 65px;
+}
+}
