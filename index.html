@@ -1851,49 +1851,50 @@
             }
 
             // 1. Створюємо кастомну іконку Leaflet із згенерованим SVG-логотипом JW
-            const jwIcon = L.divIcon({
-                className: 'jw-custom-marker', // клас для можливої додаткової стилізації
-                html: `
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="40" height="40" style="filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.4));">
-                    <!-- Синій круг з тонкою білою рамкою -->
-                    <circle 
-                        cx="50" 
-                        cy="50" 
-                        r="46" 
-                        fill="#0056b3" 
-                        stroke="#ffffff" 
-                        stroke-width="4" 
-                    />
-                    <!-- Білі літери JW в центрі -->
-                    <text 
-                        x="50%" 
-                        y="52%" 
-                        fill="#ffffff" 
-                        font-family="Arial, Helvetica, sans-serif" 
-                        font-size="36" 
-                        font-weight="bold" 
-                        text-anchor="middle" 
-                        dominant-baseline="central"
-                    >
-                        JW
-                    </text>
-                    </svg>
-                `,
-                iconSize: [40, 40],   // Розмір значка в пікселях
-                iconAnchor: [20, 20], // Точка прив'язки значка (центр)
-                popupAnchor: [0, -20] // Точка відкриття попапу відносно центру
-            });
+            // 1. Функція розрахунку розміру іконки (база: 40px на 17 зумі)
+            function getJwIcon(zoom) {
+                // 40px на 17 зумі. Кожен крок віддалення/наближення змінює розмір на 6px.
+                // Math.max(10, ...) гарантує, що значок не зникне повністю на далеких зумах (мінімум 10px).
+                const size = Math.max(10, 40 + (zoom - 17) * 10);
 
-            // 2. Додаємо маркер на карту за заданими координатами
-            const jwMarker = L.marker([49.228301, 29.057116], { icon: jwIcon }).addTo(window.map);
+                return L.divIcon({
+                    className: 'jw-custom-marker',
+                    html: `
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}" style="filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.4)); transition: all 0.15s ease-out;">
+                        <circle 
+                            cx="50" cy="50" r="46" 
+                            fill="#0056b3" stroke="#ffffff" stroke-width="4" 
+                        />
+                        <text 
+                            x="50%" y="52%" 
+                            fill="#ffffff" font-family="Arial, sans-serif" font-size="36" font-weight="bold" 
+                            text-anchor="middle" dominant-baseline="central"
+                        >
+                            JW
+                        </text>
+                        </svg>
+                    `,
+                    iconSize: [size, size],
+                    iconAnchor: [size / 2, size / 2], // Центр прив'язки
+                    popupAnchor: [0, -size / 2]       // Вихід попапу рівно зверху
+                });
+            }
 
-            // 3. (За бажанням) Додаємо інтерактивний попап до шпильки
+            // 2. Додавання шпильки на карту з урахуванням поточного зуму
+            const currentZoom = window.map.getZoom();
+            const jwMarker = L.marker([49.228301, 29.057116], { icon: getJwIcon(currentZoom) }).addTo(window.map);
+
             jwMarker.bindPopup(`
-    <div style="text-align: center; padding: 4px;">
-        <b style="font-size: 15px; color: #0056b3;">Зал Царства</b><br>
-        <span style="font-size: 12px; color: #555;">Координати: 49.228301, 29.057116</span>
-    </div>
-`);
+                <div style="text-align: center; padding: 4px;">
+                    <b style="font-size: 15px; color: #0056b3;">Логотип JW</b>
+                </div>
+            `);
+
+            // 3. Динамічне перемальовування значка під час зумування
+            window.map.on('zoomend', function () {
+                const newZoom = window.map.getZoom();
+                jwMarker.setIcon(getJwIcon(newZoom));
+            });
         });
 
         // 6. ОДИН РАЗ рахуємо кількість для фільтрів
