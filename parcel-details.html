@@ -700,6 +700,17 @@
         let allComments = [];
 
         async function init() {
+            // 1. Чекаємо відновлення сесії Supabase та перевіряємо авторизацію
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (!session) {
+                console.warn("⚠️ Користувач не авторизований. Перенаправлення на login.html");
+                // Перенаправляємо на сторінку входу і передаємо поточний URL, щоб повернутися після авторизації
+                const returnUrl = encodeURIComponent(window.location.href);
+                window.location.href = `login.html?redirect=${returnUrl}`;
+                return; // Зупиняємо виконання функції
+            }
+
             const urlParams = new URLSearchParams(window.location.search);
             const rawId = urlParams.get('id') || urlParams.get('parcel');
 
@@ -714,9 +725,6 @@
             const currentParcelId = Number(rawId);
 
             try {
-                // 1. Чекаємо відновлення сесії Supabase (щоб RLS перевірив права без збоїв)
-                const { data: { session } } = await supabase.auth.getSession();
-
                 console.log(" [Деталі] Запит до таблиці 'parcels' за id =", currentParcelId);
 
                 // 2. Виконуємо запит до БД
@@ -734,7 +742,7 @@
                 console.log("✅ [Деталі] Результат запиту (масив):", data);
 
                 if (!data || data.length === 0) {
-                    console.error("⚠️ [Деталі] Дільницю з системним id " + currentParcelId + " не знайдено в базі або RLS блокує її читання.");
+                    console.error("⚠️ [Деталі] Дільницю з системним id " + currentParcelId + " не знайдено в базі.");
                     alert("Дільницю з ID " + currentParcelId + " не знайдено.");
                     return;
                 }
@@ -1230,18 +1238,26 @@
             if (p.geom) initMiniMap(p.geom);
             document.getElementById('currentStatus').innerHTML = formatStatusHTML(p);
 
+            // Знаходимо елементи кнопок
             const returnBtn = document.getElementById('adminReturnBtn');
             const assignBtn = document.getElementById('adminAssignBtn');
 
-            if (p.status === 'taken' && returnBtn && isAdmin) {
-                returnBtn.style.display = 'inline-block';
-                returnBtn.onclick = () => window.triggerReturnParcelWithCustomModal(p.id, p.name, supabase, async () => {
-                    await loadParcelInfo(); // При повторному виклику запитає свіжі дані з БД
-                    await loadHistory();
-                    showToast(`Дільницю №${p.name} успішно здано!`);
-                });
-            } else if (returnBtn) {
-                returnBtn.style.display = 'none';
+            // Скидаємо відображення обох кнопок перед перевіркою
+            if (returnBtn) returnBtn.style.display = 'none';
+            if (assignBtn) assignBtn.style.display = 'none';
+
+            if (isAdmin) {
+                if (p.status === 'taken' && returnBtn) {
+                    returnBtn.style.display = 'inline-block';
+                    returnBtn.onclick = () => window.triggerReturnParcelWithCustomModal(p.id, p.name, supabase, async () => {
+                        await loadParcelInfo(); // Оновиться з БД і переключить видимість кнопок
+                        await loadHistory();
+                        showToast(`Дільницю №${p.name} успішно здано!`);
+                    });
+                } else if (p.status === 'free' && assignBtn) {
+                    assignBtn.style.display = 'inline-block';
+                    assignBtn.onclick = () => window.startAssignProcess(p.id, p.name, p);
+                }
             }
 
             if (p.status === 'free' && assignBtn && isAdmin) {

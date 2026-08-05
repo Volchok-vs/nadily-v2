@@ -709,7 +709,7 @@
                 <input type="checkbox" id="admin-bypass-checkbox"> Дозволити видачу (адмін)
             </label>
         </div>
-        <button id="confirm-take-btn" onclick="window.confirmTake()"
+        <button id="confirm-take-btn"
             style="width:100%; background:#179133; color:white; border:none; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer;">ПІДТВЕРДИТИ</button>
         <button onclick="window.UI.toggleModal('takeModal', false)"
             style="position: absolute; top: 15px; right: 15px; width: 30px; height: 30px; background: transparent; color: black; border: none; border-radius: 50%; cursor: pointer; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">
@@ -1671,32 +1671,41 @@
             };
         };
 
-        // Сама логіка запису в БД
+        // Логіка запису в БД
         window.confirmTake = async (e) => {
-            if (e && typeof e.preventDefault === 'function') {
-                e.preventDefault(); // Блокуємо дефолтне перезавантаження форми браузером
-            }
+            if (e?.preventDefault) e.preventDefault();
+
             const confirmBtn = document.getElementById('confirm-take-btn');
             const selectEl = document.getElementById('v-name-select');
             const parcelId = document.getElementById('modalParcelId')?.value;
+
             const pubId = selectEl?.value;
-            const pubName = selectEl.options[selectEl.selectedIndex].text;
-            // Перевіряємо кастомну дату для адміна
-            const dateEditCheckbox = document.getElementById('enable-date-edit');
-            const customDateInput = document.getElementById('custom-take-date');
-            let executionDate = new Date(); // За замовчуванням - зараз
-            if (dateEditCheckbox && dateEditCheckbox.checked && customDateInput && customDateInput.value) {
-                executionDate = new Date(customDateInput.value);
-            }
-            const isoDate = executionDate.toISOString();
+            const selectedOption = selectEl?.options[selectEl.selectedIndex];
+            const pubName = selectedOption ? selectedOption.text : '';
+
             if (!parcelId || !pubId) {
                 alert("Помилка: Не вибрано вісника або відсутній ID дільниці.");
                 return;
             }
+
+            // Обробка кастомної дати
+            const dateEditCheckbox = document.getElementById('enable-date-edit');
+            const customDateInput = document.getElementById('custom-take-date');
+
+            let executionDate = new Date();
+            if (dateEditCheckbox?.checked && customDateInput?.value) {
+                // Створюємо об'єкт дати з урахуванням локального часу
+                executionDate = new Date(customDateInput.value);
+            }
+
+            const isoDate = executionDate.toISOString();
+
             if (confirmBtn) confirmBtn.disabled = true;
+
             try {
                 console.log("🔍 Оновлення дільниці:", { parcelId: String(parcelId), taken_by_id: pubId, taken_by: pubName, taken_at: isoDate });
-                // Пряме оновлення дільниці в таблиці parcels
+
+                // Оновлення дільниці в таблиці parcels
                 const { data, error } = await window.supabase
                     .from('parcels')
                     .update({
@@ -1706,27 +1715,28 @@
                         taken_at: isoDate
                     })
                     .eq('id', String(parcelId));
-                if (error) {
-                    console.error("Помилка оновлення:", error);
-                    alert("Помилка бази даних: " + error.message);
-                    if (confirmBtn) confirmBtn.disabled = false;
-                    return;
+
+                if (error) throw error;
+
+                console.log("✅ Дільницю успішно оновлено!");
+
+                window.UI?.toggleModal('takeModal', false);
+                window.map?.closePopup();
+
+                // Оновлюємо шари на карті (якщо функція глобальна)
+                if (typeof loadParcels === 'function') {
+                    await loadParcels();
+                } else if (typeof window.loadParcels === 'function') {
+                    await window.loadParcels();
                 }
-                console.log("✅ Дільниця успішно оновлено!");
-                window.UI.toggleModal('takeModal', false);
-                // Закриваємо popup на карті, якщо він відкритий
-                if (window.map) {
-                    window.map.closePopup();
-                }
-                // Перезавантажуємо дані дільниць, щоб мапа зчитала новий статус з бази
-                await loadParcels();
+
             } catch (err) {
-                console.error("Критична помилка виконання:", err);
-                alert("Сталася помилка при обробці запиту.");
+                console.error("Помилка при оновленні дільниці:", err);
+                alert("Помилка бази даних: " + (err.message || "Сталася помилка при обробці запиту."));
+            } finally {
                 if (confirmBtn) confirmBtn.disabled = false;
             }
         };
-
         window.returnParcel = async (id) => {
             console.log('🔄 Виклик window.returnParcel для дільниці:', id);
 
