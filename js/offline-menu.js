@@ -127,9 +127,8 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
     button.title = 'Завантаження офлайн карти';
 
 
-    // --- 1. Створюємо модальне вікно один раз ---
+    // --- 1. Створюємо або отримуємо модальне вікно ---
     let modal = document.getElementById('offline-modal');
-    let historyBox, selectZone, checkboxes = {}, downloadBtn, sizeInfoBox;
 
     if (!modal) {
         modal = document.createElement('div');
@@ -168,7 +167,7 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
         labelZone.style.marginBottom = '5px';
         modalContent.appendChild(labelZone);
 
-        selectZone = document.createElement('select');
+        const selectZone = document.createElement('select');
         selectZone.id = 'offline-zone-select';
         Object.assign(selectZone.style, {
             width: '100%', padding: '8px', marginBottom: '15px', borderRadius: '6px', border: '1px solid #ccc'
@@ -205,17 +204,17 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
             const chk = document.createElement('input');
             chk.type = 'checkbox';
             chk.checked = false;
+            chk.dataset.providerId = p.id;
+            chk.className = 'offline-layer-chk';
 
             row.appendChild(chk);
             row.appendChild(document.createTextNode(p.label));
             layersContainer.appendChild(row);
-
-            checkboxes[p.id] = chk;
         });
         modalContent.appendChild(layersContainer);
 
         // --- 3. БЛОК РОЗРАХУНКУ ВАГИ КЕШУ ---
-        sizeInfoBox = document.createElement('div');
+        const sizeInfoBox = document.createElement('div');
         sizeInfoBox.id = 'offline-size-info';
         Object.assign(sizeInfoBox.style, {
             backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '6px',
@@ -224,7 +223,7 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
         modalContent.appendChild(sizeInfoBox);
 
         // --- 4. БЛОК ІСТОРІЇ ЗБЕРЕЖЕНИХ ЗОН ---
-        historyBox = document.createElement('div');
+        const historyBox = document.createElement('div');
         historyBox.id = 'downloaded-zones-history';
         Object.assign(historyBox.style, {
             marginBottom: '15px',
@@ -236,7 +235,8 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
         modalContent.appendChild(historyBox);
 
         // --- 5. КНОПКА ЗАПУСКУ ЗАВАНТАЖЕННЯ ---
-        downloadBtn = document.createElement('button');
+        const downloadBtn = document.createElement('button');
+        downloadBtn.id = 'offline-download-btn';
         downloadBtn.innerHTML = 'Завантажити карту';
         Object.assign(downloadBtn.style, {
             width: '100%', padding: '10px', backgroundColor: '#007bff', color: '#fff',
@@ -249,9 +249,12 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
                 return;
             }
 
-            const targetZone = selectZone.value;
-            const targetZoneLabel = selectZone.options[selectZone.selectedIndex].text;
-            const selectedProviders = Object.keys(checkboxes).filter(id => checkboxes[id].checked);
+            const currentSelect = document.getElementById('offline-zone-select');
+            const targetZone = currentSelect ? currentSelect.value : 'city';
+            const targetZoneLabel = currentSelect ? currentSelect.options[currentSelect.selectedIndex].text : '';
+
+            const selectedCheckboxes = document.querySelectorAll('.offline-layer-chk:checked');
+            const selectedProviders = Array.from(selectedCheckboxes).map(c => c.dataset.providerId);
 
             if (selectedProviders.length === 0) {
                 alert('⚠️ Будь ласка, оберіть хоча б один шар комплектації!');
@@ -336,26 +339,33 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
 
     // Оновлення калькулятора розміру
     const updateEstimatedSize = () => {
-        const targetZone = selectZone.value;
-        const selectedProviders = Object.keys(checkboxes).filter(id => checkboxes[id].checked);
+        const selectEl = document.getElementById('offline-zone-select');
+        const sizeBoxEl = document.getElementById('offline-size-info');
+        const btnEl = document.getElementById('offline-download-btn');
+        const chkEls = document.querySelectorAll('.offline-layer-chk');
+
+        if (!selectEl || !sizeBoxEl || !btnEl) return;
+
+        const targetZone = selectEl.value;
+        const selectedProviders = Array.from(chkEls).filter(c => c.checked).map(c => c.dataset.providerId);
 
         if (selectedProviders.length === 0) {
-            sizeInfoBox.innerHTML = '❌ Оберіть хоча б один шар карти для комплектації';
-            downloadBtn.disabled = true;
-            downloadBtn.style.opacity = '0.5';
-            downloadBtn.style.cursor = 'not-allowed';
+            sizeBoxEl.innerHTML = '❌ Оберіть хоча б один шар карти для комплектації';
+            btnEl.disabled = true;
+            btnEl.style.opacity = '0.5';
+            btnEl.style.cursor = 'not-allowed';
             return;
         }
 
-        downloadBtn.disabled = false;
-        downloadBtn.style.opacity = '1';
-        downloadBtn.style.cursor = 'pointer';
+        btnEl.disabled = false;
+        btnEl.style.opacity = '1';
+        btnEl.style.cursor = 'pointer';
 
         if (typeof estimateCacheSize === 'function' && allParcelsGroup) {
             const filteredPolygons = getFilteredPolygons(targetZone);
 
             if (filteredPolygons.length === 0) {
-                sizeInfoBox.innerHTML = '📊 Немає полігонів для прорахунку цієї зони';
+                sizeBoxEl.innerHTML = '📊 Немає полігонів для прорахунку цієї зони';
                 return;
             }
 
@@ -365,18 +375,25 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
                 selectedProviders
             );
 
-            sizeInfoBox.innerHTML = `📊 Оцінка: ~<strong>${estimation.sizeMB} МБ</strong><br><small style="color:#666;">Тайлів до скачування: ${estimation.totalTiles} шт.</small>`;
+            sizeBoxEl.innerHTML = `📊 Оцінка: ~<strong>${estimation.sizeMB} МБ</strong><br><small style="color:#666;">Тайлів до скачування: ${estimation.totalTiles} шт.</small>`;
         } else {
-            sizeInfoBox.innerHTML = '📊 Розрахунок розміру готується...';
+            sizeBoxEl.innerHTML = '📊 Розрахунок розміру готується...';
         }
     };
 
-    selectZone.onchange = updateEstimatedSize;
-    Object.values(checkboxes).forEach(chk => {
+    // Отримуємо елементи з DOM безпосередньо для гарантованого зв'язування подій
+    const selectZoneEl = document.getElementById('offline-zone-select');
+    const layerCheckboxes = document.querySelectorAll('.offline-layer-chk');
+
+    if (selectZoneEl) {
+        selectZoneEl.onchange = updateEstimatedSize;
+    }
+    layerCheckboxes.forEach(chk => {
         chk.onchange = updateEstimatedSize;
     });
 
     // 3. Відкриття модального вікна при кліку на кнопку
+    L.DomEvent.off(button, 'click'); // Знімаємо старі обробники, щоб не дублювати
     L.DomEvent.on(button, 'click', function (e) {
         L.DomEvent.stopPropagation(e);
         L.DomEvent.preventDefault(e);
