@@ -739,16 +739,17 @@
                     return;
                 }
 
-                console.log("✅ [Деталі] Результат запиту (масив):", data);
+                console.log("✅ [Деталі] Результат запиту:", data);
 
-                if (!data || data.length === 0) {
+                // Перевіряємо, чи повернувся масив або подинокий об'єкт
+                const parcelData = Array.isArray(data) ? data[0] : data;
+
+                if (!parcelData) {
                     console.error("⚠️ [Деталі] Дільницю з системним id " + currentParcelId + " не знайдено в базі.");
                     alert("Дільницю з ID " + currentParcelId + " не знайдено.");
                     return;
                 }
 
-                // 3. Зберігаємо отриманий об'єкт
-                const parcelData = data[0];
                 console.log("📦 [Деталі] Дані об'єкта дільниці для відображення:", parcelData);
 
                 // Перевіряємо доступ для вільних дільниць
