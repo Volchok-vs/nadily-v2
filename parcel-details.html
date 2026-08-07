@@ -1221,16 +1221,18 @@
                 const { data, error } = await supabase
                     .from('parcels')
                     .select('*')
-                    .eq('id', Number(rawId))
-                    .single();
+                    .eq('id', Number(rawId));
 
-                if (error || !data) {
+                if (error || !data || (Array.isArray(data) && data.length === 0)) {
                     console.error("❌ Помилка завантаження даних дільниці в loadParcelInfo:", error);
                     return;
                 }
 
-                p = data;
+                // Гарантуємо, що p - це єдиний об'єкт дільниці, а не масив
+                p = Array.isArray(data) ? data[0] : data;
             }
+
+            if (!p) return;
 
             const prefix = p.category === 'Село' ? ': ' : ' №';
             document.getElementById('parcelTitle').innerText = `Дільниця${prefix}${p.name}`;
