@@ -1721,15 +1721,12 @@
                 console.log("✅ Дільницю успішно оновлено!");
 
                 window.UI?.toggleModal('takeModal', false);
-                window.map?.closePopup();
-
-                // Оновлюємо шари на карті (якщо функція глобальна)
-                if (typeof loadParcels === 'function') {
-                    await loadParcels();
-                } else if (typeof window.loadParcels === 'function') {
-                    await window.loadParcels();
+                 // Закриваємо popup на карті, якщо він відкритий
+                if (window.map) {
+                    window.map.closePopup();
                 }
-
+                // Перезавантажуємо дані дільниць, щоб мапа зчитала новий статус з бази
+                await loadParcels();
             } catch (err) {
                 console.error("Помилка при оновленні дільниці:", err);
                 alert("Помилка бази даних: " + (err.message || "Сталася помилка при обробці запиту."));

@@ -88,13 +88,16 @@ window.deleteOfflineZone = async function (index) {
     alert('Офлайн-карта та її кеш успішно видалені!');
 };
 
-// =========================================================================
-// 2. ОСНОВНИЙ КОНТРОЛЕР МЕНЮ ОФЛАЙН ЗАВАНТАЖЕННЯ (ОНОВЛЕНО)
-// =========================================================================
-// =========================================================================
+/// =========================================================================
 // 2. ОСНОВНИЙ КОНТРОЛЕР МЕНЮ ОФЛАЙН ЗАВАНТАЖЕННЯ (З ДІАГНОСТИКОЮ)
 // =========================================================================
 function initOfflineDownloadControl(map, allParcelsGroup) {
+    // 🛑 ПЕРЕВІРКА: Якщо кнопка вже створена в DOM — перериваємо повторну ініціалізацію
+    if (document.querySelector('.leaflet-control-offline')) {
+        console.log('ℹ️ [OfflineControl] Кнопка офлайн завантаження вже існує.');
+        return;
+    }
+
     console.group('🔍 [OfflineControl] Діагностика пошуку контейнерів');
 
     // 1. Перевіряємо всі існуючі бари у верхньому лівому кутку
@@ -122,10 +125,9 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
 
     // 2. Створюємо елемент кнопки 💾 та додаємо в parentBar
     const button = L.DomUtil.create('button', 'leaflet-control-offline leaflet-custom-btn', parentBar);
-    button.type = 'button'; // Явно вказуємо тип, щоб запобігти випадковому відправленню форм (submit)
+    button.type = 'button';
     button.innerHTML = '💾';
     button.title = 'Завантаження офлайн карти';
-
 
     // --- 1. Створюємо або отримуємо модальне вікно ---
     let modal = document.getElementById('offline-modal');
