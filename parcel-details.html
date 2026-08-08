@@ -465,6 +465,54 @@
         #adminGear:active {
             transform: scale(0.8);
         }
+
+        input#districtInput {
+            margin-bottom: auto;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+        }
+
+        .close-btn {
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #888;
+        }
+
+        .close-btn:hover {
+            color: #000;
+        }
     </style>
     <link rel="stylesheet" href="css/responsive.css">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -500,10 +548,13 @@
                 style="display:none; margin-bottom: 15px; border-left: 4px solid #ff9f43;">
                 <h3 style="margin-top:0; font-size: 16px; color: #333;">📝 Редагування (Адмін)</h3>
 
+                <!-- Редагування Типу -->
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
                     <input type="checkbox" id="editSectorCheck" title="Дозволити зміну типу">
-                    <label for="sectorTypeSelect" style="font-size: 14px; flex-shrink: 0;">Тип:</label>
-                    <select id="sectorTypeSelect" disabled style="flex-grow: 1; padding: 5px; border-radius: 5px;">
+                    <label for="sectorTypeSelect"
+                        style="font-size: 14px; flex-shrink: 0; width: 60px; margin-bottom: 0;">Тип:</label>
+                    <select id="sectorTypeSelect" disabled
+                        style="flex-grow: 1; padding: 5px; border-radius: 5px; margin-bottom: 0;">
                         <option value="Приватний сектор">Приватний сектор</option>
                         <option value="Поверхівки">Поверхівки</option>
                         <option value="Змішані">Змішані</option>
@@ -512,11 +563,42 @@
                     </select>
                 </div>
 
+                <!-- Редагування Району -->
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                    <input type="checkbox" id="editDistrictCheck" title="Дозволити зміну району">
+                    <label for="districtInput"
+                        style="font-size: 14px; flex-shrink: 0; width: 60px; margin-bottom: 0;">Район:</label>
+
+                    <div class="district-field-container"
+                        style="flex: 1; position: relative; display: flex; gap: 6px; align-items: center;">
+                        <div style="flex: 1; position: relative;">
+                            <!-- Поле вводу (додано disabled за замовчуванням) -->
+                            <input type="text" id="districtInput" disabled placeholder="Введіть або оберіть район..."
+                                oninput="handleDistrictInput()" onfocus="handleDistrictInput()" autocomplete="off"
+                                style="width: 100%; padding: 8px; box-sizing: border-box;">
+
+                            <input type="hidden" id="selectedDistrictId" value="">
+
+                            <div id="districtSuggestions"
+                                style="display: none; position: absolute; top: 98%; left: 4px; right: 4px; background: #fff; border: 1px solid #ccc; max-height: 180px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            </div>
+                        </div>
+
+                        <!-- Кнопка відкриття модалки (додано id та disabled) -->
+                        <button type="button" id="districtModalBtn" disabled onclick="openDistrictsModal()"
+                            title="Управління районами" style="padding: 8px 12px; cursor: pointer;">
+                            ⚙️
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Редагування Дати -->
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
                     <input type="checkbox" id="editDateCheck" title="Дозволити зміну дати">
-                    <label for="lastProcessedDate" style="font-size: 14px; flex-shrink: 0;">Дата:</label>
+                    <label for="lastProcessedDate"
+                        style="font-size: 14px; flex-shrink: 0; width: 60px; margin-bottom: 0;">Дата:</label>
                     <input type="date" id="lastProcessedDate" disabled
-                        style="width: 140px; padding: 5px; border-radius: 5px; border: 1px solid #ccc;">
+                        style="width: 140px; padding: 5px; border-radius: 5px; border: 1px solid #ccc; margin-bottom: 0;">
                 </div>
 
                 <button id="saveAllBtn" onclick="saveGeneralChanges()" class="btn-primary"
@@ -682,6 +764,34 @@
         </div>
     </div>
 
+    <!-- Модальне вікно управління районами -->
+    <div id="districtsModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Управління районами</h3>
+                <span class="close-btn" onclick="closeDistrictsModal()">&times;</span>
+            </div>
+
+            <div class="modal-body">
+                <!-- Форма додавання -->
+                <div style="display: flex; gap: 8px; margin-bottom: 15px; align-items: flex-start;">
+                    <input type="text" id="newDistrictName" placeholder="Назва нового району"
+                        style="flex: 1; padding: 8px;">
+                    <button type="button" onclick="createDistrict()"
+                        style="padding: 8px 16px; cursor: pointer;">Додати</button>
+                </div>
+
+                <hr style="margin-bottom: 15px; border: 0; border-top: 1px solid #eee;">
+
+                <!-- Список районів -->
+                <ul id="districtsList"
+                    style="list-style: none; padding: 0; margin: 0; max-height: 250px; overflow-y: auto;">
+                    <!-- Завантажується динамічно -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <script src="js/campaign-modal.js"></script>
     <script src="js/date-utils.js"></script>
     <script type="module">
@@ -768,6 +878,9 @@
                 if (isAdmin) {
                     const adminCard = document.getElementById('adminCard');
                     if (adminCard) adminCard.style.display = 'block';
+
+                    // 💡 ДОДАНО: Завантажуємо варіанти районів перед відображенням даних[cite: 2]
+                    await loadDistrictsOptions();
                 }
 
                 const addManualBtn = document.querySelector('button[onclick="showManualLogModal()"]');
@@ -784,6 +897,18 @@
                     if (e.target.id === 'editSectorCheck') {
                         document.getElementById('sectorTypeSelect').disabled = !e.target.checked;
                     }
+                    if (e.target.id === 'editDistrictCheck') {
+                        const isChecked = e.target.checked;
+                        const input = document.getElementById('districtInput');
+                        const btn = document.getElementById('districtModalBtn');
+
+                        if (input) input.disabled = !isChecked;
+                        if (btn) btn.disabled = !isChecked;
+
+                        if (!isChecked) {
+                            document.getElementById('districtSuggestions').style.display = 'none';
+                        }
+                    }
                     if (e.target.id === 'editDateCheck') {
                         document.getElementById('lastProcessedDate').disabled = !e.target.checked;
                     }
@@ -791,15 +916,43 @@
             } catch (err) {
                 console.error("❌ [Деталі] Критична помилка всередині init():", err);
             }
+
+            async function loadDistrictsOptions() {
+                const { data, error } = await supabase
+                    .from('settings')
+                    .select('data')
+                    .eq('id', 'districts')
+                    .single();
+
+                if (error) {
+                    console.error("Помилка завантаження районів:", error);
+                    return;
+                }
+
+                const select = document.getElementById('districtSelect');
+                if (!select || !data?.data) return;
+
+                // Очищаємо список та додаємо дефолтний варіант
+                select.innerHTML = '<option value="">-- Не обрано --</option>';
+
+                // Масив об'єктів видаду: [{id: 1, name: "Скакунка"}, {id: 2, name: "Центр"}]
+                data.data.forEach(district => {
+                    const option = document.createElement('option');
+                    option.value = district.id;
+                    option.textContent = district.name;
+                    select.appendChild(option);
+                });
+            }
         }
 
         window.saveGeneralChanges = async () => {
             const isDateEdit = document.getElementById('editDateCheck').checked;
             const isSectorEdit = document.getElementById('editSectorCheck').checked;
+            const isDistrictEdit = document.getElementById('editDistrictCheck')?.checked;
 
             console.log("%c--- СТАРТ ПРОЦЕСУ ОНОВЛЕННЯ (ТЕО-РІК + ФАНТОМ-КОНТРОЛЬ) ---", "color: #fff; background: #dc3545; padding: 3px 10px; font-weight: bold;");
 
-            if (!isDateEdit && !isSectorEdit) {
+            if (!isDateEdit && !isSectorEdit && !isDistrictEdit) {
                 showToast("Виберіть, що саме ви хочете змінити", true);
                 return;
             }
@@ -809,6 +962,12 @@
             if (isSectorEdit) {
                 const newCategory = document.getElementById('sectorTypeSelect').value;
                 updateData.category = newCategory;
+            }
+
+            // Додаємо збереження district_id
+            if (isDistrictEdit) {
+                const selectedValue = document.getElementById('selectedDistrictId').value;
+                updateData.district_id = selectedValue ? parseInt(selectedValue, 10) : null;
             }
 
             if (isDateEdit) {
@@ -879,10 +1038,16 @@
 
             if (!error) {
                 showToast("Дані успішно оновлено!");
+
+                // Скидаємо прапорці та вимикаємо поля
                 document.getElementById('editDateCheck').checked = false;
                 document.getElementById('editSectorCheck').checked = false;
+                if (document.getElementById('editDistrictCheck')) document.getElementById('editDistrictCheck').checked = false;
+
                 document.getElementById('lastProcessedDate').disabled = true;
                 document.getElementById('sectorTypeSelect').disabled = true;
+                if (document.getElementById('districtInput')) document.getElementById('districtInput').disabled = true;
+                if (document.getElementById('districtModalBtn')) document.getElementById('districtModalBtn').disabled = true;
 
                 await loadParcelInfo();
                 if (typeof loadHistory === "function") await loadHistory();
@@ -1264,12 +1429,24 @@
                 assignBtn.style.display = 'none';
             }
 
-            // Перевірку isAdmin залишено лише для адміністративних полів форматування
             if (isAdmin) {
                 const lastProcessedInput = document.getElementById('lastProcessedDate');
                 const sectorTypeSelect = document.getElementById('sectorTypeSelect');
+                const districtInput = document.getElementById('districtInput');
+                const selectedDistrictId = document.getElementById('selectedDistrictId');
+
                 if (lastProcessedInput) lastProcessedInput.value = p.last_processed || '';
                 if (sectorTypeSelect) sectorTypeSelect.value = p.category || 'Приватний сектор';
+
+                if (p.district_id) {
+                    if (selectedDistrictId) selectedDistrictId.value = p.district_id;
+                    const districts = await getDistrictsFromDB();
+                    const dist = districts.find(d => Number(d.id) === Number(p.district_id));
+                    if (districtInput) districtInput.value = dist ? dist.name : '';
+                } else {
+                    if (selectedDistrictId) selectedDistrictId.value = '';
+                    if (districtInput) districtInput.value = '';
+                }
             }
         }
 
@@ -1727,7 +1904,13 @@
                 dateContainer.style.display = 'block';
                 const today = new Date().toISOString().split('T')[0];
                 customDateInput.value = today;
-                if (enableCheck) enableCheck.checked = false;
+                if (enableCheck) {
+                    enableCheck.checked = false;
+                    // 💡 Додаємо слухач події змінення чекбокса:
+                    enableCheck.onchange = function () {
+                        customDateInput.disabled = !this.checked;
+                    };
+                }
                 if (customDateInput) customDateInput.disabled = true;
             } else if (dateContainer) {
                 dateContainer.style.display = 'none';
@@ -1880,6 +2063,380 @@
                 });
             }
         });
+
+        // --- ВЗАЄМОДІЯ З SUPABASE (таблиця settings) ---
+
+        async function getDistrictsFromDB() {
+            const { data, error } = await supabase
+                .from('settings')
+                .select('data')
+                .eq('id', 'districts')
+                .single();
+
+            if (error) {
+                console.error('Помилка завантаження районів:', error);
+                return [];
+            }
+            return data?.data || [];
+        }
+
+        async function saveDistrictsToDB(updatedDistricts) {
+            const { error } = await supabase
+                .from('settings')
+                .update({ data: updatedDistricts })
+                .eq('id', 'districts');
+
+            if (error) {
+                alert('Помилка збереження: ' + error.message);
+                return false;
+            }
+            return true;
+        }
+
+        // --- УПРАВЛІННЯ МОДАЛЬНИМ ВІКНОМ ---
+
+        async function openDistrictsModal() {
+            document.getElementById('districtsModal').style.display = 'flex';
+            await renderDistrictsList();
+        }
+
+        function closeDistrictsModal() {
+            document.getElementById('districtsModal').style.display = 'none';
+        }
+
+        // Рендеринг списку районів у модальному вікні
+        async function renderDistrictsList() {
+            const listElement = document.getElementById('districtsList');
+            listElement.innerHTML = '<li>Завантаження...</li>';
+
+            const districts = await getDistrictsFromDB();
+
+            if (districts.length === 0) {
+                listElement.innerHTML = '<li style="text-align: center; color: #888;">Районів поки немає</li>';
+                return;
+            }
+
+            listElement.innerHTML = '';
+            districts.forEach(district => {
+                const li = document.createElement('li');
+                li.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0;';
+
+                const safeName = escapeQuotes(district.name);
+
+                li.innerHTML = `
+            <span><strong>${district.name}</strong> <small style="color:#888;">(ID: ${district.id})</small></span>
+            <div style="display: flex; gap: 6px;">
+                <button type="button" onclick="editDistrict(${district.id}, '${safeName}')" title="Редагувати" style="cursor: pointer;">✏️</button>
+                <button type="button" onclick="deleteDistrict(${district.id}, '${safeName}')" title="Видалити" style="cursor: pointer; color: red;">🗑️</button>
+            </div>
+        `;
+                listElement.appendChild(li);
+            });
+        }
+
+        // --- CRUD ОПЕРАЦІЇ ---
+
+        // 1. Додавання нового району
+        async function createDistrict() {
+            const input = document.getElementById('newDistrictName');
+            const name = input.value.trim();
+
+            if (!name) {
+                alert('Введіть назву району');
+                return;
+            }
+
+            const districts = await getDistrictsFromDB();
+
+            // Розрахунок нового ID (максимальний існуючий + 1)
+            const newId = districts.length > 0
+                ? Math.max(...districts.map(d => Number(d.id) || 0)) + 1
+                : 1;
+
+            districts.push({ id: newId, name: name });
+
+            const success = await saveDistrictsToDB(districts);
+            if (success) {
+                input.value = '';
+                await renderDistrictsList();
+                if (typeof loadDistrictsOptions === 'function') await loadDistrictsOptions();
+            }
+        }
+
+        // 2. Редагування назви району
+        async function editDistrict(id, currentName) {
+            const newName = prompt('Введіть нову назву району:', currentName);
+
+            if (!newName || newName.trim() === '' || newName.trim() === currentName) return;
+
+            const districts = await getDistrictsFromDB();
+            const target = districts.find(d => d.id === id);
+
+            if (target) {
+                target.name = newName.trim();
+                const success = await saveDistrictsToDB(districts);
+                if (success) {
+                    await renderDistrictsList();
+                    if (typeof loadDistrictsOptions === 'function') await loadDistrictsOptions();
+                }
+            }
+        }
+
+        // 3. Видалення району
+        async function deleteDistrict(id, name) {
+            const confirmed = confirm(`Ви дійсно хочете видалити район "${name}"?`);
+            if (!confirmed) return;
+
+            const districts = await getDistrictsFromDB();
+            const updatedDistricts = districts.filter(d => d.id !== id);
+
+            const success = await saveDistrictsToDB(updatedDistricts);
+            if (success) {
+                await renderDistrictsList();
+                if (typeof loadDistrictsOptions === 'function') await loadDistrictsOptions();
+            }
+        }
+
+        // Допоміжна функція екранування дужок для inline-подій onclick
+        function escapeQuotes(str) {
+            return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        // Закриття модального вікна при кліку на затемнену область
+        window.addEventListener('click', function (event) {
+            const modal = document.getElementById('districtsModal');
+            if (event.target === modal) {
+                closeDistrictsModal();
+            }
+        });
+
+        let districtsListCache = [];
+
+        window.handleDistrictInput = async function () {
+            const input = document.getElementById('districtInput');
+            const suggestions = document.getElementById('districtSuggestions');
+            if (!input || !suggestions || input.disabled) return;
+
+            if (districtsListCache.length === 0 && typeof getDistrictsFromDB === 'function') {
+                districtsListCache = await getDistrictsFromDB();
+            }
+
+            const rawQuery = input.value.trim();
+            const query = rawQuery.toLowerCase();
+
+            // Фільтрація існуючих районів
+            const filtered = districtsListCache.filter(d => d.name.toLowerCase().includes(query));
+
+            let html = '';
+
+            if (filtered.length > 0) {
+                html += filtered.map(d => `
+            <div onclick="selectDistrictSuggestion(${d.id}, '${escapeQuotes(d.name)}')" 
+                 style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee;"
+                 onmouseover="this.style.background='#f0f0f0'" 
+                 onmouseout="this.style.background='#fff'">
+                ${d.name}
+            </div>
+        `).join('');
+            }
+
+            // Перевірка: якщо введено текст і точного збігу з існуючими немає — виводимо кнопку створення
+            const exactMatch = districtsListCache.some(d => d.name.toLowerCase() === query);
+            if (rawQuery !== '' && !exactMatch) {
+                html += `
+                    <div onclick="addNewDistrictDirectly('${escapeQuotes(rawQuery)}')" 
+                        style="padding: 8px 12px; cursor: pointer; color: #0056b3; font-weight: 600; background: #f8f9fa; border-top: 1px solid #e0e0e0;"
+                        onmouseover="this.style.background='#e2e6ea'" 
+                        onmouseout="this.style.background='#f8f9fa'">
+                        ➕ Додати район "${rawQuery}"
+                    </div>
+                `;
+            }
+
+            if (html === '') {
+                html = '<div style="padding: 8px; color: #888;">Введіть назву району...</div>';
+            }
+
+            suggestions.innerHTML = html;
+            suggestions.style.display = 'block';
+        };
+
+        window.selectDistrictSuggestion = function (id, name) {
+            document.getElementById('districtInput').value = name;
+            document.getElementById('selectedDistrictId').value = id;
+            document.getElementById('districtSuggestions').style.display = 'none';
+        };
+
+
+        // Приховувати підказки при кліку поза полем
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.district-field-container')) {
+                const suggestions = document.getElementById('districtSuggestions');
+                if (suggestions) suggestions.style.display = 'none';
+            }
+        });
+
+        // Відкриття модалки із можливістю підставити початкову назву
+        window.openDistrictsModal = function (initialName = '') {
+            const modal = document.getElementById('districtsModal'); // Перевірте ID вашого модального вікна
+            if (modal) {
+                modal.style.display = 'flex'; // або 'block'
+            }
+
+            // Поле введення всередині модального вікна (перевірте ID цього input у модалці)
+            const modalInput = document.querySelector('#districtsModal input[type="text"]') || document.getElementById('newDistrictInput');
+            if (modalInput) {
+                modalInput.value = typeof initialName === 'string' ? initialName : '';
+                modalInput.focus();
+            }
+        };
+
+        // Швидкий перехід з підказки
+        window.quickOpenAddDistrictModal = function (name) {
+            const suggestions = document.getElementById('districtSuggestions');
+            if (suggestions) suggestions.style.display = 'none';
+
+            window.openDistrictsModal(name);
+        };
+        window.addNewDistrictDirectly = async function (name) {
+            // Приховуємо випадаючий список підказок
+            const suggestions = document.getElementById('districtSuggestions');
+            if (suggestions) suggestions.style.display = 'none';
+
+            const cleanName = (name || '').trim();
+            if (!cleanName) return;
+
+            // 1. Отримуємо актуальний список районів з БД
+            const districts = await getDistrictsFromDB();
+
+            // Перевірка на дублікат (якщо хтось встиг додати)
+            const existing = districts.find(d => d.name.toLowerCase() === cleanName.toLowerCase());
+            if (existing) {
+                selectDistrictSuggestion(existing.id, existing.name);
+                return;
+            }
+
+            // 2. Генеруємо новий ID
+            const newId = districts.length > 0
+                ? Math.max(...districts.map(d => Number(d.id) || 0)) + 1
+                : 1;
+
+            // 3. Додаємо новий об'єкт у масив
+            districts.push({ id: newId, name: cleanName });
+
+            // 4. Зберігаємо оновлений масив у БД (Supabase)
+            const success = await saveDistrictsToDB(districts);
+
+            if (success) {
+                // Оновлюємо локальний кеш районів
+                districtsListCache = districts;
+
+                // Автоматично обираємо щойно створений район у полі
+                selectDistrictSuggestion(newId, cleanName);
+
+                if (typeof showToast === 'function') {
+                    showToast(`Район "${cleanName}" додано!`);
+                }
+            }
+        };
+
+        // Закриття модалки (виправляє помилку closeDistrictsModal is not defined)
+        window.closeDistrictsModal = function () {
+            const modal = document.getElementById('districtsModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        };
+
+        window.deleteDistrict = async function (districtId, districtName) {
+            try {
+                // 1. Перевірка прив'язаних дільниць (замінено supabaseClient на supabase)
+                const { count, error: countError } = await supabase
+                    .from('parcels')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('district_id', districtId);
+
+                if (countError) {
+                    console.error("Помилка перевірки прив'язаних дільниць:", countError);
+                    if (typeof showToast === 'function') showToast("Не вдалося перевірити прив'язані дільниці", true);
+                    return;
+                }
+
+                function getParcelWord(count) {
+                    const abs = Math.abs(count) % 100;
+                    const lastDigit = abs % 10;
+
+                    if (abs > 10 && abs < 20) return 'дільниць';
+                    if (lastDigit > 1 && lastDigit < 5) return 'дільниці';
+                    if (lastDigit === 1) return 'дільниця';
+                    return 'дільниць';
+                }
+
+                // 2. Формування тексту підтвердження
+                let message = `Ви дійсно бажаєте видалити район <b>"${districtName}"</b>?`;
+                if (count > 0) {
+                    const parcelWord = getParcelWord(count);
+                    message = `Увага! До району <b>"${districtName}"</b> зараз прив'язано <b>${count} ${parcelWord}</b>.<br><br>` +
+                        `При видаленні району прив'язку цих дільниць буде скинуто.<br><br>` +
+                        `Ви впевнені, що хочете видалити район?`;
+                }
+
+                // 3. Функція виконання видалення
+                const performDelete = async () => {
+                    if (count > 0) {
+                        // Скидаємо district_id у дільницях
+                        const { error: unlinkError } = await supabase
+                            .from('parcels')
+                            .update({ district_id: null })
+                            .eq('district_id', districtId);
+
+                        if (unlinkError) {
+                            console.error("Помилка скидання district_id у дільницях:", unlinkError);
+                            if (typeof showToast === 'function') showToast("Помилка при скиданні прив'язки дільниць", true);
+                            return;
+                        }
+                    }
+
+                    // Видаляємо район зі списку
+                    const districts = await getDistrictsFromDB();
+                    const updatedDistricts = districts.filter(d => Number(d.id) !== Number(districtId));
+
+                    const success = await saveDistrictsToDB(updatedDistricts);
+
+                    if (success) {
+                        if (typeof districtsListCache !== 'undefined') {
+                            districtsListCache = updatedDistricts;
+                        }
+
+                        if (typeof renderDistrictsList === 'function') {
+                            renderDistrictsList();
+                        }
+
+                        if (typeof showToast === 'function') {
+                            showToast(`Район "${districtName}" видалено`);
+                        }
+                    }
+                };
+
+                // 4. Підтвердження через модальне вікно або confirm
+                if (typeof showCustomConfirm === 'function') {
+                    showCustomConfirm("Видалення району", message, performDelete, "🗑️", "#dc3545", "Так, видалити");
+                } else if (confirm(message)) {
+                    await performDelete();
+                }
+
+            } catch (err) {
+                console.error("Помилка під час видалення району:", err);
+            }
+        };
+
+        // Експорт функцій у глобальну область видимості для HTML-обробників
+        window.handleDistrictInput = handleDistrictInput;
+        window.selectDistrictSuggestion = selectDistrictSuggestion;
+        window.openDistrictsModal = openDistrictsModal;
+        window.quickOpenAddDistrictModal = quickOpenAddDistrictModal;
+        window.closeDistrictsModal = closeDistrictsModal;
+        window.addNewDistrictDirectly = addNewDistrictDirectly;
 
         init();
     </script>

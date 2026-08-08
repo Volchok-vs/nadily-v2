@@ -3,14 +3,11 @@
 // 1. showCustomConfirm(title, message, onConfirm, icon, yesBtnBg, yesBtnText)
 // 2. showCustomConfirm({ title, text, confirmText, cancelText }) - повертає Promise
 export function showCustomConfirm(...args) {
-    console.log('🔍 showCustomConfirm викликана з аргументами:', args);
     const modal = document.getElementById('customConfirmModal');
     if (!modal) {
         console.error('❌ Модальне вікно customConfirmModal не знайдено');
         return;
     }
-    console.log('✅ Модальне вікно customConfirmModal знайдено');
-    console.log('🔍 Поточний display модального вікна:', window.getComputedStyle(modal).display);
 
     // Визначаємо формат виклику
     const isObjectFormat = args.length === 1 && typeof args[0] === 'object';
@@ -29,18 +26,26 @@ export function showCustomConfirm(...args) {
 
         // Повертаємо Promise для підтримки async/await в profile.html
         return new Promise((resolve) => {
+            const titleEl = document.getElementById('confirmModalTitle');
+            const messageEl = document.getElementById('confirmModalMessage') || document.getElementById('confirmModalText');
+            const iconEl = document.getElementById('confirmModalIcon');
             const btnYes = document.getElementById('confirmBtnYes');
             const btnNo = document.getElementById('confirmBtnNo');
 
-            if (btnYes) btnYes.textContent = yesBtnText;
+            if (titleEl && title) titleEl.textContent = title;
+            if (messageEl && message) messageEl.innerHTML = message; // Додано innerHTML
+            if (iconEl && icon) iconEl.textContent = icon;
+
+            if (btnYes) {
+                btnYes.textContent = yesBtnText;
+                btnYes.style.backgroundColor = yesBtnBg;
+            }
             if (btnNo) btnNo.textContent = cancelText;
 
             modal.style.display = 'flex';
-            console.log('✅ Модальне вікно показано (display: flex) - об\'єктний формат');
 
             const cleanup = (result) => {
                 modal.style.display = 'none';
-                console.log('✅ Модальне вікно приховано (display: none) - об\'єктний формат');
                 if (btnYes) btnYes.onclick = null;
                 if (btnNo) btnNo.onclick = null;
                 resolve(result);
@@ -57,14 +62,13 @@ export function showCustomConfirm(...args) {
         yesBtnText = yesBtnText || "Так, виконати";
 
         const titleEl = document.getElementById('confirmModalTitle');
-        // Підтримка обох варіантів: confirmModalMessage (index, parcel-details) та confirmModalText (profile)
         const messageEl = document.getElementById('confirmModalMessage') || document.getElementById('confirmModalText');
         const iconEl = document.getElementById('confirmModalIcon');
         const btnYes = document.getElementById('confirmBtnYes');
         const btnNo = document.getElementById('confirmBtnNo');
 
         if (titleEl) titleEl.textContent = title;
-        if (messageEl) messageEl.textContent = message;
+        if (messageEl) messageEl.innerHTML = message; // Замінено textContent на innerHTML
         if (iconEl) iconEl.textContent = icon;
 
         if (btnYes) {
@@ -74,7 +78,6 @@ export function showCustomConfirm(...args) {
 
         // Показуємо модальне вікно через display: flex
         modal.style.display = 'flex';
-        console.log('✅ Модальне вікно показано (display: flex)');
 
         // Клонування кнопок для очищення старих подій
         const newBtnYes = btnYes ? btnYes.cloneNode(true) : null;
@@ -86,7 +89,6 @@ export function showCustomConfirm(...args) {
         if (newBtnYes) {
             newBtnYes.addEventListener('click', async () => {
                 modal.style.display = 'none';
-                console.log('✅ Модальне вікно приховано (display: none)');
                 if (onConfirm) await onConfirm();
             });
         }
@@ -94,7 +96,6 @@ export function showCustomConfirm(...args) {
         if (newBtnNo) {
             newBtnNo.addEventListener('click', () => {
                 modal.style.display = 'none';
-                console.log('✅ Модальне вікно приховано (display: none)');
             });
         }
     }
@@ -102,12 +103,10 @@ export function showCustomConfirm(...args) {
 
 // Універсальна функція для здачі дільниці з кастомним модальним вікном
 export function triggerReturnParcelWithCustomModal(id, name, supabase, callback) {
-    console.log('🔍 triggerReturnParcelWithCustomModal викликана з параметрами:', { id, name, hasSupabase: !!supabase, hasCallback: !!callback });
     showCustomConfirm(
         "Здати дільницю",
         `Ви впевнені, що хочете здати дільницю №${name}? Вона перейде в статус вільної, а до журналу запишеться дата здачі.`,
         async () => {
-            console.log('✅ Користувач підтвердив здачу дільниці');
             // Тимчасово підміняємо стандартні alert та confirm, щоб придушити нативні вікна всередині модуля
             const originalConfirm = window.confirm;
             const originalAlert = window.alert;
@@ -228,11 +227,6 @@ export function handleUrlParams() {
 export function fitMapToParcelsAndUser(parcelIds = [], userLocation = null) {
     if (!window.map) return;
 
-    console.group('📐 [fitMapToParcelsAndUser] Діагностика');
-    console.log('🔎 Вхідні Parcel IDs:', parcelIds);
-    console.log('📍 Користувач:', userLocation);
-    console.log('🔍 Zoom DO:', window.map.getZoom());
-
     const combinedBounds = L.latLngBounds([]);
 
     if (parcelIds.length > 0 && window.allParcelLayers) {
@@ -258,11 +252,7 @@ export function fitMapToParcelsAndUser(parcelIds = [], userLocation = null) {
             padding: [50, 50],
             animate: false
         });
-        console.log('✅ Zoom ПІСЛЯ fitBounds:', window.map.getZoom());
-    } else {
-        console.warn('⚠️ Bounds невалідні!');
     }
-    console.groupEnd();
 }
 
 // Робимо функцію доступною глобально для інших скриптів (geolocation.js, index.html тощо)
@@ -289,10 +279,6 @@ async function findRelevantCampaigns(supabase, takenAt, returnedAt) {
     const takenISO = new Date(takenAt).toISOString();
     const returnedISO = new Date(returnedAt).toISOString();
 
-    console.log(`   🔍 Пошук кампаній за періодом роботи:`);
-    console.log(`      📅 Взято: ${takenISO}`);
-    console.log(`      📤 Здається: ${returnedISO}`);
-
     // Шукаємо кампанії, що перетинаються з періодом роботи
     // campaign_start <= returnedAt AND campaign_end >= takenAt
     const { data: campaigns, error } = await supabase
@@ -305,17 +291,6 @@ async function findRelevantCampaigns(supabase, takenAt, returnedAt) {
     if (error) {
         console.error('❌ Помилка пошуку кампаній:', error);
         return [];
-    }
-
-    console.log(`   📊 Знайдено релевантних кампаній: ${campaigns?.length || 0}`);
-
-    if (campaigns && campaigns.length > 0) {
-        console.log('   📋 Релевантні кампанії:');
-        campaigns.forEach((campaign, index) => {
-            console.log(`   ${index + 1}. ${campaign.name}`);
-            console.log(`      📅 Період: ${campaign.campaign_start} - ${campaign.campaign_end}`);
-            console.log(`      🆔 ID: ${campaign.id}`);
-        });
     }
 
     return campaigns || [];
@@ -336,29 +311,15 @@ function checkCampaignPeriods(takenAt, returnedAt, campaign) {
     const campaignStart = new Date(campaign.campaign_start);
     const campaignEnd = new Date(campaign.campaign_end);
 
-    // Детальне логування дат для діагностики
-    console.log('   📊 Аналіз періодів:');
-    console.log(`      📅 Взято: ${takenAt} (${taken.toISOString()})`);
-    console.log(`      📤 Здається: ${returnedAt} (${returned.toISOString()})`);
-    console.log(`      📅 Кампанія: ${campaign.campaign_start} - ${campaign.campaign_end}`);
-    console.log(`      🆔 Назва кампанії: ${campaign.name}`);
-
     const takenDuringCampaign = taken >= campaignStart && taken <= campaignEnd;
     const returnedDuringCampaign = returned >= campaignStart && returned <= campaignEnd;
 
     // Перевіряємо чи кампанія перекриває період роботи
     const campaignOverlapsWorkPeriod = campaignStart >= taken && campaignEnd <= returned;
 
-    console.log(`   📥 Результати порівняння:`);
-    console.log(`      📥 Взято під час кампанії: ${takenDuringCampaign}`);
-    console.log(`      📤 Здається під час кампанії: ${returnedDuringCampaign}`);
-    console.log(`      🔄 Кампанія перекриває період роботи: ${campaignOverlapsWorkPeriod}`);
-
     const needToAsk = (!takenDuringCampaign && returnedDuringCampaign) ||
         (takenDuringCampaign && !returnedDuringCampaign) ||
         campaignOverlapsWorkPeriod;
-
-    console.log(`      ❓ Потрібно запитати: ${needToAsk}`);
 
     return {
         takenDuringCampaign,
@@ -436,7 +397,6 @@ async function createTerritoryLog(supabase, parcelId, publisherId, publisherName
         console.error('❌ Помилка перевірки дублікатів:', checkError);
         return false;
     } else if (existingLogs && existingLogs.length > 0) {
-        console.log('⚠️ Дублікат виявлено! Запис з такою датою здачі вже існує.');
         return true; // Повертаємо true щоб не переривати процес здачі
     }
 
@@ -492,7 +452,6 @@ function showReturnParcelLogs() {
     }
 
     console.log('📋 Збережені логи здачі територій:');
-    console.log('');
 
     logs.forEach((log, index) => {
         console.log(`📝 Запис ${index + 1} (${new Date(log.timestamp).toLocaleString('uk-UA')}):`);
@@ -500,12 +459,10 @@ function showReturnParcelLogs() {
         if (log.logs && Array.isArray(log.logs)) {
             log.logs.forEach(line => console.log(`   ${line}`));
         }
-        console.log('');
     });
 }
 
 export async function returnParcel(id, name, supabase, callback) {
-    console.log('🔍 returnParcel викликана з параметрами:', { id, name, hasSupabase: !!supabase, hasCallback: !!callback });
     // Використовуємо стандартний confirm для зворотної сумісності
     // (triggerReturnParcelWithCustomModal викликається ззовні для кастомного модального вікна)
     if (!confirm(`Здати дільницю №${name}?`)) return;
@@ -529,11 +486,9 @@ export async function returnParcel(id, name, supabase, callback) {
     };
 
     try {
-        console.log('🎯 === ПОЧАТОК ЗДАЧІ ТЕРИТОРІЇ ===');
-        console.log(`📍 Територія: №${name} (ID: ${id})`);
+        console.log('🎯 Початок здачі території №' + name);
 
         // Отримуємо дані території перед здачею
-        console.log('📋 Отримуємо дані території...1');
         const { data: parcel, error: parcelError } = await supabase
             .from('parcels')
             .select('taken_by, taken_by_id, taken_at')
@@ -545,81 +500,38 @@ export async function returnParcel(id, name, supabase, callback) {
             return;
         }
 
-        console.log('✅ Дані території отримано:');
-        console.log(`   👤 Вісник: ${parcel.taken_by || 'Nulls Василь'}`);
-        console.log(`   📅 Взято: ${parcel.taken_at}`);
-
         // Поточна дата для здачі
         const now = window.getCurrentDate ? window.getCurrentDate() : new Date();
         const returnedAt = now.toISOString();
 
         // Шукаємо релевантні кампанії за періодом роботи
-        console.log('🔍 Перевіряємо кампанії за періодом роботи...');
-        console.log(`   📱 Supabase доступний: ${!!supabase}`);
-
         const relevantCampaigns = await findRelevantCampaigns(supabase, parcel.taken_at, returnedAt);
 
         // Беремо першу релевантну кампанію
         const activeCampaign = relevantCampaigns.length > 0 ? relevantCampaigns[0] : null;
 
-        console.log(`   🎯 Активна кампанія: ${activeCampaign ? activeCampaign.name : 'НЕМАЄ'}`);
-        if (activeCampaign) {
-            console.log(`   📅 Період кампанії: ${activeCampaign.campaign_start} - ${activeCampaign.campaign_end}`);
-            console.log(`   🆔 ID кампанії: ${activeCampaign.id}`);
-        }
-
         let shouldRecordCampaign = false;
         let wasProcessedDuringCampaign = false;
 
-        // Перевіряємо чи потрібно запитувати про кампанію
-        console.log('🎭 Перевіряємо умови для модального вікна...');
-        console.log(`   ✅ Активна кампанія: ${!!activeCampaign}`);
-        console.log(`   ✅ Модальне вікно доступне: ${!!window.showCampaignModal}`);
-        console.log(`   📅 Дата взяття території: ${parcel?.taken_at}`);
-        console.log(`   📅 Дата здачі території: ${new Date().toISOString()}`);
-
         if (activeCampaign && window.showCampaignModal) {
             const returnedAt = new Date().toISOString();
-            console.log(`   📅 Дата здачі: ${returnedAt}`);
 
             const periods = checkCampaignPeriods(parcel?.taken_at, returnedAt, activeCampaign);
 
-            console.log('📊 Результати перевірки періодів:');
-            console.log(`   📥 Взято під час кампанії: ${periods.takenDuringCampaign}`);
-            console.log(`   📤 Здається під час кампанії: ${periods.returnedDuringCampaign}`);
-            console.log(`   ❓ Потрібно запитати: ${periods.needToAsk}`);
-
             if (periods.needToAsk) {
-                console.log('🎬 Показуємо модальне вікно...');
                 // Показуємо модальне вікно для уточнення
                 wasProcessedDuringCampaign = await window.showCampaignModal(activeCampaign.name, name);
                 shouldRecordCampaign = wasProcessedDuringCampaign;
-                console.log(`   👤 Відповідь користувача: ${wasProcessedDuringCampaign ? 'ТАК' : 'НІ'}`);
             } else if (periods.takenDuringCampaign && periods.returnedDuringCampaign) {
-                console.log('✅ Автоматичне записування (взято і здано під час кампанії)');
                 // Взяли і здали під час кампанії - автоматично записуємо
                 shouldRecordCampaign = true;
                 wasProcessedDuringCampaign = true;
-            } else {
-                console.log('⏭️ Модальне вікно не потрібне (поза кампанією)');
             }
-        } else {
-            console.log('❌ Умови не виконані:');
-            if (!activeCampaign) console.log('   - Немає активної кампанії');
-            if (!window.showCampaignModal) console.log('   - Модальне вікно не завантажено (campaign-modal.js)');
         }
 
         // Створюємо запис в логах територій
-        console.log('📝 Створюємо запис в логах територій...');
         const campaignId = shouldRecordCampaign ? activeCampaign?.id : null;
         const campaignName = shouldRecordCampaign ? activeCampaign?.name : null;
-
-        console.log(`   📊 Дані для запису:`);
-        console.log(`   - publisher_id: ${parcel?.taken_by_id || 'null'}`);
-        console.log(`   - publisher_name: ${parcel?.taken_by || 'Невідомо'}`);
-        console.log(`   - duration_text: ${calculateDuration(parcel?.taken_at, returnedAt) || 'null'}`);
-        console.log(`   - campaign_id: ${campaignId || 'null'}`);
-        console.log(`   - campaign_name: ${campaignName || 'null'}`);
 
         const logSuccess = await createTerritoryLog(
             supabase,
@@ -634,8 +546,6 @@ export async function returnParcel(id, name, supabase, callback) {
 
         if (!logSuccess) {
             console.error('❌ Не вдалося створити запис в логах, але продовжуємо здачу території');
-        } else {
-            console.log('✅ Запис в логах створено успішно');
         }
 
         // Получаем текущую дату в чистом формате ISO (ГГГГ-ММ-ДД)
@@ -651,14 +561,11 @@ export async function returnParcel(id, name, supabase, callback) {
         }).eq('id', id);
 
         if (!error) {
-            console.log('✅ === ЗДАЧА ТЕРИТОРІЇ УСПІШНА ===');
+            console.log('✅ Здача території №' + name + ' успішна');
             // Вызываем уведомление (Toast), если оно определено глобально
             let message = `Дільницю №${name} успішно здано!`;
             if (shouldRecordCampaign) {
                 message += ` Опрацювання під час кампанії: ${activeCampaign.name}`;
-                console.log(`📊 Опрацювання записано для кампанії: ${activeCampaign.name}`);
-            } else {
-                console.log('📊 Опрацювання НЕ записано (поза кампанією або відмова)');
             }
 
             if (window.showToast) {
@@ -687,8 +594,6 @@ export async function returnParcel(id, name, supabase, callback) {
 
         // Зберігаємо логи
         saveReturnParcelLogs(logMessages);
-        console.log('💾 Логи збережено в localStorage');
-        console.log('📋 Для перегляду виконайте: showReturnParcelLogs()');
     }
 }
 
