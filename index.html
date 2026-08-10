@@ -980,7 +980,8 @@
                 map.setMaxZoom(19);
             }
 
-            const layerOptions = { minZoom: OFFLINE_MIN_ZOOM, maxZoom: OFFLINE_MAX_ZOOM };
+            // ✅ СТАЛО (Дозволяє шарам завантажувати тайли на всіх рівнозначних зумах):
+            const layerOptions = { minZoom: 0, maxZoom: 19 };
 
             const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors',
