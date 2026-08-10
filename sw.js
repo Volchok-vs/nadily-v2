@@ -1,5 +1,5 @@
 // Змінюємо версію, щоб браузер заново перекешував тільки необхідне
-const CACHE_NAME = 'territory-map-v3';
+const CACHE_NAME = 'territory-map-v4';
 const TILE_CACHE_NAME = 'map-tiles-v1';
 
 const progressChannel = new BroadcastChannel('offline_download_channel');
@@ -40,7 +40,6 @@ const ASSETS_TO_CACHE = [
 function normalizeTileUrl(urlString) {
     try {
         const url = new URL(urlString);
-        // Замінюємо субдомени a.tile, b.tile, c.tile чи a.tile.opentopomap.org на єдиний дзеркальний хост 'a.'
         url.hostname = url.hostname.replace(/^[a-c]\./, 'a.');
         return url.toString();
     } catch (e) {
@@ -48,19 +47,20 @@ function normalizeTileUrl(urlString) {
     }
 }
 
-// 1. Встановлення Service Worker та кешування статики
+// 1. Встановлення Service Worker та миттєва активація
 self.addEventListener('install', (event) => {
+    self.skipWaiting(); // Пропускаємо стан очікування
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             console.log('[SW] Кешування App Shell');
             return cache.addAll(ASSETS_TO_CACHE).catch(err => {
                 console.error('[SW] Помилка при попередньому кешуванні файлів:', err);
             });
-        }).then(() => self.skipWaiting())
+        })
     );
 });
 
-// 2. Активація та очищення застарілого кешу
+// 2. Активація та ВЗЯТТЯ КОНТРОЛЮ НАД СТОРІНКУ НЕГАЙНО
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((cacheNames) => {
@@ -72,7 +72,7 @@ self.addEventListener('activate', (event) => {
                     }
                 })
             );
-        }).then(() => self.clients.claim())
+        }).then(() => self.clients.claim()) // ⚠️ ВАЖЛИВО: Захоплюємо керування всіма відкритими вкладками!
     );
 });
 
@@ -86,7 +86,7 @@ self.addEventListener('fetch', (event) => {
         url.hostname.includes('tile.') ||
         url.hostname.includes('opentopomap');
 
-    // 1. ДЛЯ ТАЙЛІВ КАРТИ — Cache First (спочатку кеш, бо їх багато і вони не змінюються)
+    // 1. ДЛЯ ТАЙЛІВ КАРТИ — Cache First
     if (isTileRequest) {
         const normalizedUrl = normalizeTileUrl(event.request.url);
         event.respondWith(
@@ -106,11 +106,10 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 2. ДЛЯ КОДУ САЙТУ (HTML, JS, CSS) — Network First (спочатку мережа)
+    // 2. ДЛЯ КОДУ САЙТУ (HTML, JS, CSS) — Network First
     event.respondWith(
         fetch(event.request)
             .then((networkResponse) => {
-                // Якщо сервер відповів успішно — оновлюємо кеш у фоні та віддаємо свіжий файл
                 if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
                     const responseToCache = networkResponse.clone();
                     caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
@@ -118,7 +117,6 @@ self.addEventListener('fetch', (event) => {
                 return networkResponse;
             })
             .catch(() => {
-                // Якщо інтернету немає (офлайн) — беремо з кешу
                 return caches.match(event.request);
             })
     );
@@ -126,15 +124,22 @@ self.addEventListener('fetch', (event) => {
 
 // 4. ФОНОВЕ ЗАВАНТАЖЕННЯ ТА ТРАНСЛЯЦІЯ ПРОГРЕСУ
 self.addEventListener('message', (event) => {
-    if (event.data && (event.data.action === 'DOWNLOAD_TILES' || event.data.type === 'START_DOWNLOAD')) {
+    if (!event.data) return;
+
+    // Підтримка окремих запитів та пакетної черги
+    if (event.data.action === 'DOWNLOAD_TILES' || event.data.type === 'START_DOWNLOAD') {
         const urls = event.data.urls || [];
         const provider = event.data.provider || 'default';
 
         console.log(`[SW] Почато фонове завантаження ${urls.length} тайлів для провайдера "${provider}".`);
-
-        event.waitUntil(
-            downloadTilesInBackground(provider, urls)
-        );
+        event.waitUntil(downloadTilesInBackground(provider, urls));
+    } else if (event.data.action === 'START_BATCH_DOWNLOAD') {
+        const queue = event.data.queue || [];
+        event.waitUntil((async () => {
+            for (const item of queue) {
+                await downloadTilesInBackground(item.provider, item.urls);
+            }
+        })());
     }
 });
 
@@ -142,7 +147,6 @@ self.addEventListener('message', (event) => {
 async function fetchAndCacheTileWithRetry(cache, rawUrl, retriesLeft = 3) {
     const normalizedUrl = normalizeTileUrl(rawUrl);
 
-    // Спочатку перевіряємо, чи вже збережено
     const match = await cache.match(normalizedUrl);
     if (match) {
         return true;
@@ -156,10 +160,9 @@ async function fetchAndCacheTileWithRetry(cache, rawUrl, retriesLeft = 3) {
                 return true;
             }
         } catch (err) {
-            // Мережевий збій або таймаут
+            // Мережевий збій
         }
 
-        // Затримка перед повторною спробою (300мс, 600мс...)
         if (attempt < retriesLeft) {
             await new Promise(res => setTimeout(res, attempt * 300));
         }
@@ -171,8 +174,8 @@ async function fetchAndCacheTileWithRetry(cache, rawUrl, retriesLeft = 3) {
 async function downloadTilesInBackground(provider, urls) {
     const cache = await caches.open(TILE_CACHE_NAME);
     const total = urls.length;
-    const BATCH_SIZE = 5;  // Не більше 5 паралельних запитів
-    const DELAY_MS = 80;    // Пауза між пакетами для запобігання бана/помилки 429
+    const BATCH_SIZE = 5;
+    const DELAY_MS = 80;
 
     let downloaded = 0;
     let failed = 0;
@@ -201,16 +204,15 @@ async function downloadTilesInBackground(provider, urls) {
         const processed = downloaded + failed;
         const percent = Math.round((processed / total) * 100);
 
-        if (processed % 5 === 0 || processed === total) {
-            progressChannel.postMessage({
-                type: 'PROGRESS',
-                provider,
-                downloaded,
-                failed,
-                total,
-                percent
-            });
-        }
+        // Відправляємо прогрес на кожен пакет
+        progressChannel.postMessage({
+            type: 'PROGRESS',
+            provider,
+            downloaded,
+            failed,
+            total,
+            percent
+        });
 
         if (DELAY_MS > 0) {
             await new Promise(res => setTimeout(res, DELAY_MS));

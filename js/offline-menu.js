@@ -1,31 +1,54 @@
 // =========================================================================
-// 1. РАДІОКАНАЛ ДЛЯ ОТРИМАННЯ ПРОГРЕСУ ВІД SERVICE WORKER (ПРАЦЮЄ НА ВСІХ СТОРІНКАХ)
+// 1. РАДІОКАНАЛ ДЛЯ ОТРИМАННЯ ПРОГРЕСУ ВІД SERVICE WORKER
 // =========================================================================
 const progressChannel = new BroadcastChannel('offline_download_channel');
 
+// ✅ ПОВНОЦІННИЙ ОБРОБНИК ПРОГРЕСУ (Малює та оновлює смуги)
 progressChannel.onmessage = (event) => {
     const data = event.data;
-    const progressBox = createProgressBox();
+    if (!data) return;
+
+    const progressBox = document.getElementById('offline-progress-box');
+    if (!progressBox) return;
 
     if (data.type === 'PROGRESS') {
-        progressBox.style.display = 'block';
-        progressBox.innerHTML = `📦 Завантаження (${data.provider}): ${data.downloaded}/${data.total} (${data.percent}%)`;
+        let barContainer = document.getElementById(`progress-bar-${data.provider}`);
+
+        // Якщо смуги для цього провайдера ще немає — створюємо її
+        if (!barContainer) {
+            barContainer = document.createElement('div');
+            barContainer.id = `progress-bar-${data.provider}`;
+            barContainer.style.cssText = 'margin-top: 8px; text-align: left; min-width: 220px;';
+            barContainer.innerHTML = `
+                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px;">
+                    <span><b>${data.provider.toUpperCase()}</b></span>
+                    <span id="percent-${data.provider}">0%</span>
+                </div>
+                <div style="background: rgba(255, 255, 255, 0.2); height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div id="fill-${data.provider}" style="background: #4caf50; height: 100%; width: 0%; transition: width 0.2s;"></div>
+                </div>
+            `;
+            progressBox.appendChild(barContainer);
+        }
+
+        // Оновлюємо значення
+        const fill = document.getElementById(`fill-${data.provider}`);
+        const percentText = document.getElementById(`percent-${data.provider}`);
+
+        if (fill) fill.style.width = `${data.percent}%`;
+        if (percentText) percentText.innerText = `${data.percent}% (${data.downloaded}/${data.total})`;
     }
 
     if (data.type === 'COMPLETE') {
-        progressBox.innerHTML = `🎉 ${data.message}`;
-        setTimeout(() => progressBox.remove(), 4000);
+        const fill = document.getElementById(`fill-${data.provider}`);
+        if (fill) fill.style.background = '#2196F3'; // Синє підсвічування після завершення
 
-        // Оновлюємо список завантаженого в модальному вікні, якщо воно відкрите
-        renderDownloadedZonesList();
-    }
-
-    if (data.type === 'REGISTER_PROVIDER') {
-        const saved = JSON.parse(localStorage.getItem('offline_available_providers') || '[]');
-        if (!saved.includes(data.provider)) {
-            saved.push(data.provider);
-            localStorage.setItem('offline_available_providers', JSON.stringify(saved));
-        }
+        // Автоматично ховаємо плашку через 4 секунди після повного завершення
+        setTimeout(() => {
+            if (progressBox && !progressBox.querySelector('[id^="fill-"]:not([style*="background: rgb(33, 150, 243)"])')) {
+                progressBox.remove();
+            }
+        }, 4000);
     }
 };
 
@@ -314,7 +337,16 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
         });
 
         downloadBtn.onclick = async () => {
-            if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) {
+            if (!('serviceWorker' in navigator)) {
+                alert('⚠️ Ваш браузер не підтримує Service Worker!');
+                return;
+            }
+
+            // Чекаємо готовності Service Worker
+            const reg = await navigator.serviceWorker.ready;
+            const worker = navigator.serviceWorker.controller || reg.active;
+
+            if (!worker) {
                 alert('⚠️ Service Worker не активний!');
                 return;
             }
@@ -336,8 +368,10 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
             }
 
             modal.style.display = 'none';
+            
+            // Очищаємо вміст плашки перед новим завантаженням
             const progressBox = createProgressBox();
-            progressBox.innerHTML = '⏳ Формування списку тайлів...';
+            progressBox.innerHTML = '<div style="font-weight:bold; margin-bottom:5px;">🚀 Завантаження карти...</div>';
 
             try {
                 const filteredPolygons = getFilteredPolygons(targetZone);
@@ -347,14 +381,14 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
                     return;
                 }
 
-                const zooms = getSelectedZooms(); // Динамічно отримуємо обрані зуми
+                const zooms = getSelectedZooms();
                 for (const provider of selectedProviders) {
                     let urls = [];
                     if (typeof getTileUrlsForPolygons === 'function') {
                         urls = getTileUrlsForPolygons(filteredPolygons, zooms, provider);
                     }
                     if (urls.length > 0) {
-                        navigator.serviceWorker.controller.postMessage({
+                        worker.postMessage({
                             action: 'DOWNLOAD_TILES',
                             provider: provider,
                             urls: urls
@@ -370,7 +404,6 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
                 });
                 localStorage.setItem('offline_downloaded_zones', JSON.stringify(downloadedZones));
 
-                progressBox.innerHTML = '🚀 Завдання передано у фоновий режим!';
             } catch (err) {
                 console.error('Помилка формування списку тайлів:', err);
                 progressBox.innerHTML = '❌ Помилка підготовки завантаження.';
