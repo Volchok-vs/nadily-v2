@@ -175,9 +175,10 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
             width: '100%', padding: '8px', marginBottom: '15px', borderRadius: '6px', border: '1px solid #ccc'
         });
         selectZone.innerHTML = `
+            <option value="all">🗺️ Усі дільниці (Місто + Села)</option>
             <option value="city" selected>🏙️ Тільки Місто (Липовець)</option>
             <option value="village">🏡 Тільки Села</option>
-            <option value="all">🗺️ Усі дільниці (Місто + Села)</option>
+           
             <option value="screen">📱 Поточний вигляд екрана</option>
         `;
         modalContent.appendChild(selectZone);
