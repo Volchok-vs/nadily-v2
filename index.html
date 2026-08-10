@@ -673,6 +673,11 @@
             pointer-events: none;
             margin-bottom: 0px !important;
         }
+
+        #zoom-text-level {
+            background-color: #ffffff87;
+            border-radius: 5px;
+        }
     </style>
     <link rel="stylesheet" href="css/style_mod.css">
     <link rel="stylesheet" href="css/responsive.css">
@@ -922,96 +927,85 @@
         import { supabase } from "./js/config.js";
         import { returnParcel, handleUrlParams, showCustomConfirm, triggerReturnParcelWithCustomModal } from './js/parcel-logic.js';
         import { currentUserId, initToolControl } from './js/main.js';
-        import { initGeolocation } from './js/geolocation.js'; // перевірте шлях до файлу
+        import { initGeolocation } from './js/geolocation.js';
         import { initSearchAndFilters, updateFilterCounts } from './js/search-filter.js';
         import { getDurationText } from './js/status-helper.js';
-        // Ініціалізація сесії користувача з перевіркою ролі з бази даних (асинхронно, без блокування)
+
+        // Ініціалізація сесії користувача
         window.initUserSession();
         window.isAuth = !!localStorage.getItem('userKey');
         window.allParcelLayers = [];
         window.handleUrlParams = handleUrlParams;
 
-        // --- 1. КЛАСИ КОНТРОЛІВ (Тільки опис) ---
+        // --- 1. КЛАСИ КОНТРОЛІВ ---
         const AuthControl = L.Control.extend({
             options: { position: 'topright' },
             onAdd: function () {
                 const container = L.DomUtil.create('div', 'user-control-panel');
                 const name = localStorage.getItem('userName');
-                const role = localStorage.getItem('userRole');
                 const showLogout = localStorage.getItem('showQuickLogout') === 'true';
 
-                // Зчитуємо залізобетонні ролі, які main.js поклав у window
                 const isSuperAdmin = window.isSuperAdmin || (localStorage.getItem('userRole') === 'super-admin' || localStorage.getItem('userRole') === 'super_admin');
                 const isAdmin = window.isAdmin || (localStorage.getItem('userRole') === 'admin' || isSuperAdmin);
-                const userRole = window.userRole || localStorage.getItem('userRole') || 'user';
+
                 container.innerHTML = `
-                <a href="${name ? 'profile.html' : 'login.html'}" class="auth-btn">
-                    ${name ? '👤 ' + name : '🔐 Увійти'}
-                </a>
-                ${(showLogout && name) ? `
-                    <div onclick="window.quickLogout()" class="auth-btn"
-                        style="background: #ff4757; color: white; cursor: pointer;">
-                        👈
-                    </div>
-                ` : ''}
-                ${isSuperAdmin ? '<a href="map-editor.html" class="auth-btn edit-btn">✏️</a>' : ''}
-            `;
+            <a href="${name ? 'profile.html' : 'login.html'}" class="auth-btn">
+                ${name ? '👤 ' + name : '🔐 Увійти'}
+            </a>
+            ${(showLogout && name) ? `
+                <div onclick="window.quickLogout()" class="auth-btn" style="background: #ff4757; color: white; cursor: pointer;">👈</div>
+            ` : ''}
+            ${isSuperAdmin ? '<a href="map-editor.html" class="auth-btn edit-btn">✏️</a>' : ''}
+        `;
                 L.DomEvent.disableClickPropagation(container);
                 L.DomEvent.disableScrollPropagation(container);
                 return container;
             }
         });
-        // --- 2. ІНІЦІАЛІЗАЦІЯ КАРТИ ---
+
+        // --- 2. ІНІЦІАЛІЗАЦІЯ КАРТИ З ОФЛАЙН-ОБМЕЖЕННЯМИ ---
         function initMainMap() {
-            // 1. ОПИС БАЗОВИХ ШАРІВ
-            const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' });
-            const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap (SRTM)' });
-            const satelliteOnly = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-            const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { pane: 'shadowPane' });
+            const OFFLINE_MIN_ZOOM = 13;
+            const OFFLINE_MAX_ZOOM = 17;
+
+            function applyOfflineZoomLimits(map) {
+                map.setMinZoom(OFFLINE_MIN_ZOOM);
+                map.setMaxZoom(OFFLINE_MAX_ZOOM);
+                if (map.getZoom() < OFFLINE_MIN_ZOOM) map.setZoom(OFFLINE_MIN_ZOOM);
+                if (map.getZoom() > OFFLINE_MAX_ZOOM) map.setZoom(OFFLINE_MAX_ZOOM);
+            }
+
+            function removeZoomLimits(map) {
+                map.setMinZoom(0);
+                map.setMaxZoom(19);
+            }
+
+            const layerOptions = { minZoom: OFFLINE_MIN_ZOOM, maxZoom: OFFLINE_MAX_ZOOM };
+
+            const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                ...layerOptions
+            });
+            const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenTopoMap (SRTM)',
+                ...layerOptions
+            });
+            const satelliteOnly = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', layerOptions);
+            const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+                pane: 'shadowPane',
+                ...layerOptions
+            });
             const satelliteHybrid = L.layerGroup([satelliteOnly, labels]);
 
-            // 2. ВИЗНАЧЕННЯ ТА ОБРАННЯ БАЗОВОГО ШАРУ (З УРАХУВАННЯМ ОФЛАЙНУ)
             const baseMaps = {
                 "🛰️ Гібрид": satelliteHybrid,
                 "🗺️ Схема (OSM)": osm,
                 "⛰️ Рельєф (Topo)": topo
             };
 
-            // Відповідність імен офлайн-провайдерів до об'єктів baseMaps
-            const providerToLayer = {
-                'satellite': satelliteHybrid,
-                'topo': topo,
-                'osm': osm
-            };
-
-            const isOffline = !navigator.onLine;
-            const savedProviders = JSON.parse(localStorage.getItem('offline_available_providers') || '[]');
             const savedLayerName = localStorage.getItem('selectedBaseLayer');
+            let initialLayer = (savedLayerName && baseMaps[savedLayerName]) ? baseMaps[savedLayerName] : satelliteHybrid;
 
-            let initialLayer = null;
-
-            // Сценарій 1: Якщо ми ОФЛАЙН — шукаємо перший завантажений шар
-            if (isOffline && savedProviders.length > 0) {
-                if (savedProviders.includes('satellite')) {
-                    initialLayer = satelliteHybrid;
-                } else if (savedProviders.includes('topo')) {
-                    initialLayer = topo;
-                } else if (savedProviders.includes('osm')) {
-                    initialLayer = osm;
-                }
-                if (initialLayer) {
-                    console.log('🌐 [Offline] Автоматично обрано доступний офлайн-шар.');
-                }
-            }
-
-            // Сценарій 2: Якщо онлайн (або офлайн-шар не знайшовся) — беремо збережений з selectedBaseLayer
-            if (!initialLayer) {
-                initialLayer = (savedLayerName && baseMaps[savedLayerName])
-                    ? baseMaps[savedLayerName]
-                    : satelliteHybrid;
-            }
-
-            // 3. ІНІЦІАЛІЗАЦІЯ КАРТИ
             window.map = L.map('map', {
                 preferCanvas: false,
                 center: [49.2321, 29.0577],
@@ -1020,116 +1014,112 @@
                 zoomControl: false,
             });
 
-            // Створюємо окремий шар (pane) для оверлеїв рекомендацій
             window.map.createPane('recommendedPane');
-            // Встановлюємо zIndex вище за стандартний overlayPane (400)
             window.map.getPane('recommendedPane').style.zIndex = 450;
 
-            // Додаємо перемикач шарів у bottomleft
             L.control.layers(baseMaps, null, {
                 position: 'bottomleft',
                 collapsed: true
             }).addTo(window.map);
 
-            // 4. Подія для збереження обраного шару
             window.map.on('baselayerchange', function (e) {
                 localStorage.setItem('selectedBaseLayer', e.name);
-                console.log("💾 Шар збережено:", e.name);
             });
 
-            // 📍 5. ІНІЦІАЛІЗАЦІЯ ІНДИКАТОРА ЗУМУ
+            // === ФУНКЦІЯ СИНХРОНІЗАЦІЇ ОФЛАЙН-ШАРУ З ЛОГУВАННЯМ ===
+            function syncOfflineLayer() {
+                const isOffline = !navigator.onLine;
+                const savedProviders = JSON.parse(localStorage.getItem('offline_available_providers') || '[]');
+
+                console.log(`[OfflineCheck] Mережа: ${isOffline ? 'Offline' : 'Online'}, Доступні провайдери:`, savedProviders);
+
+                if (isOffline || savedProviders.length > 0) {
+                    applyOfflineZoomLimits(window.map);
+
+                    let targetLayer = null;
+                    let targetLayerName = "";
+
+                    // Визначаємо перший завантажений шар за пріоритетом
+                    if (savedProviders.includes('osm')) {
+                        targetLayer = osm;
+                        targetLayerName = "🗺️ Схема (OSM)";
+                    } else if (savedProviders.includes('satellite')) {
+                        targetLayer = satelliteHybrid;
+                        targetLayerName = "🛰️ Гібрид";
+                    } else if (savedProviders.includes('topo')) {
+                        targetLayer = topo;
+                        targetLayerName = "⛰️ Рельєф (Topo)";
+                    }
+
+                    if (targetLayer) {
+                        // Перевіряємо, чи поточний шар відрізняється від завантаженого офлайн
+                        if (!window.map.hasLayer(targetLayer)) {
+                            console.warn(`[OfflineCheck] Перемикання на офлайн-шар: ${targetLayerName}`);
+                            Object.values(baseMaps).forEach(layer => {
+                                if (window.map.hasLayer(layer)) window.map.removeLayer(layer);
+                            });
+                            targetLayer.addTo(window.map);
+                            localStorage.setItem('selectedBaseLayer', targetLayerName);
+                        }
+                    } else {
+                        console.warn("[OfflineCheck] Не знайдено збережених офлайн-провайдерів у localStorage");
+                    }
+                } else {
+                    removeZoomLimits(window.map);
+                }
+            }
+
+            // Викликаємо перевірку одразу при ініціалізації
+            syncOfflineLayer();
+
+            // Події мережі
+            window.addEventListener('offline', () => {
+                console.log("[Network] Пристрій перейшов у режим offline");
+                syncOfflineLayer();
+            });
+
+            window.addEventListener('online', () => {
+                console.log("[Network] Пристрій повернувся в online");
+                removeZoomLimits(window.map);
+            });
+
+            // Індикатор зуму
             const ZoomTextControl = L.Control.extend({
                 options: { position: 'bottomleft' },
                 onAdd: function (map) {
                     const div = L.DomUtil.create('div', 'leaflet-zoom-text-display');
                     div.id = 'zoom-text-level';
-                    div.innerHTML = `( x${map.getZoom()})`;
+                    div.innerHTML = `x${map.getZoom()}`;
                     return div;
                 }
             });
 
             const zoomControlInstance = new ZoomTextControl().addTo(window.map);
-
-            // 🔄 Вставити напис ПІСЛЯ кнопки шарів у DOM
             const layersControlEl = document.querySelector('.leaflet-control-layers');
             const zoomTextEl = zoomControlInstance.getContainer();
 
             if (layersControlEl && zoomTextEl && layersControlEl.parentNode) {
-                // Вставляємо напис зуму відразу після елемента перемикача шарів
                 layersControlEl.parentNode.insertBefore(zoomTextEl, layersControlEl.nextSibling);
             }
 
-            // Оновлення тексту при зміні зуму
-            window.map.on('zoomend', function () {
-                const zoomEl = document.getElementById('zoom-text-level');
-                if (zoomEl) {
-                    zoomEl.innerHTML = `x${window.map.getZoom()}`;
-                }
-            });
-
-            // 🌐 ПОДІЯ: Автоматичне перемикання при раптовій втраті інтернету
-            window.addEventListener('offline', () => {
-                const savedProviders = JSON.parse(localStorage.getItem('offline_available_providers') || '[]');
-
-                if (savedProviders.length > 0) {
-                    console.warn('⚠️ Мережу втрачено. Перемикаємось на завантажений офлайн-шар...');
-
-                    let targetLayer = null;
-                    let targetName = '';
-
-                    // Перевіряємо, який із завантажених шарів доступний
-                    if (savedProviders.includes('satellite')) {
-                        targetLayer = satelliteHybrid;
-                        targetName = "🛰️ Гібрид";
-                    } else if (savedProviders.includes('topo')) {
-                        targetLayer = topo;
-                        targetName = "⛰️ Рельєф (Topo)";
-                    } else if (savedProviders.includes('osm')) {
-                        targetLayer = osm;
-                        targetName = "🗺️ Схема (OSM)";
-                    }
-
-                    // Якщо знайшли доступний офлайн-шар і він зараз НЕ активний — перемикаємо
-                    if (targetLayer && !window.map.hasLayer(targetLayer)) {
-                        // Видаляємо всі поточні базові шари з карти
-                        Object.values(baseMaps).forEach(layer => {
-                            if (window.map.hasLayer(layer)) {
-                                window.map.removeLayer(layer);
-                            }
-                        });
-
-                        // Додаємо новий офлайн-шар
-                        targetLayer.addTo(window.map);
-                        console.log(`✅ Успішно переключено на офлайн-шар: ${targetName}`);
-                    }
-                }
-            });
-
-            // Модулі геолокації та авторизації
             if (typeof initGeolocation === 'function') initGeolocation(window.map);
             if (typeof AuthControl === 'function') new AuthControl().addTo(window.map);
 
-            // 🔍 Логіка приховування ярликів при зумі < 15 (крім сіл)
             window.updateLabelsVisibility = function () {
                 if (!window.allParcelLayers) return;
                 const currentZoom = window.map.getZoom();
                 const showLabels = currentZoom >= 15;
-
-                // Допоміжна функція для перевірки, чи це село
                 const isVillage = (p) => (p.category || p.type || "").toLowerCase().includes('сел');
 
                 window.allParcelLayers.forEach(item => {
                     if (item.label) {
                         const p = item.data || {};
                         const isVillageParcel = isVillage(p);
-
-                        // Ярлики сіл завжди видимі, незалежно від зуму
                         if (isVillageParcel) {
                             if (window.map.hasLayer(item.layer) && !window.map.hasLayer(item.label)) {
                                 item.label.addTo(window.map);
                             }
                         } else {
-                            // Для міських ділянок - залежить від зуму
                             if (showLabels && window.map.hasLayer(item.layer)) {
                                 if (!window.map.hasLayer(item.label)) item.label.addTo(window.map);
                             } else {
@@ -1140,12 +1130,15 @@
                 });
             };
 
-            // Додаємо подію на зміну зуму
-            window.map.on('zoomend', updateLabelsVisibility);
+            window.map.on('zoomend', function () {
+                const zoomEl = document.getElementById('zoom-text-level');
+                if (zoomEl) zoomEl.innerHTML = `x${window.map.getZoom()}`;
+                window.updateLabelsVisibility();
+            });
 
-            // Первинний виклик при ініціалізації
-            updateLabelsVisibility();
+            window.updateLabelsVisibility();
         }
+        
         // У вашому блоці handleUrlParams (якщо він в index) або після handleUrlParams():
         if (new URLSearchParams(window.location.search).has('parcel')) {
             document.getElementById('reset-focus-btn').style.display = 'block';
@@ -1721,7 +1714,7 @@
                 console.log("✅ Дільницю успішно оновлено!");
 
                 window.UI?.toggleModal('takeModal', false);
-                 // Закриваємо popup на карті, якщо він відкритий
+                // Закриваємо popup на карті, якщо він відкритий
                 if (window.map) {
                     window.map.closePopup();
                 }
