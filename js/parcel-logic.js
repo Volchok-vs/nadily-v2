@@ -105,7 +105,7 @@ export function showCustomConfirm(...args) {
 export function triggerReturnParcelWithCustomModal(id, name, supabase, callback) {
     showCustomConfirm(
         "Здати дільницю",
-        `Ви впевнені, що хочете здати дільницю №${name}? Вона перейде в статус вільної, а до журналу запишеться дата здачі.`,
+        `Ви впевнені, що хочете здати дільницю <b>№${name}</b>? Вона перейде в статус вільної, а до журналу запишеться дата здачі.`,
         async () => {
             // Тимчасово підміняємо стандартні alert та confirm, щоб придушити нативні вікна всередині модуля
             const originalConfirm = window.confirm;

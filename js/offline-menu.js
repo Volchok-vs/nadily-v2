@@ -88,7 +88,8 @@ window.deleteOfflineZone = async function (index) {
     alert('Офлайн-карта та її кеш успішно видалені!');
 };
 
-/// =========================================================================
+
+// =========================================================================
 // 2. ОСНОВНИЙ КОНТРОЛЕР МЕНЮ ОФЛАЙН ЗАВАНТАЖЕННЯ (З ДІАГНОСТИКОЮ)
 // =========================================================================
 function initOfflineDownloadControl(map, allParcelsGroup) {
@@ -178,7 +179,6 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
             <option value="all">🗺️ Усі дільниці (Місто + Села)</option>
             <option value="city" selected>🏙️ Тільки Місто (Липовець)</option>
             <option value="village">🏡 Тільки Села</option>
-           
             <option value="screen">📱 Поточний вигляд екрана</option>
         `;
         modalContent.appendChild(selectZone);
@@ -216,7 +216,74 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
         });
         modalContent.appendChild(layersContainer);
 
-        // --- 3. БЛОК РОЗРАХУНКУ ВАГИ КЕШУ ---
+        // --- 3. БЛОК ВИБОРУ ЗУМІВ (НЕПЕРЕРВНИЙ ДІАПАЗОН) ---
+        const labelZooms = document.createElement('div');
+        labelZooms.innerHTML = '<small style="color:#666;">3. Рівні деталізації (зум від - до):</small>';
+        labelZooms.style.marginBottom = '5px';
+        modalContent.appendChild(labelZooms);
+
+        const zoomsContainer = document.createElement('div');
+        Object.assign(zoomsContainer.style, {
+            display: 'flex', justifyContent: 'space-between', marginBottom: '15px',
+            backgroundColor: '#f8f9fa', padding: '8px 12px', borderRadius: '6px',
+            border: '1px solid #e9ecef'
+        });
+
+        const availableZooms = [13, 14, 15, 16, 17];
+        let currentMinZoom = 13;
+        let currentMaxZoom = 17;
+
+        availableZooms.forEach(z => {
+            const wrapper = document.createElement('label');
+            Object.assign(wrapper.style, {
+                display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer'
+            });
+
+            const chk = document.createElement('input');
+            chk.type = 'checkbox';
+            chk.checked = true;
+            chk.className = 'offline-zoom-chk';
+            chk.dataset.zoom = z;
+
+            chk.onchange = (e) => {
+                e.preventDefault();
+                const clickedZ = parseInt(z, 10);
+
+                if (currentMinZoom === currentMaxZoom && clickedZ === currentMinZoom) {
+                    // Не дозволяємо зняти єдиний залишився зум
+                } else if (clickedZ < currentMinZoom) {
+                    currentMinZoom = clickedZ;
+                } else if (clickedZ > currentMaxZoom) {
+                    currentMaxZoom = clickedZ;
+                } else if (clickedZ === currentMinZoom) {
+                    currentMinZoom++;
+                } else if (clickedZ === currentMaxZoom) {
+                    currentMaxZoom--;
+                } else {
+                    currentMaxZoom = clickedZ - 1;
+                }
+
+                document.querySelectorAll('.offline-zoom-chk').forEach(c => {
+                    const val = parseInt(c.dataset.zoom, 10);
+                    c.checked = (val >= currentMinZoom && val <= currentMaxZoom);
+                });
+
+                updateEstimatedSize();
+            };
+
+            const span = document.createElement('span');
+            span.style.fontSize = '11px';
+            span.style.marginTop = '3px';
+            span.style.fontWeight = 'bold';
+            span.innerText = `x${z}`;
+
+            wrapper.appendChild(chk);
+            wrapper.appendChild(span);
+            zoomsContainer.appendChild(wrapper);
+        });
+        modalContent.appendChild(zoomsContainer);
+
+        // --- 4. БЛОК РОЗРАХУНКУ ВАГИ КЕШУ ---
         const sizeInfoBox = document.createElement('div');
         sizeInfoBox.id = 'offline-size-info';
         Object.assign(sizeInfoBox.style, {
@@ -225,7 +292,7 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
         });
         modalContent.appendChild(sizeInfoBox);
 
-        // --- 4. БЛОК ІСТОРІЇ ЗБЕРЕЖЕНИХ ЗОН ---
+        // --- 5. БЛОК ІСТОРІЇ ЗБЕРЕЖЕНИХ ЗОН ---
         const historyBox = document.createElement('div');
         historyBox.id = 'downloaded-zones-history';
         Object.assign(historyBox.style, {
@@ -237,7 +304,7 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
         });
         modalContent.appendChild(historyBox);
 
-        // --- 5. КНОПКА ЗАПУСКУ ЗАВАНТАЖЕННЯ ---
+        // --- 6. КНОПКА ЗАПУСКУ ЗАВАНТАЖЕННЯ ---
         const downloadBtn = document.createElement('button');
         downloadBtn.id = 'offline-download-btn';
         downloadBtn.innerHTML = 'Завантажити карту';
@@ -280,7 +347,7 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
                     return;
                 }
 
-                const zooms = [13, 14, 15, 16, 17];
+                const zooms = getSelectedZooms(); // Динамічно отримуємо обрані зуми
                 for (const provider of selectedProviders) {
                     let urls = [];
                     if (typeof getTileUrlsForPolygons === 'function') {
@@ -316,27 +383,68 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
         document.body.appendChild(modal);
     }
 
+    // Допоміжна функція отримання активних зумів
+    const getSelectedZooms = () => {
+        const checkedBoxes = Array.from(document.querySelectorAll('.offline-zoom-chk:checked'));
+        return checkedBoxes.map(c => parseInt(c.dataset.zoom, 10)).sort((a, b) => a - b);
+    };
+
     // Допоміжна функція фільтрації полігонів
     const getFilteredPolygons = (zoneValue) => {
         const allLayers = [];
         if (!allParcelsGroup) return allLayers;
-        allParcelsGroup.eachLayer(layer => allLayers.push(layer));
+
+        allParcelsGroup.eachLayer(layer => {
+            if (typeof layer.getBounds === 'function' || typeof layer.getLatLng === 'function') {
+                allLayers.push(layer);
+            }
+        });
 
         if (zoneValue === 'all') return allLayers;
+
         if (zoneValue === 'screen') {
             const mapBounds = map.getBounds();
-            return allLayers.filter(layer => typeof layer.getBounds === 'function' && mapBounds.intersects(layer.getBounds()));
+            return allLayers.filter(layer => {
+                if (typeof layer.getBounds === 'function') {
+                    return mapBounds.intersects(layer.getBounds());
+                }
+                if (typeof layer.getLatLng === 'function') {
+                    return mapBounds.contains(layer.getLatLng());
+                }
+                return false;
+            });
         }
+
+        const cityCategories = ['приватний сектор', 'поверхівки', 'змішані'];
 
         return allLayers.filter(layer => {
             const layerId = layer.options?.id || layer.feature?.id || layer.feature?.properties?.id;
             const layerName = layer.options?.name || layer.feature?.properties?.name;
-            const globalData = window.allParcelLayers?.find(i => (layerId && i.id === layerId) || (layerName && i.name === layerName) || i.layer === layer);
-            const category = globalData?.category || layer.options?.category || layer.feature?.properties?.category;
-            const isVillage = category === 'Село';
-            const isCity = !isVillage;
 
-            return zoneValue === 'city' ? isCity : isVillage;
+            const globalData = window.allParcelLayers?.find(i =>
+                (layerId && i.id === layerId) ||
+                (layerName && i.name === layerName) ||
+                i.layer === layer
+            );
+
+            const rawCategory = globalData?.category ||
+                globalData?.data?.category ||
+                layer.options?.category ||
+                layer.feature?.properties?.category ||
+                '';
+
+            const categoryStr = String(rawCategory).trim().toLowerCase();
+
+            const isVillage = categoryStr === 'село';
+            const isCity = cityCategories.includes(categoryStr) || (!isVillage && categoryStr !== '');
+
+            if (zoneValue === 'village') {
+                return isVillage;
+            } else if (zoneValue === 'city') {
+                return isCity;
+            }
+
+            return true;
         });
     };
 
@@ -351,9 +459,18 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
 
         const targetZone = selectEl.value;
         const selectedProviders = Array.from(chkEls).filter(c => c.checked).map(c => c.dataset.providerId);
+        const selectedZooms = getSelectedZooms();
 
         if (selectedProviders.length === 0) {
             sizeBoxEl.innerHTML = '❌ Оберіть хоча б один шар карти для комплектації';
+            btnEl.disabled = true;
+            btnEl.style.opacity = '0.5';
+            btnEl.style.cursor = 'not-allowed';
+            return;
+        }
+
+        if (selectedZooms.length === 0) {
+            sizeBoxEl.innerHTML = '❌ Оберіть хоча б один зум';
             btnEl.disabled = true;
             btnEl.style.opacity = '0.5';
             btnEl.style.cursor = 'not-allowed';
@@ -374,17 +491,16 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
 
             const estimation = estimateCacheSize(
                 filteredPolygons,
-                [13, 14, 15, 16, 17],
+                selectedZooms, // Динамічні зуми
                 selectedProviders
             );
 
-            sizeBoxEl.innerHTML = `📊 Оцінка: ~<strong>${estimation.sizeMB} МБ</strong><br><small style="color:#666;">Тайлів до скачування: ${estimation.totalTiles} шт.</small>`;
+            sizeBoxEl.innerHTML = `📊 Оцінка: ~<strong>${estimation.sizeMB} МБ</strong><br><small style="color:#666;">Тайлів до скачування: ${estimation.totalTiles} шт. (зуми: ${selectedZooms.join('-')})</small>`;
         } else {
             sizeBoxEl.innerHTML = '📊 Розрахунок розміру готується...';
         }
     };
 
-    // Отримуємо елементи з DOM безпосередньо для гарантованого зв'язування подій
     const selectZoneEl = document.getElementById('offline-zone-select');
     const layerCheckboxes = document.querySelectorAll('.offline-layer-chk');
 
@@ -396,7 +512,7 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
     });
 
     // 3. Відкриття модального вікна при кліку на кнопку
-    L.DomEvent.off(button, 'click'); // Знімаємо старі обробники, щоб не дублювати
+    L.DomEvent.off(button, 'click');
     L.DomEvent.on(button, 'click', function (e) {
         L.DomEvent.stopPropagation(e);
         L.DomEvent.preventDefault(e);

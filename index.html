@@ -1031,9 +1031,11 @@
                 const isOffline = !navigator.onLine;
                 const savedProviders = JSON.parse(localStorage.getItem('offline_available_providers') || '[]');
 
-                console.log(`[OfflineCheck] Mережа: ${isOffline ? 'Offline' : 'Online'}, Доступні провайдери:`, savedProviders);
+                console.log(`[OfflineCheck] Мережа: ${isOffline ? 'Offline' : 'Online'}, Доступні провайдери:`, savedProviders);
 
-                if (isOffline || savedProviders.length > 0) {
+                // 🛑 ВИПРАВЛЕНО: Змінено || (АБО) на && (І)
+                // Шар перемикається ТІЛЬКИ якщо ми дійсно ОФЛАЙН І маємо завантажені тайли
+                if (isOffline && savedProviders.length > 0) {
                     applyOfflineZoomLimits(window.map);
 
                     let targetLayer = null;
@@ -1054,7 +1056,7 @@
                     if (targetLayer) {
                         // Перевіряємо, чи поточний шар відрізняється від завантаженого офлайн
                         if (!window.map.hasLayer(targetLayer)) {
-                            console.warn(`[OfflineCheck] Перемикання на офлайн-шар: ${targetLayerName}`);
+                            console.warn(`[OfflineCheck] Офлайн режим! Перемикання на завантажений шар: ${targetLayerName}`);
                             Object.values(baseMaps).forEach(layer => {
                                 if (window.map.hasLayer(layer)) window.map.removeLayer(layer);
                             });
@@ -1065,7 +1067,9 @@
                         console.warn("[OfflineCheck] Не знайдено збережених офлайн-провайдерів у localStorage");
                     }
                 } else {
+                    // Якщо ми в онлайні (або відсутні збережені тайли) — знімаємо ліміти зуму
                     removeZoomLimits(window.map);
+                    console.log("[OfflineCheck] Онлайн режим: залишаємо стандартну карту та знімаємо обмеження.");
                 }
             }
 
@@ -1138,7 +1142,7 @@
 
             window.updateLabelsVisibility();
         }
-        
+
         // У вашому блоці handleUrlParams (якщо він в index) або після handleUrlParams():
         if (new URLSearchParams(window.location.search).has('parcel')) {
             document.getElementById('reset-focus-btn').style.display = 'block';

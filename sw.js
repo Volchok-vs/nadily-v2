@@ -1,5 +1,5 @@
 // Змінюємо версію, щоб браузер заново перекешував тільки необхідне
-const CACHE_NAME = 'territory-map-v3'; 
+const CACHE_NAME = 'territory-map-v3';
 const TILE_CACHE_NAME = 'map-tiles-v1';
 
 const progressChannel = new BroadcastChannel('offline_download_channel');
@@ -36,6 +36,18 @@ const ASSETS_TO_CACHE = [
     'https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&display=swap'
 ];
 
+// Допоміжна функція нормалізації субдоменів (a, b, c -> a) для всіх провайдерів карт
+function normalizeTileUrl(urlString) {
+    try {
+        const url = new URL(urlString);
+        // Замінюємо субдомени a.tile, b.tile, c.tile чи a.tile.opentopomap.org на єдиний дзеркальний хост 'a.'
+        url.hostname = url.hostname.replace(/^[a-c]\./, 'a.');
+        return url.toString();
+    } catch (e) {
+        return urlString;
+    }
+}
+
 // 1. Встановлення Service Worker та кешування статики
 self.addEventListener('install', (event) => {
     event.waitUntil(
@@ -66,75 +78,58 @@ self.addEventListener('activate', (event) => {
 
 // 3. Перехоплення мережевих запитів (Fetch)
 self.addEventListener('fetch', (event) => {
-    // 1. Фільтруємо запити: кешувати можна тільки HTTP/HTTPS та тільки GET-запити.
-    // Це позбавить від помилок з 'chrome-extension://', Supabase API (POST/PATCH) тощо.
-    if (!event.request.url.startsWith('http://') && !event.request.url.startsWith('https://')) {
-        return;
-    }
-    if (event.request.method !== 'GET') {
-        return;
-    }
+    if (!event.request.url.startsWith('http://') && !event.request.url.startsWith('https://')) return;
+    if (event.request.method !== 'GET') return;
 
     const url = new URL(event.request.url);
+    const isTileRequest = url.pathname.includes('/tile/') ||
+        url.hostname.includes('tile.') ||
+        url.hostname.includes('opentopomap');
 
-    // Перевіряємо, чи це запит тайлу OpenStreetMap
-    if (url.hostname.endsWith('tile.openstreetmap.org')) {
-        // Замінюємо будь-який субдомен (a.tile, b.tile, c.tile) на єдиний 'a.tile' або 'tile'
-        const normalizedUrl = event.request.url.replace(/\/\/[abc]\.tile\./, '//a.tile.');
-
+    // 1. ДЛЯ ТАЙЛІВ КАРТИ — Cache First (спочатку кеш, бо їх багато і вони не змінюються)
+    if (isTileRequest) {
+        const normalizedUrl = normalizeTileUrl(event.request.url);
         event.respondWith(
-            caches.match(normalizedUrl).then((cachedResponse) => {
-                if (cachedResponse) {
-                    return cachedResponse;
-                }
-                // Якщо немає в кеші та немає мережі, повертаємо помилку
-                return fetch(event.request);
+            caches.open(TILE_CACHE_NAME).then((cache) => {
+                return cache.match(normalizedUrl).then((cachedResponse) => {
+                    if (cachedResponse) return cachedResponse;
+
+                    return fetch(event.request).then((networkResponse) => {
+                        if (networkResponse && networkResponse.status === 200) {
+                            cache.put(normalizedUrl, networkResponse.clone());
+                        }
+                        return networkResponse;
+                    }).catch(() => new Response('', { status: 404, statusText: 'Tile Not In Cache' }));
+                });
             })
         );
         return;
     }
 
-    // Стратегія Cache First (з фоновим оновленням) для всього App Shell та CDN
+    // 2. ДЛЯ КОДУ САЙТУ (HTML, JS, CSS) — Network First (спочатку мережа)
     event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-            if (cachedResponse) {
-                // Оновлюємо ресурс у кеші у фоновому режимі (Stale-While-Revalidate)
-                fetch(event.request).then((networkResponse) => {
-                    if (networkResponse && networkResponse.status === 200) {
-                        const cacheToUse = url.pathname.includes('/tile/') || url.hostname.includes('tile.') ? TILE_CACHE_NAME : CACHE_NAME;
-                        caches.open(cacheToUse).then((cache) => cache.put(event.request, networkResponse.clone()));
-                    }
-                }).catch(() => {/* Офлайн */});
-
-                return cachedResponse;
-            }
-
-            // Якщо в кеші немає — дістаємо з мережі та динамічно кешуємо
-            return fetch(event.request).then((networkResponse) => {
-                if (!networkResponse || networkResponse.status !== 200) {
-                    return networkResponse;
-                }
-                
-                if (networkResponse.type === 'basic' || networkResponse.type === 'cors') {
+        fetch(event.request)
+            .then((networkResponse) => {
+                // Якщо сервер відповів успішно — оновлюємо кеш у фоні та віддаємо свіжий файл
+                if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
                     const responseToCache = networkResponse.clone();
-                    const cacheToUse = url.pathname.includes('/tile/') || url.hostname.includes('tile.') ? TILE_CACHE_NAME : CACHE_NAME;
-                    caches.open(cacheToUse).then((cache) => {
-                        cache.put(event.request, responseToCache);
-                    });
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
                 }
-                
                 return networkResponse;
-            });
-        })
+            })
+            .catch(() => {
+                // Якщо інтернету немає (офлайн) — беремо з кешу
+                return caches.match(event.request);
+            })
     );
 });
+
 // 4. ФОНОВЕ ЗАВАНТАЖЕННЯ ТА ТРАНСЛЯЦІЯ ПРОГРЕСУ
 self.addEventListener('message', (event) => {
-    // Підтримуємо як "START_DOWNLOAD", так і "DOWNLOAD_TILES"
     if (event.data && (event.data.action === 'DOWNLOAD_TILES' || event.data.type === 'START_DOWNLOAD')) {
         const urls = event.data.urls || [];
         const provider = event.data.provider || 'default';
-        
+
         console.log(`[SW] Почато фонове завантаження ${urls.length} тайлів для провайдера "${provider}".`);
 
         event.waitUntil(
@@ -143,62 +138,99 @@ self.addEventListener('message', (event) => {
     }
 });
 
-// Допоміжна функція фонового завантаження тайлів
+// Допоміжна функція завантаження тайла з повторними спробами (Retry)
+async function fetchAndCacheTileWithRetry(cache, rawUrl, retriesLeft = 3) {
+    const normalizedUrl = normalizeTileUrl(rawUrl);
+
+    // Спочатку перевіряємо, чи вже збережено
+    const match = await cache.match(normalizedUrl);
+    if (match) {
+        return true;
+    }
+
+    for (let attempt = 1; attempt <= retriesLeft; attempt++) {
+        try {
+            const response = await fetch(rawUrl, { mode: 'cors', cache: 'no-cache' });
+            if (response.ok) {
+                await cache.put(normalizedUrl, response);
+                return true;
+            }
+        } catch (err) {
+            // Мережевий збій або таймаут
+        }
+
+        // Затримка перед повторною спробою (300мс, 600мс...)
+        if (attempt < retriesLeft) {
+            await new Promise(res => setTimeout(res, attempt * 300));
+        }
+    }
+    return false;
+}
+
+// Пакетне фонове завантаження з обмеженням навантаження на сервер
 async function downloadTilesInBackground(provider, urls) {
     const cache = await caches.open(TILE_CACHE_NAME);
     const total = urls.length;
-    let downloaded = 0;
+    const BATCH_SIZE = 5;  // Не більше 5 паралельних запитів
+    const DELAY_MS = 80;    // Пауза між пакетами для запобігання бана/помилки 429
 
-    // Сповіщаємо про початок завантаження
+    let downloaded = 0;
+    let failed = 0;
+
     progressChannel.postMessage({
         type: 'PROGRESS',
         provider,
         downloaded: 0,
+        failed: 0,
         total,
         percent: 0
     });
 
-    for (let i = 0; i < total; i++) {
-        const url = urls[i];
-        try {
-            const match = await cache.match(url);
-            if (!match) {
-                const response = await fetch(url, { mode: 'cors' });
-                if (response.ok) {
-                    await cache.put(url, response);
-                }
+    for (let i = 0; i < total; i += BATCH_SIZE) {
+        const batch = urls.slice(i, i + BATCH_SIZE);
+
+        await Promise.all(batch.map(async (url) => {
+            const success = await fetchAndCacheTileWithRetry(cache, url, 3);
+            if (success) {
+                downloaded++;
+            } else {
+                failed++;
             }
-        } catch (err) {
-            console.warn('[SW] Помилка фонового завантаження тайла:', url, err);
-        }
+        }));
 
-        downloaded++;
+        const processed = downloaded + failed;
+        const percent = Math.round((processed / total) * 100);
 
-        // Відправляємо прогрес кожні 5 тайлів або наприкінці (щоб не перевантажувати канал)
-        if (downloaded % 5 === 0 || downloaded === total) {
-            const percent = Math.round((downloaded / total) * 100);
+        if (processed % 5 === 0 || processed === total) {
             progressChannel.postMessage({
                 type: 'PROGRESS',
                 provider,
                 downloaded,
+                failed,
                 total,
                 percent
             });
         }
+
+        if (DELAY_MS > 0) {
+            await new Promise(res => setTimeout(res, DELAY_MS));
+        }
     }
 
-    // Сповіщаємо сайт записати провайдера у localStorage
     progressChannel.postMessage({
         type: 'REGISTER_PROVIDER',
         provider
     });
 
-    // Сповіщаємо про повне завершення
     progressChannel.postMessage({
         type: 'COMPLETE',
         provider,
-        message: `Завантаження тайлів для "${provider}" завершено!`
+        downloaded,
+        failed,
+        message: failed > 0
+            ? `Завантаження "${provider}" завершено: ${downloaded} шт. успішно, ${failed} шт. з помилкою.`
+            : `Успішно завантажено всі ${downloaded} тайлів для "${provider}"!`
     });
 
-    console.log(`[SW] Завантаження для "${provider}" повністю виконано.`);
+    console.log(`[SW] Завантаження для "${provider}" виконано. Успішно: ${downloaded}, збіїв: ${failed}.`);
 }
