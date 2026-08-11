@@ -196,7 +196,8 @@
                 <button onclick="switchTerritoryTab('village')" class="origin-tab-btn">🏡 Села</button>
             </div>
 
-            <div class="card" style="overflow-x: auto; border-radius: 0 10px 10px 10px;">
+            <div class="card" style="border-radius: 0 10px 10px 10px;">
+                <!-- Легенда залишається статичною на всю ширину -->
                 <div id="campaign-color-legend" class="campaign-legend">
                     <div class="legend-item">
                         <div class="color-box color-congress"></div>
@@ -212,10 +213,13 @@
                     </div>
                 </div>
 
-                <table id="territoryTable">
-                    <thead id="tHead"></thead>
-                    <tbody id="tBody"></tbody>
-                </table>
+                <!-- Окремий обгортаючий div із горизонтальним скролом для таблиці -->
+                <div style="overflow-x: auto; width: 100%;">
+                    <table id="territoryTable">
+                        <thead id="tHead"></thead>
+                        <tbody id="tBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
