@@ -70,6 +70,9 @@ window.initUserSession = async () => {
             window.isAdmin = cachedIsAdmin;
             window.isSuperAdmin = cachedIsSuperAdmin;
 
+            // ✅ Оновлюємо UI карти за кешованими даними
+            if (window.authControl) window.authControl.update();
+
             return { role: cachedRole, isAdmin: cachedIsAdmin, isSuperAdmin: cachedIsSuperAdmin };
         }
 
@@ -92,6 +95,11 @@ window.initUserSession = async () => {
         localStorage.setItem('userRole', role);
         localStorage.setItem('userName', window.userFullName);
 
+        // ✅ ГОЛОВНА ТОЧКА ОНОВЛЕННЯ: оновлюємо кнопку авторизації на карті після завантаження профілю
+        if (window.authControl) {
+            window.authControl.update();
+        }
+
         console.log("✅ [Session] Сесія успішно ініціалізована:", { role, isAdmin, isSuperAdmin });
 
         return { role, isAdmin, isSuperAdmin };
@@ -106,6 +114,9 @@ window.initUserSession = async () => {
         window.userRole = cachedRole;
         window.isAdmin = cachedIsAdmin;
         window.isSuperAdmin = cachedIsSuperAdmin;
+
+        // ✅ Оновлюємо UI карти в разі помилки
+        if (window.authControl) window.authControl.update();
 
         return { role: cachedRole, isAdmin: cachedIsAdmin, isSuperAdmin: cachedIsSuperAdmin };
     }

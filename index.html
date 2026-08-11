@@ -940,28 +940,44 @@
         // --- 1. КЛАСИ КОНТРОЛІВ ---
         const AuthControl = L.Control.extend({
             options: { position: 'topright' },
-            onAdd: function () {
-                const container = L.DomUtil.create('div', 'user-control-panel');
+            onAdd: function (map) {
+                this._container = L.DomUtil.create('div', 'user-control-panel');
+                L.DomEvent.disableClickPropagation(this._container);
+                L.DomEvent.disableScrollPropagation(this._container);
+                this.update();
+                return this._container;
+            },
+            update: function () {
+                if (!this._container) return;
+
+                // 🛑 Якщо немає мережі — показуємо ТІЛЬКИ плашку офлайн і виходимо з функції
+                if (!navigator.onLine) {
+                    this._container.innerHTML = `
+                <div class="auth-btn offline-badge" style="background: #747d8c; color: #ffffff; cursor: default;" title="Пристрій у режимі офлайн">
+                    📡 Офлайн
+                </div>
+            `;
+                    return; // 👈 Кнопки нижче НЕ будуть згенеровані
+                }
+
+                // 🌐 Якщо мережа Є — рендеримо стандартні кнопки
                 const name = localStorage.getItem('userName');
                 const showLogout = localStorage.getItem('showQuickLogout') === 'true';
+                const role = localStorage.getItem('userRole');
+                const isSuperAdmin = window.isSuperAdmin || (role === 'super-admin' || role === 'super_admin');
 
-                const isSuperAdmin = window.isSuperAdmin || (localStorage.getItem('userRole') === 'super-admin' || localStorage.getItem('userRole') === 'super_admin');
-                const isAdmin = window.isAdmin || (localStorage.getItem('userRole') === 'admin' || isSuperAdmin);
-
-                container.innerHTML = `
+                this._container.innerHTML = `
             <a href="${name ? 'profile.html' : 'login.html'}" class="auth-btn">
                 ${name ? '👤 ' + name : '🔐 Увійти'}
             </a>
             ${(showLogout && name) ? `
-                <div onclick="window.quickLogout()" class="auth-btn" style="background: #ff4757; color: white; cursor: pointer;">👈</div>
+                <div onclick="window.quickLogout()" class="auth-btn" style="background: #ff4757; color: white; cursor: pointer;" title="Вийти">👈</div>
             ` : ''}
-            ${isSuperAdmin ? '<a href="map-editor.html" class="auth-btn edit-btn">✏️</a>' : ''}
+            ${isSuperAdmin ? '<a href="map-editor.html" class="auth-btn edit-btn" title="Редактор карти">✏️</a>' : ''}
         `;
-                L.DomEvent.disableClickPropagation(container);
-                L.DomEvent.disableScrollPropagation(container);
-                return container;
             }
         });
+
 
         // --- 2. ІНІЦІАЛІЗАЦІЯ КАРТИ З ОФЛАЙН-ОБМЕЖЕННЯМИ ---
         function initMainMap() {
@@ -1081,11 +1097,21 @@
             window.addEventListener('offline', () => {
                 console.log("[Network] Пристрій перейшов у режим offline");
                 syncOfflineLayer();
+
+                // 🔄 Примусово перемальовуємо панель авторизації
+                if (window.authControl) {
+                    window.authControl.update();
+                }
             });
 
             window.addEventListener('online', () => {
                 console.log("[Network] Пристрій повернувся в online");
                 removeZoomLimits(window.map);
+
+                // 🔄 Повертаємо кнопки
+                if (window.authControl) {
+                    window.authControl.update();
+                }
             });
 
             // Індикатор зуму
@@ -1108,7 +1134,10 @@
             }
 
             if (typeof initGeolocation === 'function') initGeolocation(window.map);
-            if (typeof AuthControl === 'function') new AuthControl().addTo(window.map);
+            if (typeof AuthControl === 'function') {
+                window.authControl = new AuthControl();
+                window.authControl.addTo(window.map);
+            }
 
             window.updateLabelsVisibility = function () {
                 if (!window.allParcelLayers) return;
@@ -1269,9 +1298,69 @@
             popupHtml += `</div>`;
             return popupHtml;
         };
-        // --- 4. ЗАВАНТАЖЕННЯ ДІЛЬНИЦЬ ---
+        // --- 1. ДОПОМІЖНІ ФУНКЦІЇ КЕШУВАННЯ ---
+        function saveParcelsToCache(data) {
+            try {
+                localStorage.setItem('offline_parcels_data', JSON.stringify(data));
+
+                // Зберігаємо локальний час у форматі "ДД.ММ.РРРР, ГОД:ХВ:СС"
+                const localTimeString = new Date().toLocaleString('uk-UA');
+                localStorage.setItem('offline_parcels_timestamp', localTimeString);
+            } catch (e) {
+                console.warn('Не вдалося зберегти кеш (можливо, перевищено ліміт 5MB):', e);
+            }
+        }
+
+        function getParcelsFromCache() {
+            const cached = localStorage.getItem('offline_parcels_data');
+            return cached ? JSON.parse(cached) : [];
+        }
+
+        // --- 2. ЗАВАНТАЖЕННЯ ДІЛЬНИЦЬ З МЕРЕЖІ АБО КЕШУ ---
         async function loadParcels(targetIds = null) {
-            // Очищуємо старі шари з карти перед завантаженням нових
+            let parcelsData = [];
+            let isOffline = !navigator.onLine;
+
+            const isAuth = !!localStorage.getItem('userId');
+            const targetSource = isAuth ? 'parcels' : 'public_parcels_map_mirror';
+
+            if (!isOffline) {
+                try {
+                    let query = window.supabase.from(targetSource).select('*');
+
+                    if (targetIds && Array.isArray(targetIds) && targetIds.length > 0) {
+                        query = query.in('id', targetIds);
+                    }
+
+                    const { data, error } = await query;
+                    if (error) throw error;
+
+                    parcelsData = data || [];
+
+                    // Зберігаємо в кеш лише якщо завантажуємо повний список (без точкових фільтрів)
+                    if (!targetIds || targetIds.length === 0) {
+                        saveParcelsToCache(parcelsData);
+                    }
+                } catch (err) {
+                    console.warn('Помилка мережі. Переходимо на локальний кеш:', err);
+                    isOffline = true;
+                }
+            }
+
+            if (isOffline) {
+                parcelsData = getParcelsFromCache();
+                if (parcelsData.length === 0) {
+                    alert('Відсутнє підключення до мережі та немає збережених офлайн-даних.');
+                    return;
+                }
+            }
+
+            renderParcelsOnMap(parcelsData, isAuth);
+        }
+
+        // --- 3. РЕНДЕРИНГ ДІЛЬНИЦЬ НА КАРТІ ---
+        function renderParcelsOnMap(parcels, isAuth) {
+            // Очищаємо старі шари та ярлики з карти перед завантаженням нових
             if (window.allParcelLayers && window.allParcelLayers.length > 0) {
                 window.allParcelLayers.forEach(item => {
                     if (item.layer && window.map.hasLayer(item.layer)) {
@@ -1284,22 +1373,11 @@
             }
             window.allParcelLayers = [];
 
-            // ПЕРЕВІРКА АВТОРИЗАЦІЇ ДЛЯ ВИБОРУ ТАБЛИЦІ
-            const isAuth = !!localStorage.getItem('userId');
-            const targetSource = isAuth ? 'parcels' : 'public_parcels_map_mirror';
-
-            // Формуємо запит до Supabase
-            let query = window.supabase.from(targetSource).select('*');
-
-            // Фільтруємо дільниці на рівні бази даних, якщо передано масив targetIds
-            if (targetIds && Array.isArray(targetIds) && targetIds.length > 0) {
-                query = query.in('id', targetIds);
+            if (window.allParcelsGroup) {
+                window.allParcelsGroup.clearLayers();
+            } else {
+                window.allParcelsGroup = L.featureGroup().addTo(window.map);
             }
-
-            const { data: parcels, error } = await query;
-            if (error) return console.error(error);
-
-            window.allParcelsGroup = L.featureGroup().addTo(window.map);
 
             parcels.forEach(p => {
                 if (!p.geom) return;
@@ -1375,6 +1453,7 @@
 
                 parcelGroup.addTo(window.map);
                 parcelGroup.addTo(window.allParcelsGroup);
+
                 window.allParcelLayers.push({
                     id: p.id,
                     name: preparedData.name.toLowerCase(),

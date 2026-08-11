@@ -88,10 +88,20 @@ window.deleteOfflineZone = async function (index) {
     if (!confirm('Ви дійсно хочете видалити цю офлайн-карту та очистити кеш?')) return;
 
     let downloadedZones = JSON.parse(localStorage.getItem('offline_downloaded_zones') || '[]');
+    const targetItem = downloadedZones[index];
 
     // Видаляємо елемент із масиву за індексом
     downloadedZones.splice(index, 1);
     localStorage.setItem('offline_downloaded_zones', JSON.stringify(downloadedZones));
+
+    // 🟢 ДОДАНО: Видаляємо кешований GeoJSON для цієї зони (якщо він є)
+    if (targetItem) {
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('offline_geojson_')) {
+                localStorage.removeItem(key);
+            }
+        });
+    }
 
     // Очищаємо кеш тайлів у браузері (map-tiles-v1)
     if ('caches' in window) {
@@ -368,7 +378,7 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
             }
 
             modal.style.display = 'none';
-            
+
             // Очищаємо вміст плашки перед новим завантаженням
             const progressBox = createProgressBox();
             progressBox.innerHTML = '<div style="font-weight:bold; margin-bottom:5px;">🚀 Завантаження карти...</div>';
@@ -380,6 +390,26 @@ function initOfflineDownloadControl(map, allParcelsGroup) {
                     setTimeout(() => progressBox.remove(), 3000);
                     return;
                 }
+
+                // 💾 -----------------------------------------------------------------
+                // КРОК 1: Зберігаємо полігони обраної зони в localStorage для офлайну
+                // ---------------------------------------------------------------------
+                const rawGeoData = filteredPolygons.map(layer => {
+                    if (typeof layer.toGeoJSON === 'function') {
+                        return layer.toGeoJSON();
+                    }
+                    return null;
+                }).filter(Boolean);
+
+                if (rawGeoData.length > 0) {
+                    const featureCollection = {
+                        type: 'FeatureCollection',
+                        features: rawGeoData
+                    };
+                    localStorage.setItem(`offline_geojson_${targetZone}`, JSON.stringify(featureCollection));
+                    console.log(`✅ Полігони зони "${targetZone}" успішно збережені в localStorage (${rawGeoData.length} шт.)`);
+                }
+                // ---------------------------------------------------------------------
 
                 const zooms = getSelectedZooms();
                 for (const provider of selectedProviders) {

@@ -177,23 +177,28 @@
     // Глобальна функція швидкого виходу для головної карти
     window.quickLogout = async () => {
         try {
-            // 1. Очищаємо локальні дані авторизації та сесії
-            localStorage.removeItem('sb-access-token'); // або просто localStorage.clear(), якщо потрібно скинути все
+            // 1. Очищаємо всі токени та дані профілю користувача
+            localStorage.removeItem('sb-access-token');
             localStorage.removeItem('sb-refresh-token');
+            localStorage.removeItem('userName');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('userKey');
+
+            // Очищаємо сесію (якщо там зберігалися тимчасові дані)
             sessionStorage.clear();
 
             // 2. Якщо підключено Supabase Auth, викликаємо офіційний signOut
-            if (typeof supabase !== 'undefined' && supabase.auth) {
+            if (typeof supabase !== 'undefined' && supabase?.auth) {
                 await supabase.auth.signOut();
             }
 
             console.log("Швидкий вихід виконано успішно.");
 
-            // 3. Перезавантажуємо сторінку, щоб скинути стан інтерфейсу та знову показати вікно входу
-            window.location.reload();
         } catch (error) {
             console.error("Помилка під час швидкого виходу:", error);
-            // Альтернативний варіант, якщо Supabase видав помилку мережі, все одно перезавантажуємо сторінку
+        } finally {
+            // 3. Перезавантажуємо сторінку у будь-якому випадку (упішно чи з помилкою)
             window.location.reload();
         }
     };
