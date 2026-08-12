@@ -174,7 +174,7 @@ export function initGeolocation(map) {
             accuracyBox.style.opacity = '1';
 
             const updateText = (sec) => {
-                accuracyBox.innerHTML = `📡 Точність: ±${radius.toFixed(1)} м <span style="margin-left:8px; opacity:0.6; font-size:11px;">(${sec}с)</span>`;
+                accuracyBox.innerHTML = `📡 Точність1: ±${radius.toFixed(1)} м <span style="margin-left:8px; opacity:0.6; font-size:11px;">(${sec}с)</span>`;
             };
 
             updateText(secondsLeft);
