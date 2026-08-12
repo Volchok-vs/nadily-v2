@@ -50,20 +50,29 @@ export function initGeolocation(map) {
         }
     };
 
+    // 🔴 ВИПРАВЛЕНО ДЛЯ iOS PWA: Запит робиться миттєво
     window.locateMe = function () {
+        // 1. Перевірка HTTPS (обов'язково для iOS Standalone)
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+            alert("Геолокація на iOS працює тільки через HTTPS з'єднання.");
+            return;
+        }
+
+        // 2. Спочатку ініціюємо запит Leaflet
+        map.locate({
+            setView: false,
+            maxZoom: 18,
+            enableHighAccuracy: true,
+            timeout: 10000, // Зменшено таймаут для швидшого відгуку
+            maximumAge: 0
+        });
+
+        // 3. Відображаємо плашку пошуку ПІСЛЯ запуску запиту
         if (accuracyBox) {
             accuracyBox.style.display = 'block';
             accuracyBox.style.opacity = '1';
             accuracyBox.innerHTML = `🛰️ Пошук GPS-супутників...`;
         }
-
-        map.locate({
-            setView: false,
-            maxZoom: 18,
-            enableHighAccuracy: true,
-            timeout: 20000,
-            maximumAge: 0
-        });
     };
 
     map.on('locationfound', function (e) {
@@ -89,7 +98,6 @@ export function initGeolocation(map) {
         let targetLayers = [];
 
         if (recommendedIds.length > 0) {
-            // А. Перевірка через масив allParcelLayers
             if (window.allParcelLayers && Array.isArray(window.allParcelLayers)) {
                 window.allParcelLayers.forEach(item => {
                     const rawId = item.id ?? item.parcelId ?? item.layer?.options?.id ?? item.layer?.feature?.id;
@@ -101,7 +109,6 @@ export function initGeolocation(map) {
                 });
             }
 
-            // Б. Якщо в allParcelLayers нічого не знайшли — шукаємо у Leaflet-групі allParcelsGroup
             if (targetLayers.length === 0 && window.allParcelsGroup) {
                 window.allParcelsGroup.eachLayer(parentLayer => {
                     const layersToCheck = typeof parentLayer.eachLayer === 'function' ? [] : [parentLayer];
@@ -109,12 +116,10 @@ export function initGeolocation(map) {
                         parentLayer.eachLayer(sub => layersToCheck.push(sub));
                     }
                     layersToCheck.forEach(layer => {
-                        // 🛑 Ігноруємо кола точності та маркери геолокації
                         if (layer instanceof L.Circle || layer instanceof L.CircleMarker) {
                             return;
                         }
 
-                        // ✅ ВИПРАВЛЕНО: прибрано пробіли в "layer"
                         const rawId = layer.options?.id ?? layer.feature?.id ?? layer.feature?.properties?.id ?? parentLayer.options?.id;
                         const layerId = String(rawId || '').trim();
 
@@ -132,7 +137,6 @@ export function initGeolocation(map) {
 
         // --- 3. АДАПТИВНЕ ПОЗИЦІОНУВАННЯ ПІД ДИСПЛЕЙ ---
         const bounds = L.latLngBounds([]);
-
         bounds.extend(e.latlng);
 
         const hasRecommendations = recommendedIds.length > 0;
@@ -151,21 +155,15 @@ export function initGeolocation(map) {
             });
         }
 
-        // Перевіряємо режим позиціонування
         if (hasRecommendations && bounds.isValid()) {
             const padding = typeof getAdaptivePadding === 'function' ? getAdaptivePadding() : [50, 50];
-
-            console.log('📐 [GeoDebug] (Фільтр) Zoom перед fitBounds:', map.getZoom());
 
             map.fitBounds(bounds, {
                 padding: padding,
                 maxZoom: 16,
                 animate: false
             });
-
-            console.log('✅ [GeoDebug] (Фільтр) Zoom ПІСЛЯ fitBounds:', map.getZoom());
         } else {
-            console.log('📐 [GeoDebug] (Загальний) Фокусування на користувачі з Zoom 16');
             map.setView(e.latlng, 16, { animate: false });
         }
 
@@ -223,7 +221,7 @@ export function initGeolocation(map) {
 
         switch (e.code) {
             case 1:
-                errorMsg = "Доступ до геолокації заборонено в налаштуваннях браузера.";
+                errorMsg = "Доступ до геолокації заборонено. Відкрийте Налаштування iPhone -> Приватність -> Служби геопозиції та увімкніть дозвіл для Safari.";
                 break;
             case 2:
                 errorMsg = "Не вдалося отримати сигнал GPS. Перевірте, чи увімкнено геопозицію в системі та чи ви не в приміщенні.";
