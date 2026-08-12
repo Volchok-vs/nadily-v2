@@ -58,13 +58,13 @@ export function initGeolocation(map) {
             return;
         }
 
-        // 2. Спочатку ініціюємо запит Leaflet
+        // 2. Ініціюємо запит Leaflet з оптимізацією під iOS Standalone / PWA
         map.locate({
             setView: false,
             maxZoom: 18,
-            enableHighAccuracy: true,
-            timeout: 10000, // Зменшено таймаут для швидшого відгуку
-            maximumAge: 0
+            enableHighAccuracy: false, // Вкрай важливо для iOS PWA: вимикає примусовий запит до GPS-чіпа, який блокується пісочницею
+            timeout: 15000,            // Даємо додаткові 5 секунд для прокидання геопозиціонування в ізольованому режимі
+            maximumAge: 60000          // 60000 мс (1 хв): дозволяє iOS використати закешовані координати пристрою замість збою
         });
 
         // 3. Відображаємо плашку пошуку ПІСЛЯ запуску запиту
@@ -234,5 +234,26 @@ export function initGeolocation(map) {
         }
 
         alert(errorMsg);
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Знаходимо вашу кнопку за її ID (замініть 'locate-btn' на реальний ID вашої кнопки)
+        const locateBtn = document.getElementById('locate-btn');
+
+        if (locateBtn) {
+            // Обробка для тачскрінів (iPhone / iPad)
+            locateBtn.addEventListener('touchstart', function (e) {
+                e.preventDefault(); // Запобігає затримці та подвійному кліку на iOS
+                window.locateMe();
+            }, { passive: false });
+
+            // Обробка для звичайних комп'ютерів (мишка)
+            locateBtn.addEventListener('click', function (e) {
+                // Перевіряємо, щоб на тач-пристроях не зпрацьовувало двічі
+                if (e.pointerType !== 'touch') {
+                    window.locateMe();
+                }
+            });
+        }
     });
 }
