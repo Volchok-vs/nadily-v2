@@ -2470,6 +2470,7 @@
         import { supabase } from "./js/config.js";
         import { showCustomConfirm } from './js/parcel-logic.js';
         import './js/main.js';
+        import { getDurationText } from './js/status-helper.js'; // перевірте правильний шлях до файлу status-helper.js
 
         const userId = localStorage.getItem('userId');
 
@@ -3304,7 +3305,7 @@
             });
         }
 
-        function getDurationText(startDate, endDate = null) {
+        function calculateDurationText(startDate, endDate = null) {
             if (!startDate) return "";
 
             let start = new Date(startDate);
@@ -3364,7 +3365,7 @@
 
             statusElement.textContent = statusText;
             datesElement.textContent = `Період: ${formatDate(campaignData.campaign_start)} - ${formatDate(campaignData.campaign_end)}`;
-            periodElement.textContent = getDurationText(campaignData.campaign_start, campaignData.campaign_end);
+            periodElement.textContent = calculateDurationText(campaignData.campaign_start, campaignData.campaign_end);
 
             controlsElement.style.display = 'flex';
             createControlsElement.style.display = 'none';
@@ -4179,13 +4180,12 @@
                 const statusColor = t.status === 'taken' ? '#28a745' : '#6c757d';
                 const publisher = t.taken_by || '—';
 
-                let daysHeld;
-                if (t.status === 'taken') {
-                    daysHeld = Math.floor((new Date() - new Date(t.taken_at)) / (1000 * 60 * 60 * 24));
-                } else if (t.last_returned) {
-                    daysHeld = Math.floor((new Date() - new Date(t.last_returned)) / (1000 * 60 * 60 * 24));
-                } else {
-                    daysHeld = '—';
+                // Форматуємо тривалість через нашу функцію замість розрахунку чистих днів
+                let formattedDuration = '';
+                if (t.status === 'taken' && t.taken_at) {
+                    formattedDuration = getDurationText(t.taken_at);
+                } else if (t.status !== 'taken' && t.last_returned) {
+                    formattedDuration = getDurationText(t.last_returned);
                 }
 
                 return `
@@ -4196,8 +4196,8 @@
                             <div>
                                 <p><strong>Категорія:</strong> ${t.category || 'Не вказано'}</p>
                                 ${t.status === 'taken' ? `<p><strong>У вісника:</strong> ${publisher}</p>` : ''}
-                                ${t.status === 'taken' && daysHeld !== '—' ? `<p><strong>Днів на руках:</strong> ${daysHeld}</p>` : ''}
-                                ${t.status !== 'taken' && daysHeld !== '—' ? `<p><strong>Вільна:</strong> ${daysHeld}</p>` : ''}
+                                ${t.status === 'taken' && formattedDuration ? `<p><strong>На руках:</strong> ${formattedDuration}</p>` : ''}
+                                ${t.status !== 'taken' && formattedDuration ? `<p><strong>Вільна:</strong> ${formattedDuration}</p>` : ''}
                             </div>
                             <div>
                                 <span class="territory-badge" style="background: ${statusColor};">${status}</span>
