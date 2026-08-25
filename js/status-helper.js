@@ -17,7 +17,7 @@ export function getDurationText(startDate, endDate = null) {
 
     if (isNaN(start.getTime()) || isNaN(end.getTime())) return "";
 
-    // Якщо раптом дата здачі раніша за дату отримання (помилка вводу) — міняємо їх місцями
+    // Якщо раптом дата початку пізніша за дату кінця — міняємо їх місцями
     if (start > end) {
         let temp = start;
         start = end;
@@ -39,13 +39,15 @@ export function getDurationText(startDate, endDate = null) {
         months += 12;
     }
 
-    const totalMonths = (years * 12) + months;
+    // Якщо нуль днів/місяців/років
+    if (years === 0 && months === 0 && days === 0) return "0 дн.";
 
-    if (totalMonths === 0 && days === 0) return "0 дн.";
-    if (totalMonths === 0) return `${days} дн.`;
-    if (days === 0) return `${totalMonths} міс.`;
-    
-    return `${totalMonths} міс. ${days} дн.`;
+    const parts = [];
+    if (years > 0) parts.push(`${years} р.`);
+    if (months > 0) parts.push(`${months} міс.`);
+    if (days > 0) parts.push(`${days} дн.`);
+
+    return parts.join(" ");
 }
 
 /**
