@@ -4,6 +4,19 @@
  */
 export function getParcelStyle(pData) {
 
+    // 🌟 ПЕРЕВІРКА НА РЕЖИМ ГЕО-БЛОКІВ: 
+    // Якщо відкритий режим рекомендацій і для цієї ділянки розраховано колір блоку
+    if (window.parcelBlockColorMap && window.parcelBlockColorMap[pData.id]) {
+        const blockColor = window.parcelBlockColorMap[pData.id];
+        return {
+            fillColor: blockColor,
+            fillOpacity: 0.5,
+            color: '#FFFFFF',
+            weight: 2,
+            opacity: 1
+        };
+    }
+
     // 1. КОНФІГУРАЦІЯ БАЗОВИХ КОЛЬОРІВ
     // Беремо кольори з бази (якщо завантажені), інакше — стандартні
     const config = (window.mapConfig && window.mapConfig.colors) ? window.mapConfig.colors : {
@@ -78,7 +91,12 @@ export function getParcelStyle(pData) {
     let finalOpacity = 0.3;
     let weight = 1.5;
 
-    if (pData.status !== 'taken' && diffMonths >= 6) {
+    // Перевіряємо, чи це рекомендована ділянка (наприклад, за прапором або з URL)
+    const urlParams = new URLSearchParams(window.location.search);
+    const isRecommendedMode = urlParams.has('recommend_ids');
+
+    // Застосовуємо червоне старіння ТІЛЬКИ якщо це НЕ режим рекомендованих
+    if (!isRecommendedMode && pData.status !== 'taken' && diffMonths >= 6) {
         if (diffMonths < 7) {
             const progress = diffMonths - 6;
             baseColor = interpolateColor(baseColor, '#FF0000', progress);
@@ -91,7 +109,6 @@ export function getParcelStyle(pData) {
         else {
             baseColor = '#FF0000';
             strokeColor = '#FF0000';
-            // Прозорість плавно зростає від 0.2 до 0.9 (до 12-го місяця)
             finalOpacity = diffMonths <= 12
                 ? 0.2 + ((diffMonths - 8) / 4 * 0.7)
                 : 0.9;

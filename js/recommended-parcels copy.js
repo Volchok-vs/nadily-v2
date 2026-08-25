@@ -652,9 +652,6 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
  */
 async function showRecommendedOnMap(radiusMeters = 500, minIdleMonths = 'auto', targetIds = null) {
     try {
-        // ⬇️ ЗБЕРІГАЄМО СТАН: Тепер LocalStorage оновиться гарантовано при будь-якому виклику
-        localStorage.setItem('geoblocks_active_mode', 'recommended');
-
         const { groups, allRecommendedIds } = await computeRecommendedParcels(radiusMeters, minIdleMonths);
 
         if (!allRecommendedIds || allRecommendedIds.length === 0) {
@@ -666,7 +663,6 @@ async function showRecommendedOnMap(radiusMeters = 500, minIdleMonths = 'auto', 
             ? targetIds
             : allRecommendedIds;
 
-        // Оновлення URL (у вас воно вже реалізовано через pushState)
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.set('recommend_ids', activeIds.join(','));
         newUrl.searchParams.set('from', 'recommended');
@@ -695,11 +691,6 @@ async function showRecommendedOnMap(radiusMeters = 500, minIdleMonths = 'auto', 
 
         if (typeof window.fitMapToParcelIds === 'function') {
             window.fitMapToParcelIds(activeIds);
-        }
-
-        // 🌟 ВСТАВЛЯТИ СЮДИ: Малюємо зірочки після відображення шарів та зуму
-        if (typeof window.drawStarsOnMapPolygons === 'function') {
-            window.drawStarsOnMapPolygons();
         }
 
         return activeIds;
