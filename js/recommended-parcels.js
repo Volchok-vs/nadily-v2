@@ -1,6 +1,6 @@
 /**
  * recommended-parcels.js
- * Універсальний модуль для розрахунку та відображення рекомендованих гео-блоків.
+ * Універсальний модуль для розрахунку та відображення рекомендованих гео-блоків та загального списку з табами.
  */
 
 let currentRadiusMeters = 500;
@@ -12,6 +12,11 @@ window.renderedGeoGroups = [];
 window.blockSortStates = {};
 // Збереження геолокації користувача
 window.userCoordinates = null;
+
+// Збереження даних плоского списку
+window.flatParcelsList = [];
+window.flatListSortState = { sortField: 'idle', sortOrder: 'asc' };
+window.flatStarThresholdDays = Infinity;
 
 // 🎨 Палітра приємних, виразних кольорів без чистого червоного
 const BLOCK_COLORS = [
@@ -266,6 +271,20 @@ function calculateIdleTime(lastDateStr) {
     return parts.join(' ');
 }
 
+function formatThresholdTime(days) {
+    if (days === Infinity || isNaN(days)) return "—";
+
+    const totalMonths = Math.round(days / 30.44);
+    const years = Math.floor(totalMonths / 12);
+    const months = totalMonths % 12;
+
+    const parts = [];
+    if (years > 0) parts.push(`${years} р.`);
+    if (months > 0) parts.push(`${months} міс.`);
+
+    return parts.length > 0 ? parts.join(' ') : '0 міс.';
+}
+
 function formatDate(dateStr) {
     if (!dateStr) return "—";
     const d = new Date(dateStr);
@@ -316,11 +335,14 @@ function renderSingleBlockTable(groupIndex) {
     group.forEach((parcel, idx) => {
         const idleText = calculateIdleTime(parcel.last_returned);
         const formattedDate = formatDate(parcel.last_returned);
+        // ⭐ Додано відображення зірочки та підсвічування рядка для найстаріших дільниць
+        const starBadge = parcel.isOldestThird ? '⭐ ' : '';
+        const rowBgStyle = parcel.isOldestThird ? 'background-color: #fffbeb;' : '';
 
         rowsHtml += `
-            <tr style="border-bottom: 1px solid #f1f5f9;">
+            <tr style="border-bottom: 1px solid #f1f5f9; ${rowBgStyle}">
                 <td style="padding: 10px; text-align: center; font-weight: bold; color: #94a3b8;">${idx + 1}</td>
-                <td style="padding: 10px;"><b>№${parcel.name || 'без назви'}</b></td>
+                <td style="padding: 10px;"><b>${starBadge}№${parcel.name || 'без назви'}</b></td>
                 <td style="padding: 10px; text-align: center; white-space: nowrap;">${formattedDate}</td>
                 <td style="padding: 10px; text-align: center; font-weight: 600; color: #d97706; white-space: nowrap;">${idleText}</td>
             </tr>
@@ -495,6 +517,129 @@ function renderBlocksList() {
     });
 }
 
+/**
+ * 📋 ФОНОВІ ФУНКЦІЇ ДЛЯ РЕНДЕРУ ПЛОСКОГО СПИСКУ З ЗІРОЧКАМИ
+ */
+function toggleFlatListSort(field) {
+    if (window.flatListSortState.sortField === field) {
+        window.flatListSortState.sortOrder = window.flatListSortState.sortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+        window.flatListSortState.sortField = field;
+        window.flatListSortState.sortOrder = 'asc';
+    }
+    renderFlatParcelsTable();
+}
+
+function renderFlatParcelsTable() {
+    const tableContainer = document.getElementById('flat-parcels-table-container');
+    if (!tableContainer || !window.flatParcelsList) return;
+
+    const list = [...window.flatParcelsList];
+    const { sortField, sortOrder } = window.flatListSortState;
+
+    list.sort((a, b) => {
+        if (sortField === 'num') {
+            const numA = extractNumberForSort(a.name);
+            const numB = extractNumberForSort(b.name);
+            if (numA !== numB) return sortOrder === 'asc' ? numA - numB : numB - numA;
+            return sortOrder === 'asc'
+                ? (a.name || '').localeCompare(b.name || '', 'uk', { numeric: true })
+                : (b.name || '').localeCompare(a.name || '', 'uk', { numeric: true });
+        } else {
+            if (!a.last_returned && !b.last_returned) return 0;
+            if (!a.last_returned) return 1;
+            if (!b.last_returned) return -1;
+            const timeA = new Date(a.last_returned).getTime();
+            const timeB = new Date(b.last_returned).getTime();
+            return sortOrder === 'asc' ? timeA - timeB : timeB - timeA;
+        }
+    });
+
+    let rowsHtml = '';
+    list.forEach((parcel, idx) => {
+        const idleText = calculateIdleTime(parcel.last_returned);
+        const formattedDate = formatDate(parcel.last_returned);
+        const starBadge = parcel.isOldestThird ? '⭐ ' : '';
+        const mapUrl = `index.html?recommend_ids=${parcel.id}&from=recommended${parcel.isOldestThird ? '&draw_stars=1' : ''}`;
+
+        rowsHtml += `
+            <tr style="border-bottom: 1px solid #f1f5f9; ${parcel.isOldestThird ? 'background-color: #fffbeb;' : ''}">
+                <td style="padding: 10px; text-align: center; font-weight: bold; color: #94a3b8;">${idx + 1}</td>
+                <td style="padding: 10px;"><b>${starBadge}№${parcel.name || 'без назви'}</b></td>
+                <td style="padding: 10px; text-align: center; white-space: nowrap;">${formattedDate}</td>
+                <td style="padding: 10px; text-align: center; font-weight: 600; color: #d97706; white-space: nowrap;">${idleText}</td>
+                <td style="padding: 10px; text-align: center;">
+                    <a href="${mapUrl}" target="_blank" 
+                       style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; background: #2e7d32; color: #fff; text-decoration: none; border-radius: 6px; font-size: 0.82rem; font-weight: 600; white-space: nowrap;">
+                        🗺️ На карту
+                    </a>
+                </td>
+            </tr>
+        `;
+    });
+
+    const numIcon = sortField === 'num' ? (sortOrder === 'asc' ? ' ↑' : ' ↓') : ' <span style="color: #cbd5e1;">↕</span>';
+    const idleIcon = sortField === 'idle' ? (sortOrder === 'asc' ? ' ↑' : ' ↓') : ' <span style="color: #cbd5e1;">↕</span>';
+
+    tableContainer.innerHTML = `
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+            <thead>
+                <tr style="background: #f8fafc; color: #475569; border-bottom: 2px solid #e2e8f0; text-align: left;">
+                    <th style="padding: 10px; text-align: center;">№</th>
+                    <th onclick="window.toggleFlatListSort('num')" style="padding: 10px; cursor: pointer; user-select: none;" title="Сортувати за номером">
+                        Дільниця${numIcon}
+                    </th>
+                    <th style="padding: 10px; text-align: center;">Останнє опрацювання</th>
+                    <th onclick="window.toggleFlatListSort('idle')" style="padding: 10px; text-align: center; cursor: pointer; user-select: none;" title="Сортувати за часом простою">
+                        Час простою${idleIcon}
+                    </th>
+                    <th style="padding: 10px; text-align: center;">Дія</th>
+                </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+        </table>
+    `;
+}
+
+/**
+ * 🔄 ПЕРЕМКАННЯ ТАБІВ ("Гео-блоки" та "Список")
+ */
+function switchRecTab(tabName) {
+    const btnBlocks = document.getElementById('tab-btn-geoblocks');
+    const btnList = document.getElementById('tab-btn-flatlist');
+    const contentBlocks = document.getElementById('tab-content-geoblocks');
+    const contentList = document.getElementById('tab-content-flatlist');
+
+    if (!btnBlocks || !btnList || !contentBlocks || !contentList) return;
+
+    // Спільні стилі для обох табів (вигляд вкладок папки: радіус тільки зверху)
+    const baseTabStyle = "padding: 10px 20px; font-weight: 600; cursor: pointer; border-radius: 8px 8px 0 0; position: relative; font-size: 0.92rem; transition: all 0.2s ease;";
+
+    if (tabName === 'geoblocks') {
+        // Активний таб "Гео-блоки" (зливається з контентом, перекриває лінію)
+        btnBlocks.style.cssText = baseTabStyle + " background: #ffffff; color: #1565C0; border: 2px solid #e2e8f0; border-bottom: 2px solid #ffffff; margin-bottom: -2px; z-index: 2;";
+        
+        // Неактивний таб "Список" (сірий, смуга знизу залишається)
+        btnList.style.cssText = baseTabStyle + " background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; border-bottom: none; margin-bottom: 0; z-index: 1;";
+
+        contentBlocks.style.display = 'block';
+        contentList.style.display = 'none';
+    } else {
+        // Активний таб "Список"
+        btnList.style.cssText = baseTabStyle + " background: #ffffff; color: #1565C0; border: 2px solid #e2e8f0; border-bottom: 2px solid #ffffff; margin-bottom: -2px; z-index: 2;";
+        
+        // Неактивний таб "Гео-блоки"
+        btnBlocks.style.cssText = baseTabStyle + " background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; border-bottom: none; margin-bottom: 0; z-index: 1;";
+
+        contentList.style.display = 'block';
+        contentBlocks.style.display = 'none';
+
+        if (typeof renderFlatParcelsTable === 'function') {
+            renderFlatParcelsTable();
+        }
+    }
+}
+
 function clearBlockBoundaries() {
     if (window.currentBlockBoundaries.length > 0) {
         window.currentBlockBoundaries.forEach(layer => {
@@ -593,6 +738,41 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
         window.renderedGeoGroups = groups;
         window.blockSortStates = {}; // Скидаємо попередні стани сортування
 
+        // 🧮 ОБЧИСЛЕННЯ ЗІРОЧОК ДЛЯ ВЕСЬ СПИСОК (І ДЛЯ ГЕО-БЛОКІВ)
+        const now = new Date();
+        const MS_PER_DAY = 24 * 60 * 60 * 1000;
+        const validIdleDays = filtered
+            .map(p => {
+                if (!p.last_returned) return Infinity;
+                return (now - new Date(p.last_returned)) / MS_PER_DAY;
+            })
+            .filter(days => days !== Infinity && !isNaN(days));
+
+        let starThresholdDays = Infinity;
+        if (validIdleDays.length > 0) {
+            const minIdleDays = Math.min(...validIdleDays);
+            const maxIdleDays = Math.max(...validIdleDays);
+            const idleRange = maxIdleDays - minIdleDays;
+            starThresholdDays = maxIdleDays - (idleRange / 3);
+        }
+
+        filtered.forEach(p => {
+            const idleDays = !p.last_returned ? Infinity : (now - new Date(p.last_returned)) / MS_PER_DAY;
+            p.isOldestThird = idleDays === Infinity || idleDays >= starThresholdDays;
+        });
+
+        window.flatParcelsList = filtered;
+        window.flatStarThresholdDays = starThresholdDays;
+
+        // Збереження центроїдів найстаріших дільниць для карти
+        const starParcels = filtered.filter(p => p.isOldestThird);
+        const starParcelsObjects = starParcels.map(item => ({
+            id: item.id,
+            name: item.name || item.parcel_number || item.id,
+            centroid: item._centroid || { lat: null, lng: null }
+        }));
+        localStorage.setItem('star_parcels_data', JSON.stringify(starParcelsObjects));
+
         let noticeHtml = '';
         if (isAutoExpanded) {
             const word4 = getPluralWord(4);
@@ -633,7 +813,51 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
             window.blockSortStates[groupIndex] = { sortField: 'idle', sortOrder: 'asc' };
         });
 
-        contentDiv.innerHTML = noticeHtml + controlsHtml + `<div id="geo-blocks-list-container"></div>`;
+        const thresholdText = formatThresholdTime(starThresholdDays);
+        const allMapStarsUrl = `index.html?recommend_ids=${filtered.map(p => p.id).join(',')}&from=recommended&draw_stars=1`;
+
+        // 🏛️ ПЕРЕМИКАЧ ТАБІВ І СТРУКТУРА ЗВІТУ
+        const tabsHeaderHtml = `
+            <div style="display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; position: relative; z-index: 1;">
+                <button id="tab-btn-geoblocks" onclick="window.switchRecTab('geoblocks')" 
+                    style="padding: 10px 20px; font-weight: 600; cursor: pointer; border-radius: 8px 8px 0 0; position: relative; font-size: 0.92rem; transition: all 0.2s ease; background: #ffffff; color: #1565C0; border: 2px solid #e2e8f0; border-bottom: 2px solid #ffffff; margin-bottom: -2px; z-index: 2;">
+                    📍 Гео-блоки (${groups.length})
+                </button>
+                <button id="tab-btn-flatlist" onclick="window.switchRecTab('flatlist')" 
+                    style="padding: 10px 20px; font-weight: 600; cursor: pointer; border-radius: 8px 8px 0 0; position: relative; font-size: 0.92rem; transition: all 0.2s ease; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; border-bottom: none; margin-bottom: 0; z-index: 1;">
+                    📋 Рекомендовані дільниці (${filtered.length})
+                </button>
+            </div>
+        `;
+
+        const starNoticeHtml = `
+            <div style="font-size: 0.82rem; color: #854d0e; background: #fef3c7; border: 1px solid #fde68a; padding: 6px 10px; border-radius: 6px; margin-bottom: 12px;">
+                ⭐ Зірочкою позначено найстаріші за часом простою дільниці (понад ${thresholdText} простою)
+            </div>
+        `;
+
+        const flatListTabContent = `
+            <div id="tab-content-flatlist" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <h3 style="margin: 0; color: #1e293b;">📋 Рекомендовані дільниці (${filtered.length})</h3>
+                    <a href="${allMapStarsUrl}" style="padding: 8px 14px; background: #1565C0; color: #fff; text-decoration: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
+                        🗺️ Показати всі на карті (⭐ ${starParcels.length})
+                    </a>
+                </div>
+                ${starNoticeHtml}
+                <div id="flat-parcels-table-container" style="overflow-x: auto;"></div>
+            </div>
+        `;
+
+        const geoBlocksTabContent = `
+            <div id="tab-content-geoblocks">
+                ${controlsHtml}
+                ${starNoticeHtml}
+                <div id="geo-blocks-list-container"></div>
+            </div>
+        `;
+
+        contentDiv.innerHTML = noticeHtml + tabsHeaderHtml + geoBlocksTabContent + flatListTabContent;
 
         renderBlocksList();
 
@@ -652,7 +876,6 @@ async function loadRecommendedParcels(radiusMeters, minIdleMonths) {
  */
 async function showRecommendedOnMap(radiusMeters = 500, minIdleMonths = 'auto', targetIds = null) {
     try {
-        // ⬇️ ЗБЕРІГАЄМО СТАН: Тепер LocalStorage оновиться гарантовано при будь-якому виклику
         localStorage.setItem('geoblocks_active_mode', 'recommended');
 
         const { groups, allRecommendedIds } = await computeRecommendedParcels(radiusMeters, minIdleMonths);
@@ -666,7 +889,6 @@ async function showRecommendedOnMap(radiusMeters = 500, minIdleMonths = 'auto', 
             ? targetIds
             : allRecommendedIds;
 
-        // Оновлення URL (у вас воно вже реалізовано через pushState)
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.set('recommend_ids', activeIds.join(','));
         newUrl.searchParams.set('from', 'recommended');
@@ -697,7 +919,6 @@ async function showRecommendedOnMap(radiusMeters = 500, minIdleMonths = 'auto', 
             window.fitMapToParcelIds(activeIds);
         }
 
-        // 🌟 ВСТАВЛЯТИ СЮДИ: Малюємо зірочки після відображення шарів та зуму
         if (typeof window.drawStarsOnMapPolygons === 'function') {
             window.drawStarsOnMapPolygons();
         }
@@ -719,3 +940,6 @@ window.clearBlockBoundaries = clearBlockBoundaries;
 window.drawBlockBoundary = drawBlockBoundary;
 window.toggleBlockSort = toggleBlockSort;
 window.requestUserLocation = requestUserLocation;
+window.switchRecTab = switchRecTab;
+window.toggleFlatListSort = toggleFlatListSort;
+window.renderFlatParcelsTable = renderFlatParcelsTable;
