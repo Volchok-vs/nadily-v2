@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Ще</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f4f5f7;
+      color: #333;
+      display: flex;
+      justify-content: center;
+    }
+
+    /* Контейнер для центрування та обмеження ширини */
+    .page-container {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .header {
+      margin: 12px 0 20px 4px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    /* Блок списку налаштувань */
+    .menu-group {
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      padding: 14px 16px;
+      background: none;
+      border: none;
+      font-size: 15px;
+      text-align: left;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+
+    .menu-item:active {
+      background-color: #f0f0f0;
+    }
+
+    .menu-icon {
+      font-size: 18px;
+      margin-right: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+    }
+
+    .menu-item.logout {
+      color: #d32f2f;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-container">
+    <div class="header">
+      <h1>Додатково</h1>
+    </div>
+
+    <div class="menu-group">
+      <button id="logoutBtn" class="menu-item logout">
+        <span class="menu-icon">🚪</span>
+        <span>Вийти з облікового запису</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      if (confirm('Ви дійсно бажаєте вийти з облікового запису?')) {
+        localStorage.removeItem('userId');
+        localStorage.removeItem('userName');
+        window.location.href = 'login.html';
+      }
+    });
+  </script>
+
+  <script src="js/app-navigation.js"></script>
+</body>
+</html>

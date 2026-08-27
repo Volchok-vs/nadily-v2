@@ -1,606 +1,911 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="uk">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <title>Кабінет Адміністратора</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="css/profile-style.css" />
-    <link rel="stylesheet" href="css/responsive.css">
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1565C0">
-</head>
+    <link rel="stylesheet" href="css/responsive.css" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#1565C0" />
+  </head>
 
-<body>
+  <body>
     <div id="main-loader">
-        <div class="spinner"></div>
+      <div class="spinner"></div>
     </div>
     <div class="mobile-header">
-        <button class="mobile-nav-toggle-new" onclick="toggleSidebar()">☰</button>
-        <div class="mobile-title" id="mobile-title">👤 Моя картка</div>
+      <button class="mobile-nav-toggle-new" onclick="toggleSidebar()">
+        ☰
+      </button>
+      <div class="mobile-title" id="mobile-title">👤 Моя картка</div>
     </div>
     <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div class="sidebar">
-        <h2 id="displayRole">Кабінет</h2>
-        <div class="nav-item active" onclick="switchTab('my-card')">👤 Моя картка</div>
-        <div class="nav-item" onclick="switchTab('recommended-parcels')">📍 Рекомендовані ділянки</div>
-        <div id="adminMenu" class="hidden">
-            <div class="nav-item" onclick="switchTab('group-cards')">👥 Вісники</div>
-            <div class="nav-item" onclick="switchTab('all-territories')">📋 S-13</div>
-            <a href="admin-statistics.html" class="nav-item nav-admin">
-                📈 Адмін статистика
-            </a>
-            <a href="territories-manager.html" class="nav-item nav-admin">
-                ⚙️ Адміка
-            </a>
-            <a href="dev-settings.html" id="devLink" class="nav-item nav-dev hidden">
-                🛠 Режим розробки
-            </a>
+      <h2 id="displayRole">Кабінет</h2>
+      <div class="nav-item active" onclick="switchTab('my-card')">
+        👤 Моя картка
+      </div>
+      <div class="nav-item" onclick="switchTab('recommended-parcels')">
+        📍 Рекомендовані ділянки
+      </div>
+      <div id="adminMenu" class="hidden">
+        <div class="nav-item" onclick="switchTab('group-cards')">
+          👥 Вісники
         </div>
-        <a href="index.html" class="nav-item">🗺️ Повернутись до карти</a>
-        <button class="nav-item logout-btn" onclick="logout()">🏃 Вийти</button>
+        <div class="nav-item" onclick="switchTab('all-territories')">
+          📋 S-13
+        </div>
+        <a href="admin-statistics.html" class="nav-item nav-admin">
+          📈 Адмін статистика
+        </a>
+        <a href="territories-manager.html" class="nav-item nav-admin">
+          ⚙️ Адміка
+        </a>
+        <a
+          href="dev-settings.html"
+          id="devLink"
+          class="nav-item nav-dev hidden"
+        >
+          🛠 Режим розробки
+        </a>
+      </div>
+      <a href="index.html" class="nav-item">🗺️ Повернутись до карти</a>
+      <button class="nav-item logout-btn" onclick="logout()">🏃 Вийти</button>
     </div>
 
     <div class="main-content">
-        <div id="tab-my-card" class="tab-content">
-            <h1 id="userName" class="page-header">Завантаження...</h1>
-            <div class="card">
-                <h3 class="parcel-title">🗂️ Мої дільниці</h3>
-                <div id="myParcels">Пошук дільниць...</div>
-            </div>
-
-            <div class="card campaign-card">
-                <div id="campaignHeader" onclick="toggleCampaignInfo()"
-                    style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; cursor:pointer;">
-                    <h3 style="margin:0; display:flex; align-items:center; gap:10px;">
-                        🗓️ Кампанії
-                    </h3>
-                    <span id="campaignHeaderText"
-                        style="font-size:0.95rem; color:#1976d2; display:flex; align-items:center; gap:6px;">
-                        <span id="campaignHeaderIcon" style="font-size:1.1rem;">＋</span>
-                        <span id="campaignHeaderLabel">Розгорнути</span>
-                    </span>
-                </div>
-                <div id="campaignPreview" class="hidden" style="margin-top:12px; line-height:1.5;"></div>
-                <div id="campaignInfoCard" class="hidden" style="margin-top:12px; line-height:1.5;">
-                    <div id="campaignInfoContent">
-                        <p style="color:gray; margin:0;">Завантаження інформації про кампанії...</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card" id="historyCard">
-                <div id="historyHeader" onclick="toggleHistoryInfo()"
-                    style="display:flex; justify-content:space-between; align-items:center; gap:10px; cursor:pointer;">
-                    <h3 style="margin:0; display:flex; align-items:center; gap:10px;">📜 Історія опрацювань</h3>
-                    <span id="historyHeaderText"
-                        style="font-size:0.95rem; color:#1976d2; display:flex; align-items:center; gap:6px;">
-                        <span id="historyHeaderIcon" style="font-size:1.1rem;">＋</span>
-                        <span id="historyHeaderLabel">Розгорнути</span>
-                    </span>
-                </div>
-                <div id="historyContent" class="hidden" style="margin-top:12px;">
-                    <div id="myHistory">Завантаження історії...</div>
-                </div>
-            </div>
+      <div id="tab-my-card" class="tab-content">
+        <h1 id="userName" class="page-header">Завантаження...</h1>
+        <div class="card">
+          <h3 class="parcel-title">🗂️ Мої дільниці</h3>
+          <div id="myParcels">Пошук дільниць...</div>
         </div>
 
-        <div id="tab-recommended-parcels" class="tab-content hidden">
-            <div id="recommended-parcels-container">
-                <div
-                    style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px;">
-                    <div>
-                        <h1 class="page-header" style="margin: 0 0 6px 0;">📍 Рекомендовані ділянки (Місто)</h1>
-                        <p style="color: #64748b; font-size: 0.9rem; margin: 0;">
-                            Дільниці міста з найбільшим часом простою, згруповані за відстанню.
-                        </p>
-                    </div>
-                </div>
-
-                <div id="recommended-parcels-content">
-                    <div style="text-align: center; padding: 40px; color: #64748b;">
-                        Завантаження даних...
-                    </div>
-                </div>
+        <div class="card campaign-card">
+          <div
+            id="campaignHeader"
+            onclick="toggleCampaignInfo()"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              gap: 10px;
+              flex-wrap: wrap;
+              cursor: pointer;
+            "
+          >
+            <h3
+              style="margin: 0; display: flex; align-items: center; gap: 10px"
+            >
+              🗓️ Кампанії
+            </h3>
+            <span
+              id="campaignHeaderText"
+              style="
+                font-size: 0.95rem;
+                color: #1976d2;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+              "
+            >
+              <span id="campaignHeaderIcon" style="font-size: 1.1rem">＋</span>
+              <span id="campaignHeaderLabel">Розгорнути</span>
+            </span>
+          </div>
+          <div
+            id="campaignPreview"
+            class="hidden"
+            style="margin-top: 12px; line-height: 1.5"
+          ></div>
+          <div
+            id="campaignInfoCard"
+            class="hidden"
+            style="margin-top: 12px; line-height: 1.5"
+          >
+            <div id="campaignInfoContent">
+              <p style="color: gray; margin: 0">
+                Завантаження інформації про кампанії...
+              </p>
             </div>
+          </div>
         </div>
 
-        <div id="tab-group-cards" class="tab-content hidden">
-            <div class="tab-header">
-                <h1>Вісники</h1>
-                <button onclick="openAddPublisherModal()" class="btn-add">
-                    + Додати
-                </button>
-            </div>
+        <div class="card" id="historyCard">
+          <div
+            id="historyHeader"
+            onclick="toggleHistoryInfo()"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              gap: 10px;
+              cursor: pointer;
+            "
+          >
+            <h3
+              style="margin: 0; display: flex; align-items: center; gap: 10px"
+            >
+              📜 Історія опрацювань
+            </h3>
+            <span
+              id="historyHeaderText"
+              style="
+                font-size: 0.95rem;
+                color: #1976d2;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+              "
+            >
+              <span id="historyHeaderIcon" style="font-size: 1.1rem">＋</span>
+              <span id="historyHeaderLabel">Розгорнути</span>
+            </span>
+          </div>
+          <div id="historyContent" class="hidden" style="margin-top: 12px">
+            <div id="myHistory">Завантаження історії...</div>
+          </div>
+        </div>
+      </div>
 
-            <div class="origin-tabs">
-                <button onclick="filterByOrigin('active')" class="origin-tab-btn active">Всі активні</button>
-                <button onclick="filterByOrigin('Липовець')" class="origin-tab-btn">🏠 Липовець</button>
-                <button onclick="filterByOrigin('Іллінці')" class="origin-tab-btn">🚗 Іллінці</button>
-                <button onclick="filterByOrigin('Гості')" class="origin-tab-btn">👣 Гості</button>
+      <div id="tab-recommended-parcels" class="tab-content hidden">
+        <div id="recommended-parcels-container">
+          <div
+            style="
+              display: flex;
+              flex-wrap: wrap;
+              justify-content: space-between;
+              align-items: center;
+              gap: 12px;
+              margin-bottom: 20px;
+            "
+          >
+            <div>
+              <h1 class="page-header" style="margin: 0 0 6px 0">
+                📍 Рекомендовані ділянки (Місто)
+              </h1>
+              <p style="color: #64748b; font-size: 0.9rem; margin: 0">
+                Дільниці міста з найбільшим часом простою, згруповані за
+                відстанню.
+              </p>
             </div>
+          </div>
 
-            <div class="card publishers-card">
-                <table class="publishers-table">
-                    <thead>
-                        <tr>
-                            <th onclick="toggleSort('name')" class="sortable">
-                                Прізвище та ім'я <span id="sort-icon-name" class="sort-icon">↕</span>
-                            </th>
-                            <th onclick="toggleSort('count')" class="sortable text-center">
-                                Кількість дільниць <span id="sort-icon-count" class="sort-icon">↕</span>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody id="publishersList">
-                    </tbody>
-                </table>
+          <div id="recommended-parcels-content">
+            <div style="text-align: center; padding: 40px; color: #64748b">
+              Завантаження даних...
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-group-cards" class="tab-content hidden">
+        <div class="tab-header">
+          <h1>Вісники</h1>
+          <button onclick="openAddPublisherModal()" class="btn-add">
+            + Додати
+          </button>
         </div>
 
-        <div id="addPublisherModal" class="modal-overlay">
-            <div class="modal-container">
-                <h2 class="modal-title">Новий вісник</h2>
-
-                <div class="modal-form-group">
-                    <label class="modal-label">Ім'я</label>
-                    <input type="text" id="newPubFirstName"
-                        oninput="validateUniqueName('newPubFirstName', 'newPubLastName')" placeholder="Наприклад: Тарас"
-                        class="modal-input" autocomplete="off">
-                </div>
-
-                <div class="modal-form-group">
-                    <label id="labelLastName" class="modal-label">Прізвище (необов'язково)</label>
-                    <input type="text" id="newPubLastName" placeholder="Наприклад: Шевченко" class="modal-input"
-                        autocomplete="off">
-                </div>
-
-                <div class="modal-form-group">
-                    <label class="modal-label">Походження</label>
-                    <select id="newPubGroupTag" class="modal-select" autocomplete="off">
-                        <option value="Липовець">🏠 Липовець</option>
-                        <option value="Іллінці">🚗 Іллінці</option>
-                        <option value="Гості">👣 Гості</option>
-                    </select>
-                </div>
-
-                <!-- КОНТЕЙНЕР ДЛЯ ВИВОДУ ПОМИЛОК ВСЕРЕДИНІ МОДАЛКИ -->
-                <div id="modalErrorMsg" class="modal-error-message hidden"></div>
-
-                <div class="modal-buttons">
-                    <button onclick="closeAddPublisherModal()" class="modal-btn modal-btn-cancel">Скасувати</button>
-                    <button onclick="saveNewPublisher()" class="modal-btn modal-btn-save">Зберегти</button>
-                </div>
-            </div>
+        <div class="origin-tabs">
+          <button
+            onclick="filterByOrigin('active')"
+            class="origin-tab-btn active"
+          >
+            Всі активні
+          </button>
+          <button onclick="filterByOrigin('Липовець')" class="origin-tab-btn">
+            🏠 Липовець
+          </button>
+          <button onclick="filterByOrigin('Іллінці')" class="origin-tab-btn">
+            🚗 Іллінці
+          </button>
+          <button onclick="filterByOrigin('Гості')" class="origin-tab-btn">
+            👣 Гості
+          </button>
         </div>
 
-        <div id="tab-user-details" class="tab-content hidden">
-            <div class="btn-back" onclick="switchTab('group-cards')">← Назад до списку</div>
-            <h1 id="detailUserName">Ім'я вісника</h1>
-            <div class="card">
-                <h3>Активні дільниці вісника</h3>
-                <div id="detailUserParcels"></div>
-            </div>
+        <div class="card publishers-card">
+          <table class="publishers-table">
+            <thead>
+              <tr>
+                <th onclick="toggleSort('name')" class="sortable">
+                  Прізвище та ім'я
+                  <span id="sort-icon-name" class="sort-icon">↕</span>
+                </th>
+                <th onclick="toggleSort('count')" class="sortable text-center">
+                  Кількість дільниць
+                  <span id="sort-icon-count" class="sort-icon">↕</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="publishersList"></tbody>
+          </table>
+        </div>
+      </div>
 
+      <div id="addPublisherModal" class="modal-overlay">
+        <div class="modal-container">
+          <h2 class="modal-title">Новий вісник</h2>
+
+          <div class="modal-form-group">
+            <label class="modal-label">Ім'я</label>
+            <input
+              type="text"
+              id="newPubFirstName"
+              oninput="validateUniqueName('newPubFirstName', 'newPubLastName')"
+              placeholder="Наприклад: Тарас"
+              class="modal-input"
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="modal-form-group">
+            <label id="labelLastName" class="modal-label"
+              >Прізвище (необов'язково)</label
+            >
+            <input
+              type="text"
+              id="newPubLastName"
+              placeholder="Наприклад: Шевченко"
+              class="modal-input"
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="modal-form-group">
+            <label class="modal-label">Походження</label>
+            <select id="newPubGroupTag" class="modal-select" autocomplete="off">
+              <option value="Липовець">🏠 Липовець</option>
+              <option value="Іллінці">🚗 Іллінці</option>
+              <option value="Гості">👣 Гості</option>
+            </select>
+          </div>
+
+          <!-- КОНТЕЙНЕР ДЛЯ ВИВОДУ ПОМИЛОК ВСЕРЕДИНІ МОДАЛКИ -->
+          <div id="modalErrorMsg" class="modal-error-message hidden"></div>
+
+          <div class="modal-buttons">
+            <button
+              onclick="closeAddPublisherModal()"
+              class="modal-btn modal-btn-cancel"
+            >
+              Скасувати
+            </button>
+            <button
+              onclick="saveNewPublisher()"
+              class="modal-btn modal-btn-save"
+            >
+              Зберегти
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-user-details" class="tab-content hidden">
+        <div class="btn-back" onclick="switchTab('group-cards')">
+          ← Назад до списку
+        </div>
+        <h1 id="detailUserName">Ім'я вісника</h1>
+        <div class="card">
+          <h3>Активні дільниці вісника</h3>
+          <div id="detailUserParcels"></div>
+        </div>
+      </div>
+
+      <!-- Оновлена вкладка S-13 -->
+      <div id="tab-all-territories" class="tab-content hidden">
+        <!-- Шапка з кнопкою експорту, притиснутою праворуч -->
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+          "
+        >
+          <h1 class="table-title" style="margin: 0">
+            📋 Записи про опрацювання
+          </h1>
+          <button onclick="openExportModal()" class="btn-export">
+            📥 Експорт
+          </button>
         </div>
 
-        <div id="tab-all-territories" class="tab-content hidden">
-            <h1 class="table-title">📋 Записи про опрацювання</h1>
-
-            <div class="origin-tabs">
-                <button onclick="switchTerritoryTab('city')" class="origin-tab-btn active">🏙️ Місто</button>
-                <button onclick="switchTerritoryTab('village')" class="origin-tab-btn">🏡 Села</button>
-            </div>
-
-            <div class="card" style="border-radius: 0 10px 10px 10px;">
-                <!-- Легенда залишається статичною на всю ширину -->
-                <div id="campaign-color-legend" class="campaign-legend">
-                    <div class="legend-item">
-                        <div class="color-box color-congress"></div>
-                        <span>Конгрес</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="color-box color-special"></div>
-                        <span>Спец. кампанія</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="color-box color-memorial"></div>
-                        <span>Спомин</span>
-                    </div>
-                </div>
-
-                <!-- Окремий обгортаючий div із горизонтальним скролом для таблиці -->
-                <div style="overflow-x: auto; width: 100%;">
-                    <table id="territoryTable">
-                        <thead id="tHead"></thead>
-                        <tbody id="tBody"></tbody>
-                    </table>
-                </div>
-            </div>
+        <div class="origin-tabs">
+          <button
+            onclick="switchTerritoryTab('city')"
+            class="origin-tab-btn active"
+          >
+            🏙️ Місто
+          </button>
+          <button
+            onclick="switchTerritoryTab('village')"
+            class="origin-tab-btn"
+          >
+            🏡 Села
+          </button>
         </div>
 
+        <div class="card" style="border-radius: 0 10px 10px 10px">
+          <!-- Легенда -->
+          <div id="campaign-color-legend" class="campaign-legend">
+            <div class="legend-item">
+              <div class="color-box color-congress"></div>
+              <span>Конгрес</span>
+            </div>
+            <div class="legend-item">
+              <div class="color-box color-special"></div>
+              <span>Спец. кампанія</span>
+            </div>
+            <div class="legend-item">
+              <div class="color-box color-memorial"></div>
+              <span>Спомин</span>
+            </div>
+          </div>
+
+          <!-- Таблиця з горизонтальним скролом -->
+          <div style="overflow-x: auto; width: 100%">
+            <table id="territoryTable">
+              <thead id="tHead"></thead>
+              <tbody id="tBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Модальне вікно вибору формату експорту -->
+      <div id="exportS13Modal" class="modal-overlay" style="display: none">
+        <div class="modal-container" style="max-width: 360px">
+          <h2 class="modal-title">📊 Експорт звіту S-13</h2>
+          <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 16px">
+            Оберіть формат для завантаження звіту:
+          </p>
+
+          <div class="modal-form-group">
+            <label
+              class="modal-label"
+              style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                cursor: pointer;
+                margin-bottom: 10px;
+              "
+            >
+              <input
+                type="radio"
+                name="exportFormat"
+                value="pdf"
+                checked
+                style="width: 18px; height: 18px; accent-color: #1565c0"
+              />
+              <span>📄 Документ PDF (.pdf)</span>
+            </label>
+            <label
+              class="modal-label"
+              style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                cursor: pointer;
+              "
+            >
+              <input
+                type="radio"
+                name="exportFormat"
+                value="excel"
+                style="width: 18px; height: 18px; accent-color: #1565c0"
+              />
+              <span>📊 Таблиця Excel (.xlsx)</span>
+            </label>
+          </div>
+
+          <div class="modal-buttons" style="margin-top: 24px">
+            <button
+              onclick="closeExportModal()"
+              class="modal-btn modal-btn-cancel"
+            >
+              Скасувати
+            </button>
+            <button
+              onclick="confirmS13Export()"
+              class="modal-btn modal-btn-save"
+            >
+              Завантажити
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- КАСТОМНЕ ВІКНО ПІДТВЕРДЖЕННЯ ВИДАЛЕННЯ -->
-    <div id="customConfirmModal"
-        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 9999;">
-        <div class="confirm-modal-box"
-            style="background: white; padding: 24px; border-radius: 12px; max-width: 400px; width: 90%;">
-            <h3 id="confirmModalTitle" class="confirm-modal-title">Підтвердження</h3>
-            <p id="confirmModalText" class="confirm-modal-text">Ви впевнені?</p>
-            <div class="confirm-modal-buttons">
-                <button id="confirmBtnNo" class="btn-confirm-action btn-confirm-no">Скасувати</button>
-                <button id="confirmBtnYes" class="btn-confirm-action btn-confirm-yes">Видалити</button>
-            </div>
+    <div
+      id="customConfirmModal"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      "
+    >
+      <div
+        class="confirm-modal-box"
+        style="
+          background: white;
+          padding: 24px;
+          border-radius: 12px;
+          max-width: 400px;
+          width: 90%;
+        "
+      >
+        <h3 id="confirmModalTitle" class="confirm-modal-title">
+          Підтвердження
+        </h3>
+        <p id="confirmModalText" class="confirm-modal-text">Ви впевнені?</p>
+        <div class="confirm-modal-buttons">
+          <button id="confirmBtnNo" class="btn-confirm-action btn-confirm-no">
+            Скасувати
+          </button>
+          <button id="confirmBtnYes" class="btn-confirm-action btn-confirm-yes">
+            Видалити
+          </button>
         </div>
+      </div>
     </div>
 
+    <script src="js/app-navigation.js"></script>
     <script src="js/campaign-modal.js"></script>
     <script type="module">
-        import { supabase } from "./js/config.js";
-        import { returnParcel, showCustomConfirm, triggerReturnParcelWithCustomModal } from './js/parcel-logic.js';
-        import './js/main.js';
+      import { supabase } from "./js/config.js";
+      import {
+        returnParcel,
+        showCustomConfirm,
+        triggerReturnParcelWithCustomModal,
+      } from "./js/parcel-logic.js";
+      import "./js/main.js";
 
-        // --- ФУНКЦІЯ СТВОРЕННЯ КАСТОМНИХ ТОСТІВ ---
-        function showToast(message, isError = false) {
-            const toast = document.createElement('div');
-            toast.className = `toast-notification ${isError ? 'error' : ''}`;
-            toast.innerHTML = `<span>${isError ? '❌' : '✅'}</span> ${message}`;
-            document.body.appendChild(toast);
+      // --- ФУНКЦІЯ СТВОРЕННЯ КАСТОМНИХ ТОСТІВ ---
+      function showToast(message, isError = false) {
+        const toast = document.createElement("div");
+        toast.className = `toast-notification ${isError ? "error" : ""}`;
+        toast.innerHTML = `<span>${isError ? "❌" : "✅"}</span> ${message}`;
+        document.body.appendChild(toast);
 
-            setTimeout(() => {
-                toast.classList.add('fade-out');
-                setTimeout(() => toast.remove(), 500);
-            }, 3000);
+        setTimeout(() => {
+          toast.classList.add("fade-out");
+          setTimeout(() => toast.remove(), 500);
+        }, 3000);
+      }
+      window.showToast = showToast;
+
+      function getGroupEmoji(tag) {
+        const emojis = {
+          Липовець: "🏠",
+          Іллінці: "🚗",
+          Гості: "👣",
+        };
+        return emojis[tag] || "👤";
+      }
+
+      const userId = localStorage.getItem("userId");
+      const userRole = window.getUserRole();
+
+      if (!userId) window.location.href = "index.html";
+
+      window.toggleSidebar = () => {
+        const sidebar = document.querySelector(".sidebar");
+        const overlay = document.querySelector(".sidebar-overlay");
+        if (sidebar && overlay) {
+          sidebar.classList.toggle("active");
+          overlay.classList.toggle("active");
         }
-        window.showToast = showToast;
+      };
 
-        function getGroupEmoji(tag) {
-            const emojis = {
-                'Липовець': '🏠',
-                'Іллінці': '🚗',
-                'Гості': '👣'
-            };
-            return emojis[tag] || '👤';
+      function updateMobileTitle(tabName) {
+        const mobileTitle = document.getElementById("mobile-title");
+        const titles = {
+          "my-card": "👤 Моя картка",
+          "recommended-parcels": "📍 Рекомендовані", // ➕ Додано
+          "group-cards": "👥 Вісники",
+          "all-territories": "📋 S-13",
+          "user-details": "👤 Картка вісника",
+        };
+
+        if (mobileTitle && titles[tabName]) {
+          mobileTitle.textContent = titles[tabName];
         }
+      }
 
-        const userId = localStorage.getItem('userId');
-        const userRole = window.getUserRole();
+      window.switchTab = (tabName) => {
+        document
+          .querySelectorAll(".tab-content")
+          .forEach((t) => t.classList.add("hidden"));
+        document
+          .querySelectorAll(".nav-item")
+          .forEach((n) => n.classList.remove("active"));
 
-        if (!userId) window.location.href = 'index.html';
+        const activeTab =
+          document.getElementById("tab-" + tabName) ||
+          document.getElementById(tabName);
+        if (activeTab) {
+          activeTab.classList.remove("hidden");
 
-        window.toggleSidebar = () => {
-            const sidebar = document.querySelector('.sidebar');
-            const overlay = document.querySelector('.sidebar-overlay');
-            if (sidebar && overlay) {
-                sidebar.classList.toggle('active');
-                overlay.classList.toggle('active');
-            }
-        };
+          const urlParams = new URLSearchParams(window.location.search);
+          const uId = urlParams.get("uId");
 
-        function updateMobileTitle(tabName) {
-            const mobileTitle = document.getElementById('mobile-title');
-            const titles = {
-                'my-card': '👤 Моя картка',
-                'recommended-parcels': '📍 Рекомендовані', // ➕ Додано
-                'group-cards': '👥 Вісники',
-                'all-territories': '📋 S-13',
-                'user-details': '👤 Картка вісника'
-            };
+          let newUrl =
+            window.location.protocol +
+            "//" +
+            window.location.host +
+            window.location.pathname +
+            "?tab=" +
+            tabName;
 
-            if (mobileTitle && titles[tabName]) {
-                mobileTitle.textContent = titles[tabName];
-            }
-        }
+          if (tabName === "user-details" && uId) {
+            newUrl += `&uId=${uId}`;
+          }
 
-        window.switchTab = (tabName) => {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+          window.history.pushState({ path: newUrl }, "", newUrl);
 
-            const activeTab = document.getElementById('tab-' + tabName) || document.getElementById(tabName);
-            if (activeTab) {
-                activeTab.classList.remove('hidden');
-
-                const urlParams = new URLSearchParams(window.location.search);
-                const uId = urlParams.get('uId');
-
-                let newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + tabName;
-
-                if (tabName === 'user-details' && uId) {
-                    newUrl += `&uId=${uId}`;
-                }
-
-                window.history.pushState({ path: newUrl }, '', newUrl);
-
-                if (tabName === 'all-territories') {
-                    loadAllTerritoriesGrid();
-                }
-
-                if (tabName === 'recommended-parcels') {
-                    if (typeof loadRecommendedParcels === 'function') {
-                        loadRecommendedParcels();
-                    }
-                }
-            }
-
-            if (window.innerWidth <= 768) {
-                const sidebar = document.querySelector('.sidebar');
-                const overlay = document.querySelector('.sidebar-overlay');
-                if (sidebar && sidebar.classList.contains('active')) {
-                    sidebar.classList.remove('active');
-                    if (overlay) overlay.classList.remove('active');
-                }
-            }
-
-            updateMobileTitle(tabName);
-        };
-
-        window.logout = () => {
-            localStorage.clear();
-            window.location.href = 'index.html';
-        };
-
-        window.returnParcel = (id, name) => {
-            console.log('🔄 Виклик window.returnParcel для дільниці:', id, name);
-            triggerReturnParcelWithCustomModal(id, name, supabase, async () => {
-                if (typeof loadUserParcels === 'function') {
-                    await loadUserParcels();
-                } else {
-                    location.reload();
-                }
-            });
-        };
-
-        // Експортуємо функції в window для глобального доступу
-        window.showCustomConfirm = showCustomConfirm;
-        window.triggerReturnParcelWithCustomModal = triggerReturnParcelWithCustomModal;
-        console.log('✅ Функції showCustomConfirm та triggerReturnParcelWithCustomModal додані в window');
-
-        let currentSortCol = 'name';
-        let sortAsc = true;
-
-        let currentTerritoryTab = 'city';
-
-        window.toggleSort = (column) => {
-            if (currentSortCol === column) {
-                sortAsc = !sortAsc;
-            } else {
-                currentSortCol = column;
-                sortAsc = true;
-            }
-
-            document.getElementById('sort-icon-name').innerText = '↕';
-            document.getElementById('sort-icon-count').innerText = '↕';
-            const activeIcon = document.getElementById(`sort-icon-${column}`);
-            activeIcon.innerText = sortAsc ? '↑' : '↓';
-            activeIcon.style.color = '#007bff';
-
-            allUsers.sort((a, b) => {
-                let valA, valB;
-                if (column === 'name') {
-                    valA = `${a.last_name} ${a.name}`.toLowerCase();
-                    valB = `${b.last_name} ${b.name}`.toLowerCase();
-                } else {
-                    valA = a.parcelCount || 0;
-                    valB = b.parcelCount || 0;
-                }
-
-                if (valA < valB) return sortAsc ? -1 : 1;
-                if (valA > valB) return sortAsc ? 1 : -1;
-                return 0;
-            });
-
-            const activeBtn = document.querySelector('.origin-tab-btn.active');
-            const filter = activeBtn.innerText.includes('Липовець') ? 'Липовець' :
-                activeBtn.innerText.includes('Іллінці') ? 'Іллінці' :
-                    activeBtn.innerText.includes('Гості') ? 'Гості' : 'active';
-
-            renderPublishersList(filter);
-        };
-
-        function updateTabsVisibility() {
-            const groups = ['Липовець', 'Іллінці', 'Гості'];
-
-            groups.forEach(group => {
-                const hasPublishers = allUsers.some(user => user.group_tag === group);
-                const tabBtn = document.querySelector(`.origin-tab-btn[onclick*="'${group}'"]`);
-
-                if (tabBtn) {
-                    if (hasPublishers) {
-                        tabBtn.style.display = 'inline-block';
-                    } else {
-                        tabBtn.style.display = 'none';
-                    }
-                }
-            });
-        }
-
-        window.filterByOrigin = (origin) => {
-            document.querySelectorAll('.origin-tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.getAttribute('onclick').includes(`'${origin}'`)) {
-                    btn.classList.add('active');
-                }
-            });
-            renderPublishersList(origin);
-        };
-
-        window.validateUniqueName = validateUniqueName;
-
-        window.switchTerritoryTab = function (type) {
-            currentTerritoryTab = type;
-            document.querySelectorAll('.origin-tabs .origin-tab-btn').forEach(btn => btn.classList.remove('active'));
-            event.currentTarget.classList.add('active');
+          if (tabName === "all-territories") {
             loadAllTerritoriesGrid();
-        };
+          }
 
-        async function init() {
-            // Ініціалізація сесії користувача з перевіркою ролі з бази даних
-            const session = await window.initUserSession();
-
-            if (!userId) return (window.location.href = 'index.html');
-
-            hideLoader();
-
-            setTimeout(() => {
-                const urlParams = new URLSearchParams(window.location.search);
-                const tab = urlParams.get('tab');
-
-                if (tab === 'all-territories') {
-                    setTimeout(() => {
-                        createColorLegend();
-                    }, 1000);
-                }
-            }, 500);
-
-            document.querySelectorAll('.tab-filter').forEach(btn => {
-                btn.onclick = () => {
-                    document.querySelectorAll('.tab-filter').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-
-                    if (typeof renderPublishersList === 'function') {
-                        renderPublishersList();
-                    }
-                };
-            });
-
-            const { data: userData } = await supabase.from('publishers').select('name, last_name').eq('id', userId).single();
-            const fullName = userData ? `${userData.name || ''} ${userData.last_name || ''}`.trim() : (localStorage.getItem('userName') || 'Користувач');
-            document.getElementById('userName').innerText = fullName;
-
-            // Використовуємо session для перевірки ролі
-            document.getElementById('displayRole').innerText = session.isSuperAdmin ? 'Супер  Адмін' : (session.isAdmin ? 'Адміністратор' : 'Вісник');
-
-            if (session.isAdmin) {
-                const adminMenu = document.getElementById('adminMenu');
-                if (adminMenu) adminMenu.classList.remove('hidden');
-                if (session.isSuperAdmin) {
-                    document.getElementById('devLink').style.display = 'flex';
-                    const statsLink = document.getElementById('statsLink');
-                    if (statsLink) statsLink.style.display = 'flex';
-                }
-                loadGroupStats();
-
-                setTimeout(() => {
-                    if (typeof updateTabsVisibility === 'function') {
-                        updateTabsVisibility();
-                    }
-                }, 100);
+          if (tabName === "recommended-parcels") {
+            if (typeof loadRecommendedParcels === "function") {
+              loadRecommendedParcels();
             }
+          }
+        }
 
-            loadMyParcels();
-            loadMyHistory();
-            loadCampaignInfo();
+        if (window.innerWidth <= 768) {
+          const sidebar = document.querySelector(".sidebar");
+          const overlay = document.querySelector(".sidebar-overlay");
+          if (sidebar && sidebar.classList.contains("active")) {
+            sidebar.classList.remove("active");
+            if (overlay) overlay.classList.remove("active");
+          }
+        }
 
-            const urlParams = new URLSearchParams(window.location.search);
-            const tab = urlParams.get('tab');
-            const uId = urlParams.get('uId');
+        updateMobileTitle(tabName);
+      };
 
-            if (tab === 'user-details' && uId) {
-                const { data: userData } = await supabase.from('publishers').select('*').eq('id', uId).single();
-                if (userData) {
-                    const fullName = `${userData.last_name || ''} ${userData.name || ''}`.trim();
-                    await showUserDetails(uId, fullName);
-                    hideLoader();
-                    return;
-                }
-            }
+      window.logout = () => {
+        localStorage.clear();
+        window.location.href = "index.html";
+      };
 
-            if (tab) {
-                window.switchTab(tab);
+      window.returnParcel = (id, name) => {
+        console.log("🔄 Виклик window.returnParcel для дільниці:", id, name);
+        triggerReturnParcelWithCustomModal(id, name, supabase, async () => {
+          if (typeof loadUserParcels === "function") {
+            await loadUserParcels();
+          } else {
+            location.reload();
+          }
+        });
+      };
+
+      // Експортуємо функції в window для глобального доступу
+      window.showCustomConfirm = showCustomConfirm;
+      window.triggerReturnParcelWithCustomModal =
+        triggerReturnParcelWithCustomModal;
+      console.log(
+        "✅ Функції showCustomConfirm та triggerReturnParcelWithCustomModal додані в window",
+      );
+
+      let currentSortCol = "name";
+      let sortAsc = true;
+
+      let currentTerritoryTab = "city";
+
+      window.toggleSort = (column) => {
+        if (currentSortCol === column) {
+          sortAsc = !sortAsc;
+        } else {
+          currentSortCol = column;
+          sortAsc = true;
+        }
+
+        document.getElementById("sort-icon-name").innerText = "↕";
+        document.getElementById("sort-icon-count").innerText = "↕";
+        const activeIcon = document.getElementById(`sort-icon-${column}`);
+        activeIcon.innerText = sortAsc ? "↑" : "↓";
+        activeIcon.style.color = "#007bff";
+
+        allUsers.sort((a, b) => {
+          let valA, valB;
+          if (column === "name") {
+            valA = `${a.last_name} ${a.name}`.toLowerCase();
+            valB = `${b.last_name} ${b.name}`.toLowerCase();
+          } else {
+            valA = a.parcelCount || 0;
+            valB = b.parcelCount || 0;
+          }
+
+          if (valA < valB) return sortAsc ? -1 : 1;
+          if (valA > valB) return sortAsc ? 1 : -1;
+          return 0;
+        });
+
+        const activeBtn = document.querySelector(".origin-tab-btn.active");
+        const filter = activeBtn.innerText.includes("Липовець")
+          ? "Липовець"
+          : activeBtn.innerText.includes("Іллінці")
+            ? "Іллінці"
+            : activeBtn.innerText.includes("Гості")
+              ? "Гості"
+              : "active";
+
+        renderPublishersList(filter);
+      };
+
+      function updateTabsVisibility() {
+        const groups = ["Липовець", "Іллінці", "Гості"];
+
+        groups.forEach((group) => {
+          const hasPublishers = allUsers.some(
+            (user) => user.group_tag === group,
+          );
+          const tabBtn = document.querySelector(
+            `.origin-tab-btn[onclick*="'${group}'"]`,
+          );
+
+          if (tabBtn) {
+            if (hasPublishers) {
+              tabBtn.style.display = "inline-block";
             } else {
-                window.switchTab('my-card');
+              tabBtn.style.display = "none";
             }
+          }
+        });
+      }
 
+      window.filterByOrigin = (origin) => {
+        document.querySelectorAll(".origin-tab-btn").forEach((btn) => {
+          btn.classList.remove("active");
+          if (btn.getAttribute("onclick").includes(`'${origin}'`)) {
+            btn.classList.add("active");
+          }
+        });
+        renderPublishersList(origin);
+      };
+
+      window.validateUniqueName = validateUniqueName;
+
+      window.switchTerritoryTab = function (type) {
+        currentTerritoryTab = type;
+        document
+          .querySelectorAll(".origin-tabs .origin-tab-btn")
+          .forEach((btn) => btn.classList.remove("active"));
+        event.currentTarget.classList.add("active");
+        loadAllTerritoriesGrid();
+      };
+
+      async function init() {
+        // Ініціалізація сесії користувача з перевіркою ролі з бази даних
+        const session = await window.initUserSession();
+
+        if (!userId) return (window.location.href = "index.html");
+
+        hideLoader();
+
+        setTimeout(() => {
+          const urlParams = new URLSearchParams(window.location.search);
+          const tab = urlParams.get("tab");
+
+          if (tab === "all-territories") {
+            setTimeout(() => {
+              createColorLegend();
+            }, 1000);
+          }
+        }, 500);
+
+        document.querySelectorAll(".tab-filter").forEach((btn) => {
+          btn.onclick = () => {
+            document
+              .querySelectorAll(".tab-filter")
+              .forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+
+            if (typeof renderPublishersList === "function") {
+              renderPublishersList();
+            }
+          };
+        });
+
+        const { data: userData } = await supabase
+          .from("publishers")
+          .select("name, last_name")
+          .eq("id", userId)
+          .single();
+        const fullName = userData
+          ? `${userData.name || ""} ${userData.last_name || ""}`.trim()
+          : localStorage.getItem("userName") || "Користувач";
+        document.getElementById("userName").innerText = fullName;
+
+        // Використовуємо session для перевірки ролі
+        document.getElementById("displayRole").innerText = session.isSuperAdmin
+          ? "Супер  Адмін"
+          : session.isAdmin
+            ? "Адміністратор"
+            : "Вісник";
+
+        if (session.isAdmin) {
+          const adminMenu = document.getElementById("adminMenu");
+          if (adminMenu) adminMenu.classList.remove("hidden");
+          if (session.isSuperAdmin) {
+            document.getElementById("devLink").style.display = "flex";
+            const statsLink = document.getElementById("statsLink");
+            if (statsLink) statsLink.style.display = "flex";
+          }
+          loadGroupStats();
+
+          setTimeout(() => {
+            if (typeof updateTabsVisibility === "function") {
+              updateTabsVisibility();
+            }
+          }, 100);
+        }
+
+        loadMyParcels();
+        loadMyHistory();
+        loadCampaignInfo();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const tab = urlParams.get("tab");
+        const uId = urlParams.get("uId");
+
+        if (tab === "user-details" && uId) {
+          const { data: userData } = await supabase
+            .from("publishers")
+            .select("*")
+            .eq("id", uId)
+            .single();
+          if (userData) {
+            const fullName =
+              `${userData.last_name || ""} ${userData.name || ""}`.trim();
+            await showUserDetails(uId, fullName);
             hideLoader();
+            return;
+          }
         }
 
-        function hideLoader() {
-            const loader = document.getElementById('main-loader');
-            if (loader) {
-                loader.style.opacity = '0';
-                setTimeout(() => loader.remove(), 300);
-            }
+        if (tab) {
+          window.switchTab(tab);
+        } else {
+          window.switchTab("my-card");
         }
 
-        function getTheocraticYearText() {
-            const now = new Date();
-            const currentYear = now.getFullYear();
-            const startYear = (now.getMonth() >= 8) ? currentYear : currentYear - 1;
-            const nextYearShort = (startYear + 1).toString().slice(-2);
-            return `${startYear}/${nextYearShort}`;
+        hideLoader();
+      }
+
+      function hideLoader() {
+        const loader = document.getElementById("main-loader");
+        if (loader) {
+          loader.style.opacity = "0";
+          setTimeout(() => loader.remove(), 300);
+        }
+      }
+
+      function getTheocraticYearText() {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const startYear = now.getMonth() >= 8 ? currentYear : currentYear - 1;
+        const nextYearShort = (startYear + 1).toString().slice(-2);
+        return `${startYear}/${nextYearShort}`;
+      }
+
+      function getTheocraticStart() {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        return now.getMonth() >= 8
+          ? new Date(currentYear, 8, 1)
+          : new Date(currentYear - 1, 8, 1);
+      }
+
+      async function loadAllTerritoriesGrid() {
+        const tHead = document.getElementById("tHead");
+        const tBody = document.getElementById("tBody");
+        if (!tHead || !tBody) return;
+
+        let hasCampaignInTable = false;
+
+        const rangeStart = getTheocraticStart();
+        const titleText =
+          currentTerritoryTab === "city"
+            ? "опрацювання міста"
+            : "опрацювання сіл";
+
+        const titleElement = document.querySelector(
+          "#tab-all-territories .table-title",
+        );
+        if (titleElement)
+          titleElement.innerHTML = `📋 Записи про ${titleText} ${getTheocraticYearText()}`;
+
+        const rangeStartISO = rangeStart.toISOString();
+
+        const [parcelsRes, logsRes] = await Promise.all([
+          supabase.from("parcels").select("*"),
+          supabase
+            .from("territory_logs")
+            .select("*")
+            .or(
+              `taken_at.gte.${rangeStartISO},returned_at.gte.${rangeStartISO}`,
+            )
+            .order("taken_at", { ascending: true }),
+        ]);
+
+        if (parcelsRes.error || logsRes.error) {
+          console.error(
+            "Помилка завантаження реєстру:",
+            parcelsRes.error || logsRes.error,
+          );
+          return;
         }
 
-        function getTheocraticStart() {
-            const now = new Date();
-            const currentYear = now.getFullYear();
-            return (now.getMonth() >= 8) ? new Date(currentYear, 8, 1) : new Date(currentYear - 1, 8, 1);
-        }
+        let parcels = parcelsRes.data.filter((p) => {
+          if (currentTerritoryTab === "city") return p.category !== "Село";
+          return p.category === "Село";
+        });
 
-        async function loadAllTerritoriesGrid() {
-            const tHead = document.getElementById('tHead');
-            const tBody = document.getElementById('tBody');
-            if (!tHead || !tBody) return;
+        parcels.sort((a, b) => {
+          const numA = parseInt(a.name.replace(/\D/g, "")) || 0;
+          const numB = parseInt(b.name.replace(/\D/g, "")) || 0;
+          return numA - numB;
+        });
 
-            let hasCampaignInTable = false;
+        const allLogs = logsRes.data;
+        const combinedData = {};
 
-            const rangeStart = getTheocraticStart();
-            const titleText = currentTerritoryTab === 'city' ? 'опрацювання міста' : 'опрацювання сіл';
-
-            const titleElement = document.querySelector('#tab-all-territories .table-title');
-            if (titleElement) titleElement.innerHTML = `📋 Записи про ${titleText} ${getTheocraticYearText()}`;
-
-            const rangeStartISO = rangeStart.toISOString();
-
-            const [parcelsRes, logsRes] = await Promise.all([
-                supabase.from('parcels').select('*'),
-                supabase.from('territory_logs')
-                    .select('*')
-                    .or(`taken_at.gte.${rangeStartISO},returned_at.gte.${rangeStartISO}`)
-                    .order('taken_at', { ascending: true })
-            ]);
-
-            if (parcelsRes.error || logsRes.error) {
-                console.error("Помилка завантаження реєстру:", parcelsRes.error || logsRes.error);
-                return;
-            }
-
-            let parcels = parcelsRes.data.filter(p => {
-                if (currentTerritoryTab === 'city') return p.category !== 'Село';
-                return p.category === 'Село';
+        parcels.forEach((p) => {
+          const pLogs = allLogs
+            .filter((log) => log.parcel_id === p.id)
+            .map((log) => ({
+              name: log.publisher_name,
+              in: log.taken_at,
+              out: log.returned_at,
+              campaign_id: log.campaign_id,
+              campaign_name: log.campaign_name,
+            }));
+          if (p.status === "taken" && p.taken_by) {
+            pLogs.push({
+              name: p.taken_by,
+              in: p.taken_at,
+              out: null,
+              campaign_id: null,
+              campaign_name: null,
             });
+          }
+          combinedData[p.id] = pLogs;
+        });
 
-            parcels.sort((a, b) => {
-                const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
-                const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
-                return numA - numB;
-            });
+        let maxCols = 1;
+        Object.values(combinedData).forEach((list) => {
+          if (list.length > maxCols) maxCols = list.length;
+        });
 
-            const allLogs = logsRes.data;
-            const combinedData = {};
-
-            parcels.forEach(p => {
-                const pLogs = allLogs.filter(log => log.parcel_id === p.id).map(log => ({
-                    name: log.publisher_name,
-                    in: log.taken_at,
-                    out: log.returned_at,
-                    campaign_id: log.campaign_id,
-                    campaign_name: log.campaign_name
-                }));
-                if (p.status === 'taken' && p.taken_by) {
-                    pLogs.push({ name: p.taken_by, in: p.taken_at, out: null, campaign_id: null, campaign_name: null });
-                }
-                combinedData[p.id] = pLogs;
-            });
-
-            let maxCols = 1;
-            Object.values(combinedData).forEach(list => { if (list.length > maxCols) maxCols = list.length; });
-
-            tHead.innerHTML = `
+        tHead.innerHTML = `
         <tr>
             <th rowspan="2" style="width: 40px; min-width: 40px; border:1px solid #444;">№</th>
             <th rowspan="2" style="width: 110px; min-width: 110px; border:1px solid #444; cursor: help;" title="Заповнюючи новий бланк, познач у цій колонці останню дату опрацювання кожної території">
@@ -610,183 +915,240 @@
         </tr>
         <tr>
             ${`<th style="background:#e2efda; width: 100px; min-width: 100px; border:1px solid #444;">Дата отримання</th>
-               <th style="background:#fce4d6; width: 100px; min-width: 100px; border:1px solid #444;">Дата опрацювання</th>`.repeat(maxCols)}
+               <th style="background:#fce4d6; width: 100px; min-width: 100px; border:1px solid #444;">Дата опрацювання</th>`.repeat(
+              maxCols,
+            )}
         </tr>
     `;
 
-            tBody.innerHTML = '';
-            parcels.forEach(p => {
-                const pSessions = combinedData[p.id] || [];
-                const lastProcDate = p.last_processed ? new Date(p.last_processed) : null;
-                let lastDoneDate = (lastProcDate && lastProcDate < rangeStart)
-                    ? lastProcDate.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: '2-digit' })
-                    : "-";
+        tBody.innerHTML = "";
+        parcels.forEach((p) => {
+          const pSessions = combinedData[p.id] || [];
+          const lastProcDate = p.last_processed
+            ? new Date(p.last_processed)
+            : null;
+          let lastDoneDate =
+            lastProcDate && lastProcDate < rangeStart
+              ? lastProcDate.toLocaleDateString("uk-UA", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "2-digit",
+                })
+              : "-";
 
-                const tr1 = document.createElement('tr');
-                const tr2 = document.createElement('tr');
+          const tr1 = document.createElement("tr");
+          const tr2 = document.createElement("tr");
 
-                const lastDoneStyle = lastDoneDate !== "-" ? "color: #d32f2f; font-weight: bold;" : "";
+          const lastDoneStyle =
+            lastDoneDate !== "-" ? "color: #d32f2f; font-weight: bold;" : "";
 
-                let tr1Html = `
-        <td rowspan="2" class="num-col" style="width: 40px; text-align: center; border:1px solid #444;">
-            <a href="parcel-details.html?id=${p.id}&from=all" style="text-decoration:none; color:#007bff; font-weight:bold;">
-                ${p.name}
-            </a>
-        </td>
-        <td rowspan="2" class="last-done-col" style="width: 110px; text-align: center; border:1px solid #444; ${lastDoneStyle}">
-            ${lastDoneDate}
-        </td>
-    `;
+          let tr1Html = `
+                <td rowspan="2" class="num-col" style="width: 40px; text-align: center; border:1px solid #444;">
+                    <a href="parcel-details.html?id=${p.id}&from=all" style="text-decoration:none; color:#007bff; font-weight:bold;">
+                        ${p.name}
+                    </a>
+                </td>
+                <td rowspan="2" class="last-done-col" style="width: 110px; text-align: center; border:1px solid #444; ${lastDoneStyle}">
+                    ${lastDoneDate}
+                </td>
+            `;
 
-                let tr2Html = '';
-                for (let i = 0; i < maxCols; i++) {
-                    const s = pSessions[i];
-                    const pName = s ? s.name : '';
-                    const dIn = s ? new Date(s.in).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '.') : '';
-                    const dOut = (s && s.out) ? new Date(s.out).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '.') : '';
+          let tr2Html = "";
+          for (let i = 0; i < maxCols; i++) {
+            const s = pSessions[i];
+            const pName = s ? s.name : "";
+            const dIn = s
+              ? new Date(s.in)
+                  .toLocaleDateString("uk-UA", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "2-digit",
+                  })
+                  .replace(/\//g, ".")
+              : "";
+            const dOut =
+              s && s.out
+                ? new Date(s.out)
+                    .toLocaleDateString("uk-UA", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "2-digit",
+                    })
+                    .replace(/\//g, ".")
+                : "";
 
-                    let campaignStyle = '';
-                    if (s && s.campaign_id) {
-                        hasCampaignInTable = true;
-                        if (s.campaign_name && s.campaign_name.toLowerCase().includes('конгрес')) {
-                            campaignStyle = 'background-color: rgba(233, 196, 106, 0.5); color: #5C4B1B;';
-                        } else if (s.campaign_name && (s.campaign_name.toLowerCase().includes('спец. кампанія') || s.campaign_name.toLowerCase().includes('спеціальна'))) {
-                            campaignStyle = 'background-color: rgba(255, 205, 178, 0.5); color: #6D4C41;';
-                        } else if (s.campaign_name && s.campaign_name.toLowerCase().includes('спомин')) {
-                            campaignStyle = 'background-color: rgba(178, 185, 173, 0.5); color: #2F3E30;';
-                        }
-                    }
+            let campaignStyle = "";
+            if (s && s.campaign_id) {
+              hasCampaignInTable = true;
+              if (
+                s.campaign_name &&
+                s.campaign_name.toLowerCase().includes("конгрес")
+              ) {
+                campaignStyle =
+                  "background-color: rgba(233, 196, 106, 0.5); color: #5C4B1B;";
+              } else if (
+                s.campaign_name &&
+                (s.campaign_name.toLowerCase().includes("спец. кампанія") ||
+                  s.campaign_name.toLowerCase().includes("спеціальна"))
+              ) {
+                campaignStyle =
+                  "background-color: rgba(255, 205, 178, 0.5); color: #6D4C41;";
+              } else if (
+                s.campaign_name &&
+                s.campaign_name.toLowerCase().includes("спомин")
+              ) {
+                campaignStyle =
+                  "background-color: rgba(178, 185, 173, 0.5); color: #2F3E30;";
+              }
+            }
 
-                    let inDateStyle = '';
-                    if (s && s.in) {
-                        const takenDate = new Date(s.in);
-                        const returnedDate = s.out ? new Date(s.out) : null;
+            let inDateStyle = "";
+            if (s && s.in) {
+              const takenDate = new Date(s.in);
+              const returnedDate = s.out ? new Date(s.out) : null;
 
-                        if (takenDate < rangeStart && (!returnedDate || returnedDate >= rangeStart)) {
-                            inDateStyle = 'color: #1976d2; font-weight: bold;';
-                        }
-                    }
+              if (
+                takenDate < rangeStart &&
+                (!returnedDate || returnedDate >= rangeStart)
+              ) {
+                inDateStyle = "color: #1976d2; font-weight: bold;";
+              }
+            }
 
-                    tr1Html += `<td colspan="2" class="name-row" style="width: 200px; border:1px solid #444; padding:4px; overflow: hidden; white-space: nowrap; font-size: 0.9em; ${campaignStyle}">${pName}</td>`;
-                    tr2Html += `
+            tr1Html += `<td colspan="2" class="name-row" style="width: 200px; border:1px solid #444; padding:4px; overflow: hidden; white-space: nowrap; font-size: 0.9em; ${campaignStyle}">${pName}</td>`;
+            tr2Html += `
         <td class="date-cell" style="width: 100px; background:#e8f5e9; border:1px solid #444; text-align: center; ${inDateStyle}">${dIn}</td>
         <td class="date-cell" style="width: 100px; background:#fff3e0; border:1px solid #444; text-align: center;">${dOut}</td>
     `;
-                }
+          }
 
-                tr1.innerHTML = tr1Html;
-                tr2.innerHTML = tr2Html;
-                tBody.appendChild(tr1);
-                tBody.appendChild(tr2);
-            });
+          tr1.innerHTML = tr1Html;
+          tr2.innerHTML = tr2Html;
+          tBody.appendChild(tr1);
+          tBody.appendChild(tr2);
+        });
 
-            createColorLegend(hasCampaignInTable);
-        }
-        window.loadAllTerritoriesGrid = loadAllTerritoriesGrid;
+        createColorLegend(hasCampaignInTable);
+      }
+      window.loadAllTerritoriesGrid = loadAllTerritoriesGrid;
 
-        function createColorLegend(hasCampaign = null) {
-            const legend = document.getElementById('campaign-color-legend');
-            if (!legend) return;
+      function createColorLegend(hasCampaign = null) {
+        const legend = document.getElementById("campaign-color-legend");
+        if (!legend) return;
 
-            if (hasCampaign !== null) {
-                legend.style.display = hasCampaign ? 'flex' : 'none';
-                return;
-            }
-
-            const tBody = document.getElementById('tBody');
-            if (!tBody) {
-                legend.style.display = 'none';
-                return;
-            }
-
-            const hasCampaignCells = Array.from(tBody.querySelectorAll('td.name-row')).some(td => {
-                const bg = td.style.backgroundColor;
-                return bg && bg !== '' && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)';
-            });
-
-            legend.style.display = hasCampaignCells ? 'flex' : 'none';
+        if (hasCampaign !== null) {
+          legend.style.display = hasCampaign ? "flex" : "none";
+          return;
         }
 
-        const originalLoadAllTerritoriesGrid = loadAllTerritoriesGrid;
-        window.loadAllTerritoriesGrid = async function (...args) {
-            await originalLoadAllTerritoriesGrid.apply(this, args);
-
-            const activeTab = document.querySelector('.nav-item.active');
-            if (activeTab && activeTab.textContent.includes('S-13')) {
-                setTimeout(() => {
-                    if (typeof highlightCampaignCells === 'function') {
-                        highlightCampaignCells();
-                    }
-                }, 100);
-            }
-        };
-
-        async function loadMyParcels() {
-            const userId = localStorage.getItem('userId');
-            console.log("🔍 [Профіль] Починаємо завантаження дільниць для користувача UUID:", userId);
-
-            if (!userId) {
-                console.error("❌ [Профіль] Помилка: userId відсутній у localStorage!");
-                return;
-            }
-
-            try {
-                // Прямий чистий запит, заголовки підтягнуться з config.js автоматично
-                const { data, error } = await supabase
-                    .from('parcels')
-                    .select('*')
-                    .eq('taken_by_id', userId)
-                    .eq('status', 'taken');
-
-                if (error) {
-                    console.error("❌ [Профіль] Помилка запиту до Supabase:", error);
-                    return;
-                }
-
-                console.log("📊 [Профіль] Отримані дільниці з бази даних:", data);
-
-                if (!data || data.length === 0) {
-                    console.warn("⚠️ [Профіль] База повернула 0 дільниць для користувача:", userId);
-                }
-
-                // Перевіряємо наявність функції рендерингу
-                if (typeof renderParcelList === 'function') {
-                    renderParcelList(data, 'myParcels', true);
-                } else if (typeof displayMyParcels === 'function') {
-                    displayMyParcels(data);
-                } else {
-                    console.error("❌ [Профіль] Не знайдено функцію для рендерингу списку дільниць!");
-                }
-
-            } catch (err) {
-                console.error("❌ [Профіль] Критична помилка в loadMyParcels:", err);
-            }
+        const tBody = document.getElementById("tBody");
+        if (!tBody) {
+          legend.style.display = "none";
+          return;
         }
 
-        async function loadMyHistory() {
-            const historyDiv = document.getElementById('myHistory');
-            if (!historyDiv) return;
+        const hasCampaignCells = Array.from(
+          tBody.querySelectorAll("td.name-row"),
+        ).some((td) => {
+          const bg = td.style.backgroundColor;
+          return (
+            bg && bg !== "" && bg !== "transparent" && bg !== "rgba(0, 0, 0, 0)"
+          );
+        });
 
-            try {
-                const { data: logs, error } = await supabase
-                    .from('territory_logs')
-                    .select('*, parcels(name, category)')
-                    .eq('publisher_id', userId)
-                    .order('returned_at', { ascending: false });
+        legend.style.display = hasCampaignCells ? "flex" : "none";
+      }
 
-                if (error) {
-                    console.error('Помилка завантаження історії:', error);
-                    historyDiv.innerHTML = '<p style="color: gray;">Помилка завантаження історії</p>';
-                    return;
-                }
+      const originalLoadAllTerritoriesGrid = loadAllTerritoriesGrid;
+      window.loadAllTerritoriesGrid = async function (...args) {
+        await originalLoadAllTerritoriesGrid.apply(this, args);
 
-                if (!logs || logs.length === 0) {
-                    const historyCard = document.getElementById('historyCard');
-                    if (historyCard) historyCard.style.display = 'none';
-                    return;
-                }
+        const activeTab = document.querySelector(".nav-item.active");
+        if (activeTab && activeTab.textContent.includes("S-13")) {
+          setTimeout(() => {
+            if (typeof highlightCampaignCells === "function") {
+              highlightCampaignCells();
+            }
+          }, 100);
+        }
+      };
 
-                let html = `
+      async function loadMyParcels() {
+        const userId = localStorage.getItem("userId");
+        console.log(
+          "🔍 [Профіль] Починаємо завантаження дільниць для користувача UUID:",
+          userId,
+        );
+
+        if (!userId) {
+          console.error(
+            "❌ [Профіль] Помилка: userId відсутній у localStorage!",
+          );
+          return;
+        }
+
+        try {
+          // Прямий чистий запит, заголовки підтягнуться з config.js автоматично
+          const { data, error } = await supabase
+            .from("parcels")
+            .select("*")
+            .eq("taken_by_id", userId)
+            .eq("status", "taken");
+
+          if (error) {
+            console.error("❌ [Профіль] Помилка запиту до Supabase:", error);
+            return;
+          }
+
+          console.log("📊 [Профіль] Отримані дільниці з бази даних:", data);
+
+          if (!data || data.length === 0) {
+            console.warn(
+              "⚠️ [Профіль] База повернула 0 дільниць для користувача:",
+              userId,
+            );
+          }
+
+          // Перевіряємо наявність функції рендерингу
+          if (typeof renderParcelList === "function") {
+            renderParcelList(data, "myParcels", true);
+          } else if (typeof displayMyParcels === "function") {
+            displayMyParcels(data);
+          } else {
+            console.error(
+              "❌ [Профіль] Не знайдено функцію для рендерингу списку дільниць!",
+            );
+          }
+        } catch (err) {
+          console.error("❌ [Профіль] Критична помилка в loadMyParcels:", err);
+        }
+      }
+
+      async function loadMyHistory() {
+        const historyDiv = document.getElementById("myHistory");
+        if (!historyDiv) return;
+
+        try {
+          const { data: logs, error } = await supabase
+            .from("territory_logs")
+            .select("*, parcels(name, category)")
+            .eq("publisher_id", userId)
+            .order("returned_at", { ascending: false });
+
+          if (error) {
+            console.error("Помилка завантаження історії:", error);
+            historyDiv.innerHTML =
+              '<p style="color: gray;">Помилка завантаження історії</p>';
+            return;
+          }
+
+          if (!logs || logs.length === 0) {
+            const historyCard = document.getElementById("historyCard");
+            if (historyCard) historyCard.style.display = "none";
+            return;
+          }
+
+          let html = `
                     <div class="table-wrapper">
                         <table class="history-table" style="width: 100%; border-collapse: collapse;">
                             <thead>
@@ -800,16 +1162,22 @@
                             <tbody>
                 `;
 
-                logs.forEach(log => {
-                    const parcelName = log.parcels?.name || 'Невідомо';
-                    const isVillage = log.parcels?.category === 'Село';
-                    const displayName = isVillage ? `Дільниця: ${parcelName}` : `Дільниця № ${parcelName}`;
+          logs.forEach((log) => {
+            const parcelName = log.parcels?.name || "Невідомо";
+            const isVillage = log.parcels?.category === "Село";
+            const displayName = isVillage
+              ? `Дільниця: ${parcelName}`
+              : `Дільниця № ${parcelName}`;
 
-                    const dateIn = log.taken_at ? new Date(log.taken_at).toLocaleDateString('uk-UA') : '--';
-                    const dateOut = log.returned_at ? new Date(log.returned_at).toLocaleDateString('uk-UA') : '--';
-                    const duration = log.duration_text || '-';
+            const dateIn = log.taken_at
+              ? new Date(log.taken_at).toLocaleDateString("uk-UA")
+              : "--";
+            const dateOut = log.returned_at
+              ? new Date(log.returned_at).toLocaleDateString("uk-UA")
+              : "--";
+            const duration = log.duration_text || "-";
 
-                    html += `
+            html += `
                         <tr style="border-bottom: 1px solid #eee;">
                             <td style="padding: 10px;"><b>${displayName}</b></td>
                             <td style="padding: 10px; text-align: center;">${dateIn}</td>
@@ -817,122 +1185,162 @@
                             <td style="padding: 10px; text-align: center;"><span class="badge" style="background: #e3f2fd; padding: 4px 8px; border-radius: 12px; font-size: 12px;">${duration}</span></td>
                         </tr>
                     `;
-                });
+          });
 
-                html += `
+          html += `
                             </tbody>
                         </table>
                     </div>
                 `;
 
-                historyDiv.innerHTML = html;
-            } catch (error) {
-                console.error('Помилка:', error);
-                historyDiv.innerHTML = '<p style="color: gray;">Помилка завантаження історії</p>';
-            }
+          historyDiv.innerHTML = html;
+        } catch (error) {
+          console.error("Помилка:", error);
+          historyDiv.innerHTML =
+            '<p style="color: gray;">Помилка завантаження історії</p>';
         }
+      }
 
-        let campaignInfoLoaded = false;
-        let campaignHasActive = false;
-        let campaignPreviewLoaded = false;
+      let campaignInfoLoaded = false;
+      let campaignHasActive = false;
+      let campaignPreviewLoaded = false;
 
-        async function loadCampaignInfo() {
-            const campaignInfoContent = document.getElementById('campaignInfoContent');
-            const campaignCard = document.getElementById('campaignInfoCard');
-            const campaignPreview = document.getElementById('campaignPreview');
-            if (!campaignInfoContent || !campaignCard) return;
+      async function loadCampaignInfo() {
+        const campaignInfoContent = document.getElementById(
+          "campaignInfoContent",
+        );
+        const campaignCard = document.getElementById("campaignInfoCard");
+        const campaignPreview = document.getElementById("campaignPreview");
+        if (!campaignInfoContent || !campaignCard) return;
 
-            try {
-                const { data: campaigns, error } = await supabase
-                    .from('campaigns')
-                    .select('id, name, description, campaign_start, campaign_end')
-                    .order('campaign_start', { ascending: true });
+        try {
+          const { data: campaigns, error } = await supabase
+            .from("campaigns")
+            .select("id, name, description, campaign_start, campaign_end")
+            .order("campaign_start", { ascending: true });
 
-                if (error) {
-                    console.error('Помилка завантаження кампаній:', error);
-                    campaignInfoContent.innerHTML = '<p style="color:gray;">Помилка завантаження інформації про кампанії.</p>';
-                    return;
-                }
+          if (error) {
+            console.error("Помилка завантаження кампаній:", error);
+            campaignInfoContent.innerHTML =
+              '<p style="color:gray;">Помилка завантаження інформації про кампанії.</p>';
+            return;
+          }
 
-                if (!campaigns || campaigns.length === 0) {
-                    campaignInfoContent.innerHTML = '<p style="color:gray;">Інформація про кампанії недоступна.</p>';
-                    return;
-                }
+          if (!campaigns || campaigns.length === 0) {
+            campaignInfoContent.innerHTML =
+              '<p style="color:gray;">Інформація про кампанії недоступна.</p>';
+            return;
+          }
 
-                const now = new Date();
-                const currentTheoStart = getTheocraticStart();
-                const currentTheoEnd = new Date(currentTheoStart.getFullYear() + 1, 7, 31, 23, 59, 59);
+          const now = new Date();
+          const currentTheoStart = getTheocraticStart();
+          const currentTheoEnd = new Date(
+            currentTheoStart.getFullYear() + 1,
+            7,
+            31,
+            23,
+            59,
+            59,
+          );
 
-                // 2 місяці (60 днів) у мілісекундах
-                const TWO_MONTHS_MS = 60 * 24 * 60 * 60 * 1000;
+          // 2 місяці (60 днів) у мілісекундах
+          const TWO_MONTHS_MS = 60 * 24 * 60 * 60 * 1000;
 
-                // Фільтруємо кампанії:
-                // 1. Всі кампанії поточного теократичного року
-                // 2. АБО кампанії наступного теократичного року, до початку яких залишилося <= 60 днів
-                const filteredCampaigns = campaigns.filter(campaign => {
-                    const startDate = new Date(campaign.campaign_start);
-                    const endDate = new Date(campaign.campaign_end);
+          // Фільтруємо кампанії:
+          // 1. Всі кампанії поточного теократичного року
+          // 2. АБО кампанії наступного теократичного року, до початку яких залишилося <= 60 днів
+          const filteredCampaigns = campaigns.filter((campaign) => {
+            const startDate = new Date(campaign.campaign_start);
+            const endDate = new Date(campaign.campaign_end);
 
-                    // Належить до поточного теократичного року
-                    const isCurrentTheoYear = endDate >= currentTheoStart && startDate <= currentTheoEnd;
+            // Належить до поточного теократичного року
+            const isCurrentTheoYear =
+              endDate >= currentTheoStart && startDate <= currentTheoEnd;
 
-                    // Кампанія наступного року, до якої залишилося 2 місяці або менше
-                    const isUpcomingNextYear = startDate > currentTheoEnd && (startDate - now) <= TWO_MONTHS_MS;
+            // Кампанія наступного року, до якої залишилося 2 місяці або менше
+            const isUpcomingNextYear =
+              startDate > currentTheoEnd && startDate - now <= TWO_MONTHS_MS;
 
-                    return isCurrentTheoYear || isUpcomingNextYear;
-                });
+            return isCurrentTheoYear || isUpcomingNextYear;
+          });
 
-                const activeCampaigns = filteredCampaigns.filter(campaign => {
-                    const startDate = new Date(campaign.campaign_start);
-                    const endDate = new Date(campaign.campaign_end);
-                    return now >= startDate && now <= endDate;
-                });
+          const activeCampaigns = filteredCampaigns.filter((campaign) => {
+            const startDate = new Date(campaign.campaign_start);
+            const endDate = new Date(campaign.campaign_end);
+            return now >= startDate && now <= endDate;
+          });
 
-                const plannedCampaigns = filteredCampaigns
-                    .filter(campaign => new Date(campaign.campaign_start) > now)
-                    .sort((a, b) => new Date(a.campaign_start) - new Date(b.campaign_start));
+          const plannedCampaigns = filteredCampaigns
+            .filter((campaign) => new Date(campaign.campaign_start) > now)
+            .sort(
+              (a, b) => new Date(a.campaign_start) - new Date(b.campaign_start),
+            );
 
-                const pastCampaigns = filteredCampaigns
-                    .filter(campaign => new Date(campaign.campaign_end) < now)
-                    .sort((a, b) => new Date(b.campaign_end) - new Date(a.campaign_end));
+          const pastCampaigns = filteredCampaigns
+            .filter((campaign) => new Date(campaign.campaign_end) < now)
+            .sort(
+              (a, b) => new Date(b.campaign_end) - new Date(a.campaign_end),
+            );
 
-                const sections = [];
+          const sections = [];
 
-                if (activeCampaigns.length > 0) {
-                    campaignHasActive = true;
-                    if (campaignPreview) {
-                        campaignPreview.innerHTML = renderCampaignPreview(activeCampaigns);
-                        campaignPreview.classList.remove('hidden');
-                    }
-                    campaignCard.classList.add('hidden');
-                } else {
-                    campaignHasActive = false;
-                    if (campaignPreview) campaignPreview.classList.add('hidden');
-                    campaignCard.classList.add('hidden');
-                }
-
-                if (plannedCampaigns.length > 0) {
-                    sections.push(renderCampaignSection('Заплановані кампанії', plannedCampaigns, false, false));
-                } else {
-                    sections.push('<p style="color:gray; margin: 0 0 8px 0;">Запланованих кампаній немає.</p>');
-                }
-
-                if (pastCampaigns.length > 0) {
-                    sections.push(renderCampaignSection('Пройдені кампанії цього теократичного року', pastCampaigns, false, true));
-                }
-
-                campaignInfoContent.innerHTML = sections.join('');
-                campaignInfoLoaded = true;
-            } catch (error) {
-                console.error('Помилка під час отримання кампаній:', error);
-                campaignInfoContent.innerHTML = '<p style="color:gray;">Помилка завантаження інформації про кампанії.</p>';
+          if (activeCampaigns.length > 0) {
+            campaignHasActive = true;
+            if (campaignPreview) {
+              campaignPreview.innerHTML =
+                renderCampaignPreview(activeCampaigns);
+              campaignPreview.classList.remove("hidden");
             }
-        }
+            campaignCard.classList.add("hidden");
+          } else {
+            campaignHasActive = false;
+            if (campaignPreview) campaignPreview.classList.add("hidden");
+            campaignCard.classList.add("hidden");
+          }
 
-        function renderCampaignPreview(campaigns) {
-            return campaigns.map(campaign => {
-                const period = formatCampaignPeriod(campaign.campaign_start, campaign.campaign_end);
-                return `
+          if (plannedCampaigns.length > 0) {
+            sections.push(
+              renderCampaignSection(
+                "Заплановані кампанії",
+                plannedCampaigns,
+                false,
+                false,
+              ),
+            );
+          } else {
+            sections.push(
+              '<p style="color:gray; margin: 0 0 8px 0;">Запланованих кампаній немає.</p>',
+            );
+          }
+
+          if (pastCampaigns.length > 0) {
+            sections.push(
+              renderCampaignSection(
+                "Пройдені кампанії цього теократичного року",
+                pastCampaigns,
+                false,
+                true,
+              ),
+            );
+          }
+
+          campaignInfoContent.innerHTML = sections.join("");
+          campaignInfoLoaded = true;
+        } catch (error) {
+          console.error("Помилка під час отримання кампаній:", error);
+          campaignInfoContent.innerHTML =
+            '<p style="color:gray;">Помилка завантаження інформації про кампанії.</p>';
+        }
+      }
+
+      function renderCampaignPreview(campaigns) {
+        return campaigns
+          .map((campaign) => {
+            const period = formatCampaignPeriod(
+              campaign.campaign_start,
+              campaign.campaign_end,
+            );
+            return `
                     <div style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 10px; background:#f1f8f5; margin-bottom: 8px;">
                         <div style="display:flex; justify-content:space-between; gap: 12px; flex-wrap:wrap; align-items:center;">
                             <strong style="font-size: 1rem;">${campaign.name}</strong>
@@ -941,18 +1349,35 @@
                         <p style="margin: 8px 0 0 0; color:#555;"><strong>Період:</strong> ${period}</p>
                     </div>
                 `;
-            }).join('');
-        }
+          })
+          .join("");
+      }
 
-        function renderCampaignSection(title, campaigns, isActive, isCompleted) {
-            const statusText = isCompleted ? 'Завершена' : (isActive ? 'Активна' : 'Планується');
-            const statusColor = isCompleted ? '#757575' : (isActive ? '#2e7d32' : '#1565c0');
-            const textDecoration = isCompleted ? 'text-decoration: line-through;' : '';
+      function renderCampaignSection(title, campaigns, isActive, isCompleted) {
+        const statusText = isCompleted
+          ? "Завершена"
+          : isActive
+            ? "Активна"
+            : "Планується";
+        const statusColor = isCompleted
+          ? "#757575"
+          : isActive
+            ? "#2e7d32"
+            : "#1565c0";
+        const textDecoration = isCompleted
+          ? "text-decoration: line-through;"
+          : "";
 
-            const itemsHtml = campaigns.map(campaign => {
-                const period = formatCampaignPeriod(campaign.campaign_start, campaign.campaign_end);
-                const description = campaign.description ? `<p style="margin: 6px 0 0 0; color:#444; ${textDecoration}">${campaign.description}</p>` : '';
-                return `
+        const itemsHtml = campaigns
+          .map((campaign) => {
+            const period = formatCampaignPeriod(
+              campaign.campaign_start,
+              campaign.campaign_end,
+            );
+            const description = campaign.description
+              ? `<p style="margin: 6px 0 0 0; color:#444; ${textDecoration}">${campaign.description}</p>`
+              : "";
+            return `
                     <div style="margin-bottom: 12px; padding: 12px; border: 1px solid #e0e0e0; border-radius: 10px; background:#fafafa; ${textDecoration}">
                         <div style="display:flex; justify-content:space-between; gap: 12px; flex-wrap:wrap;">
                             <strong style="font-size: 1rem; ${textDecoration}">${campaign.name}</strong>
@@ -962,371 +1387,462 @@
                         ${description}
                     </div>
                 `;
-            }).join('');
+          })
+          .join("");
 
-            return `
+        return `
                 <div style="margin-bottom: 14px;">
                     <h4 style="margin: 0 0 8px 0; font-size: 1rem;">${title}</h4>
                     ${itemsHtml}
                 </div>
             `;
+      }
+
+      function formatCampaignPeriod(start, end) {
+        if (!start || !end) return "Невідомо";
+        const startDate = formatDateDisplay(start);
+        const endDate = formatDateDisplay(end);
+        return start === end ? startDate : `${startDate} — ${endDate}`;
+      }
+
+      function formatDateDisplay(dateValue) {
+        if (!dateValue) return "—";
+        const date = new Date(dateValue);
+        if (Number.isNaN(date.getTime())) return "—";
+        return date.toLocaleDateString("uk-UA", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+      }
+
+      window.toggleCampaignInfo = function () {
+        const card = document.getElementById("campaignInfoCard");
+        const preview = document.getElementById("campaignPreview");
+        const headerText = document.getElementById("campaignHeaderText");
+        const headerIcon = document.getElementById("campaignHeaderIcon");
+        if (!card) return;
+        const hidden = card.classList.toggle("hidden");
+        if (campaignHasActive && preview) {
+          preview.classList.toggle("hidden", !hidden);
+        }
+        const headerLabel = document.getElementById("campaignHeaderLabel");
+        if (headerLabel) {
+          headerLabel.textContent = hidden ? "Розгорнути" : "Згорнути";
+        }
+        if (headerIcon) {
+          headerIcon.textContent = hidden ? "＋" : "－";
+        }
+        if (!hidden && !campaignInfoLoaded) {
+          loadCampaignInfo();
+        }
+      };
+      window.toggleHistoryInfo = function () {
+        const content = document.getElementById("historyContent");
+        const headerLabel = document.getElementById("historyHeaderLabel");
+        const headerIcon = document.getElementById("historyHeaderIcon");
+        if (!content) return;
+        const hidden = content.classList.toggle("hidden");
+        if (headerLabel) {
+          headerLabel.textContent = hidden ? "Розгорнути" : "Згорнути";
+        }
+        if (headerIcon) {
+          headerIcon.textContent = hidden ? "＋" : "－";
+        }
+      };
+
+      let allUsers = [];
+
+      async function loadGroupStats() {
+        const { data: users, error: uErr } = await supabase
+          .from("publishers")
+          .select("id, name, last_name, group_tag")
+          .order("last_name", { ascending: true });
+
+        const { data: parcels, error: pErr } = await supabase
+          .from("parcels")
+          .select("taken_by_id")
+          .eq("status", "taken");
+
+        if (uErr || pErr) {
+          console.error("Помилка завантаження:", uErr || pErr);
+          return;
         }
 
-        function formatCampaignPeriod(start, end) {
-            if (!start || !end) return 'Невідомо';
-            const startDate = formatDateDisplay(start);
-            const endDate = formatDateDisplay(end);
-            return start === end ? startDate : `${startDate} — ${endDate}`;
-        }
+        allUsers = users.map((user) => ({
+          ...user,
+          parcelCount: parcels.filter((p) => p.taken_by_id === user.id).length,
+        }));
 
-        function formatDateDisplay(dateValue) {
-            if (!dateValue) return '—';
-            const date = new Date(dateValue);
-            if (Number.isNaN(date.getTime())) return '—';
-            return date.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
-        }
+        renderPublishersList("active");
+      }
 
-        window.toggleCampaignInfo = function () {
-            const card = document.getElementById('campaignInfoCard');
-            const preview = document.getElementById('campaignPreview');
-            const headerText = document.getElementById('campaignHeaderText');
-            const headerIcon = document.getElementById('campaignHeaderIcon');
-            if (!card) return;
-            const hidden = card.classList.toggle('hidden');
-            if (campaignHasActive && preview) {
-                preview.classList.toggle('hidden', !hidden);
-            }
-            const headerLabel = document.getElementById('campaignHeaderLabel');
-            if (headerLabel) {
-                headerLabel.textContent = hidden ? 'Розгорнути' : 'Згорнути';
-            }
-            if (headerIcon) {
-                headerIcon.textContent = hidden ? '＋' : '－';
-            }
-            if (!hidden && !campaignInfoLoaded) {
-                loadCampaignInfo();
-            }
-        };
-        window.toggleHistoryInfo = function () {
-            const content = document.getElementById('historyContent');
-            const headerLabel = document.getElementById('historyHeaderLabel');
-            const headerIcon = document.getElementById('historyHeaderIcon');
-            if (!content) return;
-            const hidden = content.classList.toggle('hidden');
-            if (headerLabel) {
-                headerLabel.textContent = hidden ? 'Розгорнути' : 'Згорнути';
-            }
-            if (headerIcon) {
-                headerIcon.textContent = hidden ? '＋' : '－';
-            }
-        };
+      function renderPublishersList(currentFilter = "active") {
+        const listBody = document.getElementById("publishersList");
+        if (!listBody) return;
 
-        let allUsers = [];
+        listBody.innerHTML = "";
 
-        async function loadGroupStats() {
-            const { data: users, error: uErr } = await supabase
-                .from('publishers')
-                .select('id, name, last_name, group_tag')
-                .order('last_name', { ascending: true });
+        const filteredUsers = allUsers.filter((user) => {
+          if (currentFilter === "active") return user.parcelCount > 0;
+          if (currentFilter === "all") return true;
+          return user.group_tag === currentFilter;
+        });
 
-            const { data: parcels, error: pErr } = await supabase
-                .from('parcels')
-                .select('taken_by_id')
-                .eq('status', 'taken');
+        updateTabsVisibility();
 
-            if (uErr || pErr) {
-                console.error("Помилка завантаження:", uErr || pErr);
-                return;
-            }
+        filteredUsers.forEach((user) => {
+          const tr = document.createElement("tr");
+          const emoji =
+            typeof getGroupEmoji === "function"
+              ? getGroupEmoji(user.group_tag)
+              : "";
+          const fullName = `${user.last_name || ""} ${user.name || ""}`;
 
-            allUsers = users.map(user => ({
-                ...user,
-                parcelCount: parcels.filter(p => p.taken_by_id === user.id).length
-            }));
-
-            renderPublishersList('active');
-        }
-
-        function renderPublishersList(currentFilter = 'active') {
-            const listBody = document.getElementById('publishersList');
-            if (!listBody) return;
-
-            listBody.innerHTML = '';
-
-            const filteredUsers = allUsers.filter(user => {
-                if (currentFilter === 'active') return user.parcelCount > 0;
-                if (currentFilter === 'all') return true;
-                return user.group_tag === currentFilter;
-            });
-
-            updateTabsVisibility();
-
-            filteredUsers.forEach(user => {
-                const tr = document.createElement('tr');
-                const emoji = typeof getGroupEmoji === 'function' ? getGroupEmoji(user.group_tag) : '';
-                const fullName = `${user.last_name || ''} ${user.name || ''}`;
-
-                tr.innerHTML = `
-            <td><span>${emoji}</span> <b>${user.last_name || ''}</b> ${user.name || ''}</td>
+          tr.innerHTML = `
+            <td><span>${emoji}</span> <b>${user.last_name || ""}</b> ${user.name || ""}</td>
             <td><span class="badge">${user.parcelCount}</span></td>
         `;
 
-                tr.onclick = () => showUserDetails(user.id, fullName);
-                listBody.appendChild(tr);
-            });
+          tr.onclick = () => showUserDetails(user.id, fullName);
+          listBody.appendChild(tr);
+        });
+      }
+
+      async function showUserDetails(uId, uName) {
+        const newUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?tab=user-details&uId=${uId}`;
+        window.history.pushState({ path: newUrl }, "", newUrl);
+
+        window.switchTab("user-details");
+        document.getElementById("detailUserName").innerText = uName;
+
+        const { data: parcels } = await supabase
+          .from("parcels")
+          .select("*")
+          .eq("taken_by_id", uId)
+          .eq("status", "taken");
+        renderParcelList(parcels, "detailUserParcels", false);
+
+        const { data: userData, error } = await supabase
+          .from("publishers")
+          .select("*")
+          .eq("id", uId)
+          .single();
+
+        if (!error && userData) {
+          initAdminPanel(uId, userData);
+        }
+      }
+
+      // Допоміжна функція для форматування днів у період (роки, місяці, дні)
+      function formatDaysToPeriod(days) {
+        const years = Math.floor(days / 365);
+        const months = Math.floor((days % 365) / 30);
+        const remainingDays = Math.floor((days % 365) % 30);
+
+        const parts = [];
+        if (years > 0) parts.push(`${years} р.`);
+        if (months > 0) parts.push(`${months} міс.`);
+        if (remainingDays > 0 || (years === 0 && months === 0))
+          parts.push(`${remainingDays} дн.`);
+
+        return parts.join(" ");
+      }
+
+      // Допоміжна функція для отримання стилю попереджувального обрамлення
+      function getBorderWarningStyle(days) {
+        const startWarn = 90; // 3 місяці (початок появи помаранчевої рамки)
+        const maxWarn = 120; // 4 місяці (рамка стає повністю червоною)
+
+        if (days < startWarn) {
+          return ""; // Стандартна нейтральна рамка
         }
 
-        async function showUserDetails(uId, uName) {
-            const newUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?tab=user-details&uId=${uId}`;
-            window.history.pushState({ path: newUrl }, '', newUrl);
+        // Обчислюємо прогрес від 0.0 (на 90-й день) до 1.0 (на 120-й день)
+        const progress = Math.min(
+          Math.max((days - startWarn) / (maxWarn - startWarn), 0),
+          1,
+        );
 
-            window.switchTab('user-details');
-            document.getElementById('detailUserName').innerText = uName;
+        // Перехід Hue від 35 (Помаранчевий) до 0 (Червоний)
+        const hue = Math.round(35 - progress * 35);
 
-            const { data: parcels } = await supabase.from('parcels').select('*').eq('taken_by_id', uId).eq('status', 'taken');
-            renderParcelList(parcels, 'detailUserParcels', false);
+        // Товщина рамки плавно змінюється від 2px до 3px
+        const borderWidth = 2 + progress;
 
-            const { data: userData, error } = await supabase
-                .from('publishers')
-                .select('*')
-                .eq('id', uId)
-                .single();
+        return `border: ${borderWidth}px solid hsl(${hue}, 100%, 45%); box-shadow: 0 0 6px rgba(255, 0, 0, ${0.1 + progress * 0.3});`;
+      }
 
-            if (!error && userData) {
-                initAdminPanel(uId, userData);
-            }
+      function renderParcelList(parcels, containerId, isMyCard) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const isAdmin = window.checkIsAdmin();
+
+        if (!parcels || parcels.length === 0) {
+          container.innerHTML =
+            '<p style="color:gray;">Немає активних дільниць.</p>';
+          return;
         }
 
-        // Допоміжна функція для форматування днів у період (роки, місяці, дні)
-        function formatDaysToPeriod(days) {
-            const years = Math.floor(days / 365);
-            const months = Math.floor((days % 365) / 30);
-            const remainingDays = Math.floor((days % 365) % 30);
+        container.innerHTML = parcels
+          .map((p) => {
+            const rawDays = p.taken_at
+              ? Math.max(
+                  0,
+                  Math.floor(
+                    (new Date() - new Date(p.taken_at)) / (1000 * 60 * 60 * 24),
+                  ),
+                )
+              : 0;
+            const timeBadgeText = formatDaysToPeriod(rawDays);
+            const borderStyle = getBorderWarningStyle(rawDays);
+            const showReturnBtn = isMyCard || isAdmin;
 
-            const parts = [];
-            if (years > 0) parts.push(`${years} р.`);
-            if (months > 0) parts.push(`${months} міс.`);
-            if (remainingDays > 0 || (years === 0 && months === 0)) parts.push(`${remainingDays} дн.`);
+            const prefix = p.category === "Село" ? ": " : " №";
+            const badgeStyle =
+              rawDays >= 90 ? "background: #ff6b6b; color: white;" : "";
 
-            return parts.join(' ');
-        }
-
-        // Допоміжна функція для отримання стилю попереджувального обрамлення
-        function getBorderWarningStyle(days) {
-            const startWarn = 90;  // 3 місяці (початок появи помаранчевої рамки)
-            const maxWarn = 120;   // 4 місяці (рамка стає повністю червоною)
-
-            if (days < startWarn) {
-                return ''; // Стандартна нейтральна рамка
-            }
-
-            // Обчислюємо прогрес від 0.0 (на 90-й день) до 1.0 (на 120-й день)
-            const progress = Math.min(Math.max((days - startWarn) / (maxWarn - startWarn), 0), 1);
-
-            // Перехід Hue від 35 (Помаранчевий) до 0 (Червоний)
-            const hue = Math.round(35 - (progress * 35));
-
-            // Товщина рамки плавно змінюється від 2px до 3px
-            const borderWidth = 2 + progress;
-
-            return `border: ${borderWidth}px solid hsl(${hue}, 100%, 45%); box-shadow: 0 0 6px rgba(255, 0, 0, ${0.1 + progress * 0.3});`;
-        }
-
-        function renderParcelList(parcels, containerId, isMyCard) {
-            const container = document.getElementById(containerId);
-            if (!container) return;
-
-            const isAdmin = window.checkIsAdmin();
-
-            if (!parcels || parcels.length === 0) {
-                container.innerHTML = '<p style="color:gray;">Немає активних дільниць.</p>';
-                return;
-            }
-
-            container.innerHTML = parcels.map(p => {
-                const rawDays = p.taken_at ? Math.max(0, Math.floor((new Date() - new Date(p.taken_at)) / (1000 * 60 * 60 * 24))) : 0;
-                const timeBadgeText = formatDaysToPeriod(rawDays);
-                const borderStyle = getBorderWarningStyle(rawDays);
-                const showReturnBtn = isMyCard || isAdmin;
-
-                const prefix = p.category === 'Село' ? ': ' : ' №';
-                const badgeStyle = rawDays >= 90 ? 'background: #ff6b6b; color: white;' : '';
-
-                return `
-        <div style="${borderStyle} padding:15px; margin-bottom:10px; border-radius:8px; cursor:pointer; border: 1px solid #eee;"
-             onclick="window.location.href='parcel-details.html?id=${p.id}&from=${isMyCard ? 'my' : 'all'}'">
-            <div style="display:flex; justify-content:space-between;">
-                <strong>Дільниця${prefix}${p.name}</strong>
-                <span class="badge" style="${badgeStyle}">${timeBadgeText}</span>
-            </div>
-            <p style="font-size:0.9rem; color:#666; margin:10px 0;">${p.notes || '—'}</p>
-            ${showReturnBtn ? `
-                <button onclick="event.stopPropagation(); window.returnParcel('${p.id}', '${p.name}')" 
-                    style="background:#ff4757; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-weight:bold;">
-                    Здати
-                </button>` : ''}
-        </div>
-    `;
-            }).join('');
-        }
-
-        let currentTargetUserId = null;
-
-        function validateUniqueName(nameInputId, lastNameInputId) {
-            const nameInput = document.getElementById(nameInputId);
-            const lastNameInput = document.getElementById(lastNameInputId);
-            if (!nameInput || !lastNameInput) return;
-
-            const firstName = nameInput.value.trim().toLowerCase();
-            if (!firstName) {
-                nameInput.style.borderColor = "";
-                return;
-            }
-
-            const nameExists = allUsers.some(u =>
-                u.name.toLowerCase() === firstName && u.id !== currentTargetUserId
-            );
-
-            if (nameExists) {
-                nameInput.style.borderColor = "#ff9800";
-                lastNameInput.placeholder = "⚠️ Прізвище обов'язкове (двійник)";
-                lastNameInput.style.backgroundColor = "#fff8e1";
-            } else {
-                nameInput.style.borderColor = "";
-                lastNameInput.placeholder = "Прізвище (необов'язково)";
-                lastNameInput.style.backgroundColor = "";
-            }
-        }
-
-        // --- ЛОГІКА КАСТОМНОГО CONFIRM-ВІКНА ДЛЯ ВИДАЛЕННЯ ---
-        // Функція showCustomConfirm тепер імпортується з js/parcel-logic.js
-
-        async function initAdminPanel(targetUserId, targetUserData) {
-            if (!window.checkIsAdmin()) return;
-
-            currentTargetUserId = targetUserId;
-
-            document.getElementById('admin-settings-block').style.display = 'block';
-        }
-
-        // Ініціалізація сторінки
-        (async () => {
-            await init();
-        })();
-
-        // --- КЕРУВАННЯ ВІСНИКАМИ (МОДАЛКА ТА ВАЛІДАЦІЯ ПОМИЛОК) ---
-
-        window.openAddPublisherModal = () => {
-            const modal = document.getElementById('addPublisherModal');
-            modal.style.display = 'flex';
-            // Очищуємо інпути при відкритті модалки
-            document.getElementById('newPubFirstName').value = '';
-            document.getElementById('newPubLastName').value = '';
-            document.getElementById('newPubGroupTag').selectedIndex = 0;
-        };
-
-        window.closeAddPublisherModal = () => {
-            document.getElementById('addPublisherModal').style.display = 'none';
-            document.getElementById('newPubLastName').value = '';
-            document.getElementById('newPubFirstName').value = '';
-
-            // Скидаємо і ховаємо текст помилки
-            const errBox = document.getElementById('modalErrorMsg');
-            if (errBox) {
-                errBox.textContent = '';
-                errBox.classList.add('hidden');
-                errBox.classList.remove('animate-error-text');
-                errBox.style.fontWeight = 'normal';
-            }
-
-            const tagSelect = document.getElementById('newPubGroupTag');
-            if (tagSelect) tagSelect.selectedIndex = 0;
-        };
-
-        window.saveNewPublisher = async function () {
-            const firstNameEl = document.getElementById('newPubFirstName');
-            const lastNameEl = document.getElementById('newPubLastName');
-            const groupTagEl = document.getElementById('newPubGroupTag') || document.getElementById('newPublisherGroup') || document.getElementById('newPubGroup');
-            const loader = document.getElementById('modal-loader');
-
-            if (!firstNameEl) {
-                console.error("Елемент 'newPubFirstName' не знайдено в HTML!");
-                return;
-            }
-
-            const firstName = (firstNameEl.value || '').trim();
-            const lastName = lastNameEl ? (lastNameEl.value || '').trim() : '';
-            const groupTag = groupTagEl ? (groupTagEl.value || null) : null;
-
-            if (!firstName) {
-                if (typeof showModalError === 'function') showModalError("Ім'я є обов'язковим!");
-                else alert("Ім'я є обов'язковим!");
-                return;
-            }
-
-            if (loader) loader.classList.remove('hidden');
-
-            try {
-                const { data, error } = await supabase.rpc('admin_create_publisher', {
-                    p_name: firstName,
-                    p_last_name: lastName || null,
-                    p_group_tag: groupTag,
-                    p_role: 'user',
-                    p_password: 'Pass123!'
-                });
-
-                if (error) {
-                    console.error('RPC admin_create_publisher error:', error);
-                    if (typeof showModalError === 'function') showModalError('Помилка: ' + (error.message || JSON.stringify(error)));
-                    else alert('Помилка: ' + (error.message || JSON.stringify(error)));
-                    return;
-                }
-
-                if (data && data.success) {
-                    if (firstNameEl) firstNameEl.value = '';
-                    if (lastNameEl) lastNameEl.value = '';
-                    if (groupTagEl && groupTagEl.selectedIndex !== undefined) groupTagEl.selectedIndex = 0;
-
-                    const loginEmail = data.login_email || '';
-
-                    if (typeof showToast === 'function') {
-                        showToast(`Вісника успішно додано! Пошта для входу: ${loginEmail}`);
-                    } else {
-                        alert(`Вісника успішно додано! Пошта для входу: ${loginEmail}`);
+            return `
+                <div style="${borderStyle} padding:15px; margin-bottom:10px; border-radius:8px; cursor:pointer; border: 1px solid #eee;"
+                    onclick="window.location.href='parcel-details.html?id=${p.id}&from=${isMyCard ? "my" : "all"}'">
+                    <div style="display:flex; justify-content:space-between;">
+                        <strong>Дільниця${prefix}${p.name}</strong>
+                        <span class="badge" style="${badgeStyle}">${timeBadgeText}</span>
+                    </div>
+                    <p style="font-size:0.9rem; color:#666; margin:10px 0;">${p.notes || "—"}</p>
+                    ${
+                      showReturnBtn
+                        ? `
+                        <button onclick="event.stopPropagation(); window.returnParcel('${p.id}', '${p.name}')" 
+                            style="background:#ff4757; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-weight:bold;">
+                            Здати
+                        </button>`
+                        : ""
                     }
+                </div>
+            `;
+          })
+          .join("");
+      }
 
-                    const modal = document.getElementById('addPublisherModal');
-                    if (modal) modal.style.display = 'none';
+      let currentTargetUserId = null;
 
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1500);
-                } else {
-                    const msg = data && data.message ? data.message : 'Невідома помилка при створенні';
-                    if (typeof showModalError === 'function') showModalError('Помилка: ' + msg);
-                    else alert('Помилка: ' + msg);
-                }
-            } catch (err) {
-                console.error('Помилка створення вісника:', err);
-                if (typeof showModalError === 'function') showModalError('Помилка: ' + (err && err.message ? err.message : err));
-                else alert('Помилка: ' + (err && err.message ? err.message : err));
-            } finally {
-                if (loader) loader.classList.add('hidden');
+      function validateUniqueName(nameInputId, lastNameInputId) {
+        const nameInput = document.getElementById(nameInputId);
+        const lastNameInput = document.getElementById(lastNameInputId);
+        if (!nameInput || !lastNameInput) return;
+
+        const firstName = nameInput.value.trim().toLowerCase();
+        if (!firstName) {
+          nameInput.style.borderColor = "";
+          return;
+        }
+
+        const nameExists = allUsers.some(
+          (u) =>
+            u.name.toLowerCase() === firstName && u.id !== currentTargetUserId,
+        );
+
+        if (nameExists) {
+          nameInput.style.borderColor = "#ff9800";
+          lastNameInput.placeholder = "⚠️ Прізвище обов'язкове (двійник)";
+          lastNameInput.style.backgroundColor = "#fff8e1";
+        } else {
+          nameInput.style.borderColor = "";
+          lastNameInput.placeholder = "Прізвище (необов'язково)";
+          lastNameInput.style.backgroundColor = "";
+        }
+      }
+
+      // --- ЛОГІКА КАСТОМНОГО CONFIRM-ВІКНА ДЛЯ ВИДАЛЕННЯ ---
+      // Функція showCustomConfirm тепер імпортується з js/parcel-logic.js
+
+      async function initAdminPanel(targetUserId, targetUserData) {
+        if (!window.checkIsAdmin()) return;
+
+        currentTargetUserId = targetUserId;
+
+        document.getElementById("admin-settings-block").style.display = "block";
+      }
+
+      // Ініціалізація сторінки
+      (async () => {
+        await init();
+      })();
+
+      // --- КЕРУВАННЯ ВІСНИКАМИ (МОДАЛКА ТА ВАЛІДАЦІЯ ПОМИЛОК) ---
+
+      window.openAddPublisherModal = () => {
+        const modal = document.getElementById("addPublisherModal");
+        modal.style.display = "flex";
+        // Очищуємо інпути при відкритті модалки
+        document.getElementById("newPubFirstName").value = "";
+        document.getElementById("newPubLastName").value = "";
+        document.getElementById("newPubGroupTag").selectedIndex = 0;
+      };
+
+      window.closeAddPublisherModal = () => {
+        document.getElementById("addPublisherModal").style.display = "none";
+        document.getElementById("newPubLastName").value = "";
+        document.getElementById("newPubFirstName").value = "";
+
+        // Скидаємо і ховаємо текст помилки
+        const errBox = document.getElementById("modalErrorMsg");
+        if (errBox) {
+          errBox.textContent = "";
+          errBox.classList.add("hidden");
+          errBox.classList.remove("animate-error-text");
+          errBox.style.fontWeight = "normal";
+        }
+
+        const tagSelect = document.getElementById("newPubGroupTag");
+        if (tagSelect) tagSelect.selectedIndex = 0;
+      };
+
+      window.saveNewPublisher = async function () {
+        const firstNameEl = document.getElementById("newPubFirstName");
+        const lastNameEl = document.getElementById("newPubLastName");
+        const groupTagEl =
+          document.getElementById("newPubGroupTag") ||
+          document.getElementById("newPublisherGroup") ||
+          document.getElementById("newPubGroup");
+        const loader = document.getElementById("modal-loader");
+
+        if (!firstNameEl) {
+          console.error("Елемент 'newPubFirstName' не знайдено в HTML!");
+          return;
+        }
+
+        const firstName = (firstNameEl.value || "").trim();
+        const lastName = lastNameEl ? (lastNameEl.value || "").trim() : "";
+        const groupTag = groupTagEl ? groupTagEl.value || null : null;
+
+        if (!firstName) {
+          if (typeof showModalError === "function")
+            showModalError("Ім'я є обов'язковим!");
+          else alert("Ім'я є обов'язковим!");
+          return;
+        }
+
+        if (loader) loader.classList.remove("hidden");
+
+        try {
+          const { data, error } = await supabase.rpc("admin_create_publisher", {
+            p_name: firstName,
+            p_last_name: lastName || null,
+            p_group_tag: groupTag,
+            p_role: "user",
+            p_password: "Pass123!",
+          });
+
+          if (error) {
+            console.error("RPC admin_create_publisher error:", error);
+            if (typeof showModalError === "function")
+              showModalError(
+                "Помилка: " + (error.message || JSON.stringify(error)),
+              );
+            else alert("Помилка: " + (error.message || JSON.stringify(error)));
+            return;
+          }
+
+          if (data && data.success) {
+            if (firstNameEl) firstNameEl.value = "";
+            if (lastNameEl) lastNameEl.value = "";
+            if (groupTagEl && groupTagEl.selectedIndex !== undefined)
+              groupTagEl.selectedIndex = 0;
+
+            const loginEmail = data.login_email || "";
+
+            if (typeof showToast === "function") {
+              showToast(
+                `Вісника успішно додано! Пошта для входу: ${loginEmail}`,
+              );
+            } else {
+              alert(`Вісника успішно додано! Пошта для входу: ${loginEmail}`);
             }
-        };
 
+            const modal = document.getElementById("addPublisherModal");
+            if (modal) modal.style.display = "none";
+
+            setTimeout(() => {
+              location.reload();
+            }, 1500);
+          } else {
+            const msg =
+              data && data.message
+                ? data.message
+                : "Невідома помилка при створенні";
+            if (typeof showModalError === "function")
+              showModalError("Помилка: " + msg);
+            else alert("Помилка: " + msg);
+          }
+        } catch (err) {
+          console.error("Помилка створення вісника:", err);
+          if (typeof showModalError === "function")
+            showModalError(
+              "Помилка: " + (err && err.message ? err.message : err),
+            );
+          else alert("Помилка: " + (err && err.message ? err.message : err));
+        } finally {
+          if (loader) loader.classList.add("hidden");
+        }
+      };
+
+      // Відкрити модальне вікно
+      window.openExportModal = function () {
+        const modal = document.getElementById("exportS13Modal");
+        if (modal) modal.style.display = "flex";
+      };
+
+      // Закрити модальне вікно
+      window.closeExportModal = function () {
+        const modal = document.getElementById("exportS13Modal");
+        if (modal) modal.style.display = "none";
+      };
+
+      // Підтвердити та запустити відповідний експорт
+      window.confirmS13Export = function () {
+        const selectedFormat =
+          document.querySelector('input[name="exportFormat"]:checked')?.value ||
+          "pdf";
+
+        if (selectedFormat === "excel") {
+          if (typeof exportS13Excel === "function") {
+            exportS13Excel();
+          } else {
+            console.error("Функцію exportS13Excel не знайдено");
+          }
+        } else {
+          if (typeof exportS13FullPDF === "function") {
+            exportS13FullPDF();
+          } else {
+            console.error("Функцію exportS13FullPDF не знайдено");
+          }
+        }
+
+        closeExportModal();
+      };
     </script>
     <script src="js/recommended-parcels.js"></script>
     <script src="js/dev-tools.js"></script>
+    <script src="js/s13-export.js"></script>
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('✅ Service Worker зареєстровано успішно:', reg.scope))
-                    .catch(err => console.error('❌ Помилка реєстрації Service Worker:', err));
-            });
-        }
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("./sw.js")
+            .then((reg) =>
+              console.log(
+                "✅ Service Worker зареєстровано успішно:",
+                reg.scope,
+              ),
+            )
+            .catch((err) =>
+              console.error("❌ Помилка реєстрації Service Worker:", err),
+            );
+        });
+      }
     </script>
-</body>
-
+  </body>
 </html>

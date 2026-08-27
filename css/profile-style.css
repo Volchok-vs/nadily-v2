@@ -1083,3 +1083,18 @@ h3 {
 .btn-confirm-no:hover {
     background: #d5d5d5;
 }
+.btn-export {
+    white-space: nowrap;
+    padding: 5px 10px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+
+.btn-export:hover {
+    background: #218838;
+}

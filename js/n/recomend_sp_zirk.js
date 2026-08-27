@@ -137,6 +137,20 @@
         return parts.join(' ');
     }
 
+    function formatThresholdTime(days) {
+        if (days === Infinity || isNaN(days)) return "—";
+
+        const totalMonths = Math.round(days / 30.44);
+        const years = Math.floor(totalMonths / 12);
+        const months = totalMonths % 12;
+
+        const parts = [];
+        if (years > 0) parts.push(`${years} р.`);
+        if (months > 0) parts.push(`${months} міс.`);
+
+        return parts.length > 0 ? parts.join(' ') : '0 міс.';
+    }
+
     function formatDate(dateStr) {
         if (!dateStr) return "—";
         const d = new Date(dateStr);
@@ -247,6 +261,7 @@
     }
 
     const allMapUrl = `index.html?recommend_ids=${recommendedParcels.map(p => p.id).join(',')}&from=recommended&draw_stars=1`;
+    const thresholdText = formatThresholdTime(starThresholdDays);
 
     targetContainer.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
@@ -256,7 +271,7 @@
             </a>
         </div>
         <div style="font-size: 0.82rem; color: #854d0e; background: #fef3c7; border: 1px solid #fde68a; padding: 6px 10px; border-radius: 6px; margin-bottom: 12px;">
-            ⭐ Зірочкою позначено найстаріші за часом простою дільниці (понад ${Math.round(starThresholdDays / 30.44)} міс. простою)
+            ⭐ Зірочкою позначено найстаріші за часом простою дільниці (понад ${thresholdText} простою)
         </div>
         <div id="flat-parcels-table-container" style="overflow-x: auto;"></div>
     `;

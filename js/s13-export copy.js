@@ -1,80 +1,10 @@
-// ============================================
-// ДОПОМІЖНЕ МОДАЛЬНЕ ВІКНО ВИБОРУ РОКУ
-// ============================================
-function showYearSelectionModal() {
-    return new Promise((resolve) => {
-        const existingModal = document.getElementById('s13-year-modal');
-        if (existingModal) existingModal.remove();
-
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        const defaultStartYear = (now.getMonth() >= 8) ? currentYear : currentYear - 1;
-
-        const yearsOptions = [];
-        for (let i = 0; i < 4; i++) {
-            const startY = defaultStartYear - i;
-            const label = `${startY}/${(startY + 1).toString().slice(-2)}`;
-            yearsOptions.push({ startYear: startY, label });
-        }
-
-        const overlay = document.createElement('div');
-        overlay.id = 's13-year-modal';
-        overlay.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10001; display:flex; align-items:center; justify-content:center; font-family:sans-serif;";
-
-        overlay.innerHTML = `
-            <div style="background:white; padding:24px; border-radius:12px; min-width:320px; box-shadow:0 10px 25px rgba(0,0,0,0.3); text-align:center;">
-                <h3 style="margin-top:0; color:#333; font-size:18px;">Оберіть службовий рік</h3>
-                <p style="color:#666; font-size:13px; margin-bottom:15px;">Період: 1 вересня — 31 серпня</p>
-                
-                <div style="margin-bottom:20px;">
-                    <select id="s13-year-select" style="width:100%; padding:10px; font-size:15px; border-radius:6px; border:1px solid #ccc; background:#f8f9fa; cursor:pointer;">
-                        ${yearsOptions.map((opt, idx) => `<option value="${opt.startYear}" ${idx === 0 ? 'selected' : ''}>Службовий рік ${opt.label}</option>`).join('')}
-                    </select>
-                </div>
-
-                <div style="display:flex; gap:10px; justify-content:center;">
-                    <button id="s13-cancel-btn" style="flex:1; padding:9px 15px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Скасувати</button>
-                    <button id="s13-confirm-btn" style="flex:1; padding:9px 15px; background:#28a745; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Згенерувати</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(overlay);
-
-        const selectEl = overlay.querySelector('#s13-year-select');
-        const confirmBtn = overlay.querySelector('#s13-confirm-btn');
-        const cancelBtn = overlay.querySelector('#s13-cancel-btn');
-
-        confirmBtn.onclick = () => {
-            const selectedStartYear = parseInt(selectEl.value);
-            const rangeStart = new Date(selectedStartYear, 8, 1, 0, 0, 0, 0); 
-            const rangeEnd = new Date(selectedStartYear + 1, 7, 31, 23, 59, 59, 999); 
-            
-            const serviceYear = `${selectedStartYear}/${selectedStartYear + 1}`;
-            const serviceYearText = `${selectedStartYear}/${(selectedStartYear + 1).toString().slice(-2)}`;
-            
-            overlay.remove();
-            resolve({ rangeStart, rangeEnd, serviceYear, serviceYearText });
-        };
-
-        cancelBtn.onclick = () => {
-            overlay.remove();
-            resolve(null);
-        };
-    });
-}
+// Об'єднаний модуль експорту звіту S-13 (PDF та Excel)
+// Містить функції для експорту територіальних звітів у різні формати
 
 // ============================================
 // ФУНКЦІЯ ЕКСПОРТУ В PDF
 // ============================================
 async function exportS13FullPDF() {
-    const periodConfig = await showYearSelectionModal();
-    if (!periodConfig) return;
-
-    const { rangeStart, rangeEnd, serviceYear } = periodConfig;
-    const rangeStartISO = rangeStart.toISOString();
-    const rangeEndISO = rangeEnd.toISOString();
-
     const scripts = [
         'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
         'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
@@ -96,18 +26,25 @@ async function exportS13FullPDF() {
         }
 
         const { jsPDF } = window.jspdf;
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const rangeStart = (now.getMonth() >= 8) ? new Date(currentYear, 8, 1) : new Date(currentYear - 1, 8, 1);
+        const rangeStartISO = rangeStart.toISOString();
+        const serviceYear = (now.getMonth() >= 8) ? `${currentYear}/${currentYear + 1}` : `${currentYear - 1}/${currentYear}`;
+
         progressDiv.innerHTML = "<b>Завантаження даних...</b>";
 
         const [{ data: allParcels }, { data: allLogs }] = await Promise.all([
             supabase.from('parcels').select('*'),
             supabase.from('territory_logs')
                 .select('parcel_id, publisher_name, taken_at, returned_at, campaign_id, campaign_name')
-                .or(`and(returned_at.gte.${rangeStartISO},returned_at.lte.${rangeEndISO}),and(returned_at.is.null,taken_at.gte.${rangeStartISO},taken_at.lte.${rangeEndISO})`)
-                .order('returned_at', { ascending: true, nullsFirst: false })
+                .or(`taken_at.gte.${rangeStartISO},returned_at.gte.${rangeStartISO}`)
+                .order('taken_at', { ascending: true })
         ]);
 
         const dateOptions = { day: '2-digit', month: '2-digit', year: '2-digit' };
 
+        // --- Допоміжна функція для генерації PDF конкретної категорії ---
         async function generateS13PdfForCategory(categoryParcels, categoryName, updateProgress) {
             if (categoryParcels.length === 0) {
                 updateProgress(`Немає дільниць для категорії "${categoryName}". Пропускаємо.`);
@@ -118,28 +55,24 @@ async function exportS13FullPDF() {
 
             const combinedData = {};
             categoryParcels.forEach(p => {
-                const pLogs = allLogs.filter(log => log.parcel_id === p.id).filter(log => {
-                    if (log.returned_at) {
-                        const retDate = new Date(log.returned_at);
-                        return retDate >= rangeStart && retDate <= rangeEnd;
-                    }
-                    const takenDate = new Date(log.taken_at);
-                    return takenDate >= rangeStart && takenDate <= rangeEnd;
-                });
+                const pLogs = allLogs.filter(log => log.parcel_id === p.id).map(log => ({
+                    publisher_name: log.publisher_name,
+                    taken_at: log.taken_at,
+                    returned_at: log.returned_at,
+                    campaign_id: log.campaign_id,
+                    campaign_name: log.campaign_name
+                }));
 
                 if (p.status === 'taken' && p.taken_by) {
-                    const takenDate = p.taken_at ? new Date(p.taken_at) : null;
-                    if (takenDate && takenDate >= rangeStart && takenDate <= rangeEnd) {
-                        const alreadyInLogs = pLogs.some(l => !l.returned_at && l.publisher_name === p.taken_by);
-                        if (!alreadyInLogs) {
-                            pLogs.push({
-                                publisher_name: p.taken_by,
-                                taken_at: p.taken_at,
-                                returned_at: null,
-                                campaign_id: null,
-                                campaign_name: null
-                            });
-                        }
+                    const alreadyInLogs = pLogs.some(l => !l.returned_at && l.publisher_name === p.taken_by);
+                    if (!alreadyInLogs) {
+                        pLogs.push({
+                            publisher_name: p.taken_by,
+                            taken_at: p.taken_at,
+                            returned_at: null,
+                            campaign_id: null,
+                            campaign_name: null
+                        });
                     }
                 }
                 combinedData[p.id] = pLogs;
@@ -170,16 +103,11 @@ async function exportS13FullPDF() {
                     const logColumnsCount = (categoryName === 'Села') ? 3 : 4; 
                     for (let j = 0; j < logColumnsCount; j++) {
                         const log = pLogs[j];
-                        const takenDate = log ? new Date(log.taken_at) : null;
-                        const returnedDate = log && log.returned_at ? new Date(log.returned_at) : null;
-
-                        const dIn = takenDate ? takenDate.toLocaleDateString('uk-UA', dateOptions) : '';
-                        const dOut = returnedDate ? returnedDate.toLocaleDateString('uk-UA', dateOptions) : '';
+                        const dIn = log ? new Date(log.taken_at).toLocaleDateString('uk-UA', dateOptions) : '';
+                        const dOut = (log && log.returned_at) 
+                            ? new Date(log.returned_at).toLocaleDateString('uk-UA', dateOptions) 
+                            : '';
                         
-                        // Перевіряємо, чи була дата взяття в попередньому службовому році
-                        const isTakenInPreviousYear = takenDate && returnedDate && (takenDate < rangeStart) && (returnedDate >= rangeStart);
-                        const takenDateStyle = isTakenInPreviousYear ? 'color: #1976d2; font-weight: bold;' : '';
-
                         let campaignStyle = '';
                         if (log && log.campaign_id && log.campaign_name) {
                             if (log.campaign_name.toLowerCase().includes('конгрес')) {
@@ -197,7 +125,7 @@ async function exportS13FullPDF() {
                                     ${log ? log.publisher_name : ''}
                                 </div>
                                 <div style="display:flex; height:18px; line-height:18px; font-size:9pt;">
-                                    <div style="flex:1; ${takenDateStyle}">${dIn}</div>
+                                    <div style="flex:1;">${dIn}</div>
                                     <div style="flex:1; border-left:1px solid black;">${dOut}</div>
                                 </div>
                             </td>`;
@@ -292,7 +220,7 @@ async function exportS13FullPDF() {
                 pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
             }
 
-            pdf.save(`S-13_${categoryName}_${serviceYear.replace('/', '-')}.pdf`);
+            pdf.save(`S-13_${categoryName}_${serviceYear}.pdf`);
             tempContainer.remove();
         }
 
@@ -322,13 +250,6 @@ async function exportS13FullPDF() {
 // ФУНКЦІЯ ЕКСПОРТУ В EXCEL
 // ============================================
 async function exportS13Excel() {
-    const periodConfig = await showYearSelectionModal();
-    if (!periodConfig) return;
-
-    const { rangeStart, rangeEnd, serviceYearText } = periodConfig;
-    const rangeStartISO = rangeStart.toISOString();
-    const rangeEndISO = rangeEnd.toISOString();
-
     let statusDiv = document.getElementById('excel-export-status');
     if (!statusDiv) {
         statusDiv = document.createElement('div');
@@ -362,13 +283,19 @@ async function exportS13Excel() {
             });
         }
 
+        const now = new Date();
+        const startYear = (now.getMonth() >= 8) ? now.getFullYear() : now.getFullYear() - 1;
+        const rangeStart = new Date(startYear, 8, 1);
+        const rangeStartISO = rangeStart.toISOString();
+        const serviceYearText = `${startYear}/${(startYear + 1).toString().slice(-2)}`;
+
         setStatus("Отримання даних...");
         const [{ data: rawParcels }, { data: logs }] = await Promise.all([
             supabase.from('parcels').select('*'),
             supabase.from('territory_logs')
                 .select('parcel_id, publisher_name, taken_at, returned_at, campaign_id, campaign_name')
-                .or(`and(returned_at.gte.${rangeStartISO},returned_at.lte.${rangeEndISO}),and(returned_at.is.null,taken_at.gte.${rangeStartISO},taken_at.lte.${rangeEndISO})`)
-                .order('returned_at', { ascending: true, nullsFirst: false })
+                .or(`taken_at.gte.${rangeStartISO},returned_at.gte.${rangeStartISO}`)
+                .order('taken_at', { ascending: true })
         ]);
 
         const workbook = new ExcelJS.Workbook();
@@ -378,9 +305,14 @@ async function exportS13Excel() {
         const parcelsForCity = cityParcels.sort((a, b) => (parseInt(a.name) || 0) - (parseInt(b.name) || 0));
         const citySheet = workbook.addWorksheet('Місто');
         citySheet.pageSetup = {
-            paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0,
+            paperSize: 9,
+            orientation: 'portrait',
+            fitToPage: true,
+            fitToWidth: 1,
+            fitToHeight: 0,
             margins: { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
-            horizontalCentered: true, printTitlesRow: '5:6'
+            horizontalCentered: true,
+            printTitlesRow: '5:6'
         };
 
         citySheet.columns = [
@@ -391,7 +323,7 @@ async function exportS13Excel() {
 
         citySheet.mergeCells('A1:J1');
         const cityTitle = citySheet.getCell('A1');
-        cityTitle.value = 'ЗАПИСИ ПРО ОПРАЦЮВАННЯ ТЕРИТОРІЙ (Місто)';
+        cityTitle.value = 'ЗАПИСИ ПРО ОПРАЦЮВАННЯ ТЕРИТОРІЙ (Міто)';
         cityTitle.font = { bold: true, size: 16 };
         cityTitle.alignment = { horizontal: 'center', vertical: 'middle' };
 
@@ -426,21 +358,10 @@ async function exportS13Excel() {
         citySheet.mergeCells('G5:H5'); citySheet.mergeCells('I5:J5');
 
         parcelsForCity.forEach(p => {
-            let pLogs = logs.filter(l => l.parcel_id === p.id).filter(l => {
-                if (l.returned_at) {
-                    const retDate = new Date(l.returned_at);
-                    return retDate >= rangeStart && retDate <= rangeEnd;
-                }
-                const takenDate = new Date(l.taken_at);
-                return takenDate >= rangeStart && takenDate <= rangeEnd;
-            });
-
+            let pLogs = logs.filter(l => l.parcel_id === p.id);
             if (p.status === 'taken' && p.taken_by) {
-                const takenDate = p.taken_at ? new Date(p.taken_at) : null;
-                if (takenDate && takenDate >= rangeStart && takenDate <= rangeEnd) {
-                    if (!pLogs.some(l => !l.returned_at && l.publisher_name === p.taken_by)) {
-                        pLogs.push({ publisher_name: p.taken_by, taken_at: p.taken_at, returned_at: null, campaign_id: null, campaign_name: null });
-                    }
+                if (!pLogs.some(l => !l.returned_at && l.publisher_name === p.taken_by)) {
+                    pLogs.push({ publisher_name: p.taken_by, taken_at: p.taken_at, returned_at: null, campaign_id: null, campaign_name: null });
                 }
             }
 
@@ -499,19 +420,6 @@ async function exportS13Excel() {
                             }
                         }
                     }
-
-                    // Перевірка та стилізація дати взяття в Excel
-                    if (rowIndex === 1 && (c === 3 || c === 5 || c === 7 || c === 9)) {
-                        const logIndex = Math.floor((c - 3) / 2);
-                        const log = pLogs[logIndex];
-                        if (log) {
-                            const takenDate = new Date(log.taken_at);
-                            const returnedDate = log.returned_at ? new Date(log.returned_at) : null;
-                            if (takenDate && returnedDate && (takenDate < rangeStart) && (returnedDate >= rangeStart)) {
-                                cell.font = { color: { argb: 'FF1976D2' }, bold: true };
-                            }
-                        }
-                    }
                 }
             });
 
@@ -540,7 +448,12 @@ async function exportS13Excel() {
             let pageCount = 1;
             
             while (remainingParcels > 0) {
-                let parcelsOnPage = Math.min(remainingParcels, parcelsPerPage);
+                let parcelsOnPage;
+                if (pageCount === 1) {
+                    parcelsOnPage = Math.min(remainingParcels, parcelsPerPage);
+                } else {
+                    parcelsOnPage = Math.min(remainingParcels, parcelsPerPage);
+                }
                 
                 if (parcelsOnPage < remainingParcels) {
                     const breakRow = currentRow + (parcelsOnPage * rowsPerParcel);
@@ -563,15 +476,18 @@ async function exportS13Excel() {
             villageSheet.pageSetup = {
                 paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0,
                 margins: { left: 0.5, right: 0.5, top: 0.55, bottom: 0.39, header: 0.3, footer: 0.3 },
-                horizontalCentered: true, printTitlesRow: '5:6'
+                horizontalCentered: true,
+                printTitlesRow: '5:6'
             };
 
             villageSheet.columns = [
-                { width: 12 }, { width: 12 },
+                { width: 12 },
+                { width: 12 },
                 { width: 10 }, { width: 12 },
                 { width: 10 }, { width: 12 },
                 { width: 10 }, { width: 12 }
             ];
+            const totalVillageColumns = 8;
 
             villageSheet.mergeCells('A1:H1');
             const villageTitle = villageSheet.getCell('A1');
@@ -609,21 +525,10 @@ async function exportS13Excel() {
             villageSheet.mergeCells('C5:D5'); villageSheet.mergeCells('E5:F5'); villageSheet.mergeCells('G5:H5');
 
             parcelsForVillage.forEach(p => {
-                let pLogs = logs.filter(l => l.parcel_id === p.id).filter(l => {
-                    if (l.returned_at) {
-                        const retDate = new Date(l.returned_at);
-                        return retDate >= rangeStart && retDate <= rangeEnd;
-                    }
-                    const takenDate = new Date(l.taken_at);
-                    return takenDate >= rangeStart && takenDate <= rangeEnd;
-                });
-
+                let pLogs = logs.filter(l => l.parcel_id === p.id);
                 if (p.status === 'taken' && p.taken_by) {
-                    const takenDate = p.taken_at ? new Date(p.taken_at) : null;
-                    if (takenDate && takenDate >= rangeStart && takenDate <= rangeEnd) {
-                        if (!pLogs.some(l => !l.returned_at && l.publisher_name === p.taken_by)) {
-                            pLogs.push({ publisher_name: p.taken_by, taken_at: p.taken_at, returned_at: null, campaign_id: null, campaign_name: null });
-                        }
+                    if (!pLogs.some(l => !l.returned_at && l.publisher_name === p.taken_by)) {
+                        pLogs.push({ publisher_name: p.taken_by, taken_at: p.taken_at, returned_at: null, campaign_id: null, campaign_name: null });
                     }
                 }
 
@@ -680,19 +585,6 @@ async function exportS13Excel() {
                                 }
                             }
                         }
-
-                        // Перевірка та стилізація дати взяття в Excel
-                        if (rowIndex === 1 && (c === 3 || c === 5 || c === 7)) {
-                            const logIndex = Math.floor((c - 3) / 2);
-                            const log = pLogs[logIndex];
-                            if (log) {
-                                const takenDate = new Date(log.taken_at);
-                                const returnedDate = log.returned_at ? new Date(log.returned_at) : null;
-                                if (takenDate && returnedDate && (takenDate < rangeStart) && (returnedDate >= rangeStart)) {
-                                    cell.font = { color: { argb: 'FF1976D2' }, bold: true };
-                                }
-                            }
-                        }
                     }
                 });
 
@@ -721,7 +613,12 @@ async function exportS13Excel() {
                 let pageCount = 1;
                 
                 while (remainingParcels > 0) {
-                    let parcelsOnPage = Math.min(remainingParcels, parcelsPerPage);
+                    let parcelsOnPage;
+                    if (pageCount === 1) {
+                        parcelsOnPage = Math.min(remainingParcels, parcelsPerPage);
+                    } else {
+                        parcelsOnPage = Math.min(remainingParcels, parcelsPerPage);
+                    }
                     
                     if (parcelsOnPage < remainingParcels) {
                         const breakRow = currentRow + (parcelsOnPage * rowsPerParcel);
@@ -755,6 +652,6 @@ async function exportS13Excel() {
     }
 }
 
-// Глобальний доступ
+// Робимо функції доступними глобально
 window.exportS13FullPDF = exportS13FullPDF;
 window.exportS13Excel = exportS13Excel;
