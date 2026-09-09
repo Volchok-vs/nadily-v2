@@ -93,7 +93,7 @@ window.generateTakenParcelsReportDirect = async function() {
                 .report-controls { display: flex; align-items: center; gap: 8px; font-size: 13px; }
                 .report-controls select { padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; font-size: 13px; cursor: pointer; }
                 .report-table-wrapper { overflow-x: auto; }
-                .report-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+                .report-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.02); margin: 0; }
                 .report-table th, .report-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
                 .report-table th { background: #f1f5f9; font-weight: 600; color: #475569; }
                 .empty { padding: 32px; text-align: center; color: #94a3b8; font-style: italic; }
