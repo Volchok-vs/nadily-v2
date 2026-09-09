@@ -90,16 +90,7 @@
             >
               🗓️ Кампанії
             </h3>
-            <span
-              id="campaignHeaderText"
-              style="
-                font-size: 0.95rem;
-                color: #1976d2;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-              "
-            >
+            <span id="campaignHeaderText">
               <span id="campaignHeaderIcon" style="font-size: 1.1rem">＋</span>
               <span id="campaignHeaderLabel">Розгорнути</span>
             </span>
@@ -139,21 +130,12 @@
             >
               📜 Історія опрацювань
             </h3>
-            <span
-              id="historyHeaderText"
-              style="
-                font-size: 0.95rem;
-                color: #1976d2;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-              "
-            >
+            <span id="historyHeaderText">
               <span id="historyHeaderIcon" style="font-size: 1.1rem">＋</span>
               <span id="historyHeaderLabel">Розгорнути</span>
             </span>
           </div>
-          <div id="historyContent" class="hidden" style="margin-top: 12px">
+          <div id="historyContent" class="hidden" style="    margin-top: 12px; overflow-x: auto; overflow-y: visible;">
             <div id="myHistory">Завантаження історії...</div>
           </div>
         </div>
@@ -965,8 +947,8 @@
             const parcelName = log.parcels?.name || "Невідомо";
             const isVillage = log.parcels?.category === "Село";
             const displayName = isVillage
-              ? `Дільниця: ${parcelName}`
-              : `Дільниця № ${parcelName}`;
+              ? ` ${parcelName}`
+              : `№ ${parcelName}`;
 
             const dateIn = log.taken_at
               ? new Date(log.taken_at).toLocaleDateString("uk-UA")
@@ -1147,7 +1129,7 @@
               campaign.campaign_end,
             );
             return `
-                    <div style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 10px; background:#f1f8f5; margin-bottom: 8px;">
+                    <div style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 10px; background:#f1f8f5; margin: 0 10px 8px;">
                         <div style="display:flex; justify-content:space-between; gap: 12px; flex-wrap:wrap; align-items:center;">
                             <strong style="font-size: 1rem;">${campaign.name}</strong>
                             <span style="font-size: 0.9rem; color:#2e7d32; font-weight: 600;">Активна</span>
@@ -1197,7 +1179,7 @@
           .join("");
 
         return `
-                <div style="margin-bottom: 14px;">
+                <div style="margin: 0 10px 14px;">
                     <h4 style="margin: 0 0 8px 0; font-size: 1rem;">${title}</h4>
                     ${itemsHtml}
                 </div>

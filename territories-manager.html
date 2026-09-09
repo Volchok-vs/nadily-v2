@@ -2411,24 +2411,38 @@
 
         // Перемикання головних вкладок бічного меню
         window.switchTab = (tabName) => {
+            const activeTab = document.getElementById('tab-' + tabName);
+            
+            // Перевірка існування табу перед перемиканням
+            if (!activeTab) {
+                console.warn(`Вкладку з ID 'tab-${tabName}' не знайдено.`);
+                return;
+            }
+
+            // Приховуємо всі таби та знімаємо активність з меню
             document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
-            const activeTab = document.getElementById('tab-' + tabName);
-            if (activeTab) {
-                activeTab.classList.remove('hidden');
-            }
+            // Показуємо потрібний таб
+            activeTab.classList.remove('hidden');
 
-            const navItems = document.querySelectorAll('.nav-item');
-            navItems.forEach(item => {
-                if (item.getAttribute('onclick') && item.getAttribute('onclick').includes(`'${tabName}'`)) {
+            // Надійне визначення активної кнопки (data-атрибут або onclick)
+            document.querySelectorAll('.nav-item').forEach(item => {
+                const onClickAttr = item.getAttribute('onclick') || '';
+                const dataTab = item.getAttribute('data-tab');
+                
+                if (dataTab === tabName || onClickAttr.includes(`'${tabName}'`) || onClickAttr.includes(`"${tabName}"`)) {
                     item.classList.add('active');
                 }
             });
 
-            updateMobileTitle(tabName);
+            if (typeof updateMobileTitle === 'function') {
+                updateMobileTitle(tabName);
+            }
+            
             localStorage.setItem('currentAdminTab', tabName);
 
+            // Закриваємо мобільне меню
             if (window.innerWidth <= 768) {
                 const sidebar = document.querySelector('.sidebar');
                 const overlay = document.querySelector('.sidebar-overlay');
@@ -2438,12 +2452,13 @@
                 }
             }
 
-            if (tabName === 'territories') {
-                if (typeof loadTerritories === 'function') loadTerritories();
-            } else if (tabName === 'settings') {
-                if (typeof loadCampaigns === 'function') loadCampaigns();
-            } else if (tabName === 'publishers-admin') {
-                if (typeof loadPublishersAdminList === 'function') loadPublishersAdminList();
+            // Завантаження даних залежно від табу
+            if (tabName === 'territories' && typeof loadTerritories === 'function') {
+                loadTerritories();
+            } else if (tabName === 'settings' && typeof loadCampaigns === 'function') {
+                loadCampaigns();
+            } else if (tabName === 'publishers-admin' && typeof loadPublishersAdminList === 'function') {
+                loadPublishersAdminList();
             }
         };
 
@@ -5381,29 +5396,35 @@
                 }
             });
 
-            // Відновлюємо попередній таб з localStorage
+            // =========================================================================
+            // ВІДНОВЛЕННЯ ТАБУ: З URL (з адмін-хабу) АБО З LOCALSTORAGE
+            // =========================================================================
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlTab = urlParams.get('tab');
             const savedTab = localStorage.getItem('currentAdminTab');
-            if (savedTab) {
-                // Активуємо збережений таб
-                switchTab(savedTab);
-                if (savedTab === 'territories') {
-                    await loadTerritories();
-                } else if (savedTab === 'settings') {
-                    await loadCampaigns();
-                }
-            } else {
-                // Якщо збереженого табу немає, завантажуємо території за замовчуванням
-                switchTab('territories');
-                await loadTerritories();
-                updateMobileTitle('territories');
+
+            // Пріоритет: 1) Параметр з URL, 2) Збережений таб у localStorage, 3) За замовчуванням 'territories'
+            const activeTab = urlTab || savedTab || 'territories';
+
+            // Активуємо потрібний таб через рідну функцію switchTab
+            if (typeof switchTab === 'function') {
+                switchTab(activeTab);
+            }
+
+            // Завантажуємо відповідні дані залежно від обраної вкладки
+            if (activeTab === 'territories') {
+                if (typeof loadTerritories === 'function') await loadTerritories();
+                if (typeof updateMobileTitle === 'function') updateMobileTitle('territories');
+            } else if (activeTab === 'settings') {
+                if (typeof loadCampaigns === 'function') await loadCampaigns();
+            } else if (activeTab === 'publishers-admin' || activeTab === 'users') {
+                if (typeof window.loadPublishersAdminList === 'function') await window.loadPublishersAdminList();
             }
 
             addTableSorting(); // Додаємо сортування після завантаження
-            // При першому відкритті вкладки "Опрацювання" дані НЕ ЗАВАНТАЖУЮТЬСЯ
-            // Користувач має натиснути кнопки "Пошук"
 
             // Ховаємо лоадер після завантаження
-            hideLoader();
+            if (typeof hideLoader === 'function') hideLoader();
         });
 
         // =========================================================================
@@ -6277,6 +6298,6 @@
     <!-- Інші твої скрипти (Leaflet, Supabase init тощо) -->
     <script src="js/analytics-reporter.js"></script>
 </body>
-</body>
+
 
 </html>

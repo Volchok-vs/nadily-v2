@@ -656,6 +656,15 @@ h3 {
     overflow-y: visible;
 }
 
+span#campaignHeaderText, span#historyHeaderText {
+    font-size: 0.95rem;
+    color: #1976d2;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+}
+
 #tab-my-card > .card:not(:last-child) {
     margin-bottom: 10px;
 }

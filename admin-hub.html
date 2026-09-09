@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Панель Адміністратора</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/profile-style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1565C0">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f4f5f7;
+      color: #333;
+      display: flex;
+      justify-content: center;
+    }
+
+    .admin-hub-container {
+      width: 100%;
+      max-width: 500px;
+      display: flex;
+      flex-direction: column;
+      min-height: calc(100vh - 80px);
+    }
+
+    .admin-section-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #64748b;
+      letter-spacing: 0.05em;
+      margin: 12px 0 8px 4px;
+    }
+
+    .admin-menu-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px; /* Додано проміжок між кнопками в групі */
+      background: #fbf8f8;
+      border-radius: 12px;
+      padding: 6px; /* Внутрішній відступ контейнера для збалансованого вигляду */
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e2e8f0;
+      margin-bottom: 16px;
+    }
+
+    .admin-menu-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: #ffffff;
+      border: 1px solid #f1f5f9; /* Легка рамка для відокремлення */
+      border-radius: 8px; /* Скруглення окремих кнопок */
+      text-decoration: none;
+      color: #1e293b;
+      font-weight: 600;
+      font-size: 0.95rem;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .admin-menu-item:active {
+      background-color: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    .admin-menu-item .item-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .admin-menu-item .arrow {
+      color: #94a3b8;
+      font-size: 1.1rem;
+    }
+
+    .admin-menu-item.logout {
+      color: #d32f2f;
+      border-color: #fee2e2;
+      background-color: #fef2f2;
+    }
+
+    .admin-menu-item.logout:active {
+      background-color: #fecaca;
+    }
+
+    .logout-group {
+      margin-top: auto;
+      margin-bottom: 60px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="admin-hub-container">
+    
+   <!-- Розділ: Загальне -->
+<div class="admin-section-title">Ще</div>
+<div class="admin-menu-list">
+  <button id="statsBtn" class="admin-menu-item">
+    <div class="item-content">
+      <span>📈</span>
+      <span>Статистика</span>
+    </div>
+    <span class="arrow">›</span>
+  </button>
+  <a href="territories-manager.html?tab=analytics" class="admin-menu-item">
+    <div class="item-content">
+      <span>📊</span>
+      <span>Аналітика</span>
+    </div>
+    <span class="arrow">›</span>
+  </a>
+</div>
+
+<!-- Розділ: Менеджер територій -->
+<div class="admin-menu-list">
+  <a href="territories-manager.html?tab=territories" class="admin-menu-item">
+    <div class="item-content">
+      <span>🗺️</span>
+      <span>Території</span>
+    </div>
+    <span class="arrow">›</span>
+  </a>
+  <a href="territories-manager.html?tab=publishers-admin" class="admin-menu-item">
+    <div class="item-content">
+      <span>👤</span>
+      <span>Користувачі</span>
+    </div>
+    <span class="arrow">›</span>
+  </a>
+  
+  <a href="territories-manager.html?tab=export-import" class="admin-menu-item">
+    <div class="item-content">
+      <span>🔃</span>
+      <span>Експорт та Імпорт</span>
+    </div>
+    <span class="arrow">›</span>
+  </a>
+  
+</div>
+
+    <!-- Вихід з акаунту -->
+    <div class="admin-menu-list logout-group">
+      <button id="logoutBtn" class="admin-menu-item logout">
+        <div class="item-content">
+          <span>🚪</span>
+          <span>Вийти з облікового запису</span>
+        </div>
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    // 1. Перевірка доступу адміна
+    (function checkAdminAccess() {
+      const role = (localStorage.getItem('userRole') || '').toLowerCase();
+      const isAdmin = role === 'admin' || role === 'superadmin' || role === 'super_admin';
+      if (!isAdmin) {
+        window.location.href = 'more.html';
+      }
+    })();
+
+    // 2. Логіка виходу з акаунту
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      if (confirm('Ви дійсно бажаєте вийти з облікового запису?')) {
+        localStorage.clear();
+        window.location.href = 'login.html';
+      }
+    });
+
+    // 3. Логіка кліків по статистиці (1 клік = аналітика, 3 кліки = швидкий звіт)
+    (function() {
+      const statsBtn = document.getElementById('statsBtn');
+      if (!statsBtn) return;
+
+      let clickTimes = [];
+      let redirectTimer = null;
+
+      statsBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const now = Date.now();
+        clickTimes = clickTimes.filter(t => now - t < 1200);
+        clickTimes.push(now);
+
+        if (clickTimes.length >= 3) {
+          if (redirectTimer) clearTimeout(redirectTimer);
+          clickTimes = [];
+
+          if (window.generateTakenParcelsReportDirect) {
+            window.generateTakenParcelsReportDirect();
+          } else {
+            console.warn("Модуль звіту ще завантажується...");
+          }
+        } else if (clickTimes.length === 1) {
+          redirectTimer = setTimeout(() => {
+            clickTimes = [];
+            window.location.href = 'admin-statistics.html';
+          }, 600);
+        }
+      }, true);
+    })();
+  </script>
+
+  <!-- Завантаження модулів -->
+  <script type="module" src="js/insights-engine.js"></script>
+  <script src="js/app-navigation.js"></script>
+</body>
+</html>
