@@ -16,22 +16,17 @@
       justify-content: center;
     }
 
-    /* Контейнер для центрування та обмеження ширини */
     .page-container {
       width: 100%;
       max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      min-height: calc(100vh - 60px);
     }
 
-    .header {
-      margin: 12px 0 20px 4px;
-    }
-    .header h1 {
-      margin: 0;
-      font-size: 22px;
-      font-weight: 700;
-    }
+    .header { margin: 12px 0 20px 4px; }
+    .header h1 { margin: 0; font-size: 22px; font-weight: 700; }
 
-    /* Блок списку налаштувань */
     .menu-group {
       background: #ffffff;
       border-radius: 12px;
@@ -50,12 +45,14 @@
       font-size: 15px;
       text-align: left;
       cursor: pointer;
+      color: #333;
       transition: background-color 0.15s ease;
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    .menu-item:active {
-      background-color: #f0f0f0;
-    }
+    .menu-item:not(:last-child) { border-bottom: 1px solid #f0f0f0; }
+    .menu-item:active { background-color: #f0f0f0; }
 
     .menu-icon {
       font-size: 18px;
@@ -66,10 +63,8 @@
       width: 24px;
     }
 
-    .menu-item.logout {
-      color: #d32f2f;
-      font-weight: 500;
-    }
+    .logout-group { margin-top: auto; padding-top: 10px; }
+    .menu-item.logout { color: #d32f2f; font-weight: 500; }
   </style>
 </head>
 <body>
@@ -79,7 +74,16 @@
       <h1>Додатково</h1>
     </div>
 
+    <!-- Кнопка Статистика -->
     <div class="menu-group">
+      <button id="statsBtn" class="menu-item">
+        <span class="menu-icon">📈</span>
+        <span>Статистика</span>
+      </button>
+    </div>
+
+    <!-- Кнопка виходу -->
+    <div class="menu-group logout-group">
       <button id="logoutBtn" class="menu-item logout">
         <span class="menu-icon">🚪</span>
         <span>Вийти з облікового запису</span>
@@ -87,16 +91,56 @@
     </div>
   </div>
 
-  <script>
+ <script>
+    // 1. Логіка виходу з акаунту
     document.getElementById('logoutBtn').addEventListener('click', () => {
       if (confirm('Ви дійсно бажаєте вийти з облікового запису?')) {
-        localStorage.removeItem('userId');
-        localStorage.removeItem('userName');
+        localStorage.clear();
         window.location.href = 'login.html';
       }
     });
+
+    // 2. Оновлена логіка кліків із збільшеним інтервалом
+    (function() {
+      const statsBtn = document.getElementById('statsBtn');
+      if (!statsBtn) return;
+
+      let clickTimes = [];
+      let redirectTimer = null;
+
+      statsBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const now = Date.now();
+        
+        // Збільшено до 1200 мс (1.2 сек) — тепер є достатньо часу на 3 кліки
+        clickTimes = clickTimes.filter(t => now - t < 1200);
+        clickTimes.push(now);
+
+        if (clickTimes.length >= 3) {
+          // Зафіксовано 3 кліки — скасовуємо таймер одиночного переходу
+          if (redirectTimer) clearTimeout(redirectTimer);
+          clickTimes = [];
+
+          if (window.generateTakenParcelsReportDirect) {
+            window.generateTakenParcelsReportDirect();
+          } else {
+            console.warn("Модуль звіту ще завантажується...");
+          }
+        } else if (clickTimes.length === 1) {
+          // Одиночний клік — чекаємо 600 мс перед переходом
+          redirectTimer = setTimeout(() => {
+            clickTimes = [];
+            window.location.href = 'admin-statistics.html';
+          }, 600);
+        }
+      }, true);
+    })();
   </script>
 
+  <!-- Скрипти завантажуються після прослуховувача -->
+  <script type="module" src="js/insights-engine.js"></script>
   <script src="js/app-navigation.js"></script>
 </body>
 </html>

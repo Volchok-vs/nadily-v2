@@ -50,11 +50,14 @@ function showYearSelectionModal() {
             const rangeStart = new Date(selectedStartYear, 8, 1, 0, 0, 0, 0); 
             const rangeEnd = new Date(selectedStartYear + 1, 7, 31, 23, 59, 59, 999); 
             
+            const prevTheocraticStart = new Date(rangeStart);
+            prevTheocraticStart.setFullYear(prevTheocraticStart.getFullYear() - 1);
+
             const serviceYear = `${selectedStartYear}/${selectedStartYear + 1}`;
             const serviceYearText = `${selectedStartYear}/${(selectedStartYear + 1).toString().slice(-2)}`;
             
             overlay.remove();
-            resolve({ rangeStart, rangeEnd, serviceYear, serviceYearText });
+            resolve({ rangeStart, rangeEnd, prevTheocraticStart, serviceYear, serviceYearText });
         };
 
         cancelBtn.onclick = () => {
@@ -64,6 +67,228 @@ function showYearSelectionModal() {
     });
 }
 
+// s13-export.js — Єдиний модуль для генерації, відображення та експорту картки S-13
+
+function getTheocraticStart(date = new Date()) {
+  const year = date.getMonth() >= 8 ? date.getFullYear() : date.getFullYear() - 1;
+  return new Date(year, 8, 1, 0, 0, 0, 0);
+}
+
+/**
+ * Перевірка: чи була дільниця взята в минулому службовому році, але активна/повернена в поточному
+ */
+function isTakenInPreviousYear(takenDateStr, returnedDateStr, rangeStart) {
+  if (!takenDateStr) return false;
+  const takenDate = new Date(takenDateStr);
+  const returnedDate = returnedDateStr ? new Date(returnedDateStr) : null;
+  
+  // Взято до початку поточного службового року
+  const takenBefore = takenDate < rangeStart;
+  // І досі на руках АБО повернено вже в поточному службовому році
+  const activeOrReturnedInCurrent = !returnedDate || returnedDate >= rangeStart;
+
+  return takenBefore && activeOrReturnedInCurrent;
+}
+
+/**
+ * Отримання кольору та стилю кампанії
+ */
+function getCampaignStyle(campaignName) {
+  if (!campaignName) return { bgHex: '', colorHex: '', styleStr: '' };
+  const cName = campaignName.toLowerCase();
+  
+  if (cName.includes("конгрес")) {
+    return { bgHex: 'FFE9C46A', colorHex: 'FF5C4B1B', styleStr: 'background-color: rgba(233, 196, 106, 0.5); color: #5C4B1B;' };
+  } else if (cName.includes("спец") || cName.includes("спеціальна")) {
+    return { bgHex: 'FFFFCDB2', colorHex: 'FF6D4C41', styleStr: 'background-color: rgba(255, 205, 178, 0.5); color: #6D4C41;' };
+  } else if (cName.includes("спомин")) {
+    return { bgHex: 'FFB2B9AD', colorHex: 'FF2F3E30', styleStr: 'background-color: rgba(178, 185, 173, 0.5); color: #2F3E30;' };
+  }
+  return { bgHex: '', colorHex: '', styleStr: '' };
+}
+
+/**
+ * 1. ЄДИНЕ ДЖЕРЕЛО ДАНИХ (Data Provider)
+ */
+async function fetchS13Data(category = 'city', periodConfig = null) {
+  let rangeStart, rangeEnd, prevTheocraticStart;
+
+  if (periodConfig) {
+    rangeStart = periodConfig.rangeStart;
+    rangeEnd = periodConfig.rangeEnd;
+    prevTheocraticStart = periodConfig.prevTheocraticStart;
+  } else {
+    rangeStart = getTheocraticStart();
+    rangeEnd = new Date(rangeStart.getFullYear() + 1, 7, 31, 23, 59, 59, 999);
+    prevTheocraticStart = new Date(rangeStart);
+    prevTheocraticStart.setFullYear(prevTheocraticStart.getFullYear() - 1);
+  }
+
+  const prevStartISO = prevTheocraticStart.toISOString();
+
+  const [parcelsRes, logsRes] = await Promise.all([
+    supabase.from('parcels').select('*'),
+    supabase.from('territory_logs')
+      .select('parcel_id, publisher_name, taken_at, returned_at, campaign_id, campaign_name')
+      .or(`taken_at.gte.${prevStartISO},returned_at.gte.${prevStartISO}`)
+      .order('taken_at', { ascending: true })
+  ]);
+
+  if (parcelsRes.error || logsRes.error) {
+    throw new Error(parcelsRes.error?.message || logsRes.error?.message);
+  }
+
+  let parcels = parcelsRes.data.filter(p => 
+    category === 'city' ? p.category !== 'Село' : p.category === 'Село'
+  );
+
+  parcels.sort((a, b) => {
+    if (category === 'city') {
+      return (parseInt(a.name.replace(/\D/g, '')) || 0) - (parseInt(b.name.replace(/\D/g, '')) || 0);
+    }
+    return a.name.localeCompare(b.name, 'uk', { numeric: true });
+  });
+
+  const allLogs = logsRes.data;
+
+  const items = parcels.map(p => {
+    const pLogs = allLogs.filter(log => {
+      if (log.parcel_id !== p.id) return false;
+      const takenDate = log.taken_at ? new Date(log.taken_at) : null;
+      const returnedDate = log.returned_at ? new Date(log.returned_at) : null;
+      
+      if (returnedDate) return returnedDate >= rangeStart && returnedDate <= rangeEnd;
+      return takenDate && takenDate >= rangeStart && takenDate <= rangeEnd;
+    }).map(log => ({
+      name: log.publisher_name,
+      in: log.taken_at,
+      out: log.returned_at,
+      campaign_id: log.campaign_id,
+      campaign_name: log.campaign_name
+    }));
+
+    if (p.status === 'taken' && p.taken_by) {
+      const takenDate = p.taken_at ? new Date(p.taken_at) : null;
+      if (takenDate && takenDate <= rangeEnd) {
+        if (!pLogs.some(l => !l.out && l.name === p.taken_by)) {
+          pLogs.push({ name: p.taken_by, in: p.taken_at, out: null });
+        }
+      }
+    }
+
+    let rawLastDate = p.last_processed ? new Date(p.last_processed) : null;
+    const prevYearLogs = allLogs.filter(log => {
+      if (log.parcel_id !== p.id || !log.returned_at) return false;
+      const retDate = new Date(log.returned_at);
+      return retDate >= prevTheocraticStart && retDate < rangeStart;
+    });
+
+    if (prevYearLogs.length > 0) {
+      const maxPrevLogDate = new Date(Math.max(...prevYearLogs.map(l => new Date(l.returned_at))));
+      if (!rawLastDate || maxPrevLogDate > rawLastDate) {
+        rawLastDate = maxPrevLogDate;
+      }
+    }
+
+    return {
+      parcel: p,
+      lastProcessedDate: (rawLastDate && rawLastDate < rangeStart) ? rawLastDate : null,
+      sessions: pLogs
+    };
+  });
+
+  return { items, rangeStart, rangeEnd };
+}
+
+/**
+ * 2. ВІДОБРАЖЕННЯ ТАБЛИЦІ В ІНТЕРФЕЙСІ (HTML Grid)
+ */
+async function renderS13TableGrid(category = 'city') {
+  const tHead = document.getElementById('tHead');
+  const tBody = document.getElementById('tBody');
+  if (!tHead || !tBody) return;
+
+  try {
+    const { items, rangeStart } = await fetchS13Data(category);
+
+    let maxCols = 1;
+    items.forEach(item => {
+      if (item.sessions.length > maxCols) maxCols = item.sessions.length;
+    });
+
+    tHead.innerHTML = `
+      <tr>
+        <th rowspan="2" style="width: 40px; min-width: 40px; border:1px solid #444;">№</th>
+        <th rowspan="2" class="help-tooltip" style="width: 110px; min-width: 110px; border:1px solid #444; cursor: help; position: relative;">
+            Остання дата опрацювання<span style="color:red;">*</span>
+        </th>
+        ${`<th colspan="2" style="width: 210px; min-width: 210px; border:1px solid #444;">Вісник</th>`.repeat(maxCols)}
+      </tr>
+      <tr>
+        ${`<th style="background:#e2efda; width: 100px; min-width: 100px; border:1px solid #444;">Дата отримання</th>
+               <th style="background:#fce4d6; width: 100px; min-width: 100px; border:1px solid #444;">Дата опрацювання</th>`.repeat(maxCols)}
+      </tr>
+    `;
+
+    tBody.innerHTML = '';
+    let hasCampaignInTable = false;
+
+    items.forEach(({ parcel, lastProcessedDate, sessions }) => {
+      const lastDoneText = lastProcessedDate 
+        ? lastProcessedDate.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit", year: "2-digit" }) 
+        : "-";
+
+      const tr1 = document.createElement("tr");
+      const tr2 = document.createElement("tr");
+
+      let tr1Html = `
+        <td rowspan="2" class="num-col" style="text-align: center; border:1px solid #444;">
+          <a href="parcel-details.html?id=${parcel.id}&from=all" style="text-decoration:none; color:#007bff; font-weight:bold;">
+            ${parcel.name}
+          </a>
+        </td>
+        <td rowspan="2" class="last-done-col" style="text-align: center; border:1px solid #444; ${lastDoneText !== '-' ? 'color: #d32f2f; font-weight: bold;' : ''}">
+          ${lastDoneText}
+        </td>
+      `;
+
+      let tr2Html = "";
+      for (let i = 0; i < maxCols; i++) {
+        const s = sessions[i];
+        const pName = s ? s.name : "";
+        const dIn = s ? new Date(s.in).toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit", year: "2-digit" }) : "";
+        const dOut = s && s.out ? new Date(s.out).toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit", year: "2-digit" }) : "";
+
+        const isPrevTaken = s ? isTakenInPreviousYear(s.in, s.out, rangeStart) : false;
+        const inDateStyle = isPrevTaken ? 'color: #1976d2; font-weight: bold;' : '';
+
+        let campaignStyle = "";
+        if (s?.campaign_id) {
+          hasCampaignInTable = true;
+          campaignStyle = getCampaignStyle(s.campaign_name).styleStr;
+        }
+
+        tr1Html += `<td colspan="2" class="name-row" style="border:1px solid #444; padding:4px; ${campaignStyle}">${pName}</td>`;
+        tr2Html += `
+          <td class="date-cell" style="background:#e8f5e9; border:1px solid #444; text-align: center; ${inDateStyle}">${dIn}</td>
+          <td class="date-cell" style="background:#fff3e0; border:1px solid #444; text-align: center;">${dOut}</td>
+        `;
+      }
+
+      tr1.innerHTML = tr1Html;
+      tr2.innerHTML = tr2Html;
+      tBody.appendChild(tr1);
+      tBody.appendChild(tr2);
+    });
+
+    if (typeof createColorLegend === "function") {
+      createColorLegend(hasCampaignInTable);
+    }
+  } catch (err) {
+    console.error("Помилка при побудові S-13 таблиці:", err);
+  }
+}
+
 // ============================================
 // ФУНКЦІЯ ЕКСПОРТУ В PDF
 // ============================================
@@ -71,9 +296,8 @@ async function exportS13FullPDF() {
     const periodConfig = await showYearSelectionModal();
     if (!periodConfig) return;
 
-    const { rangeStart, rangeEnd, serviceYear } = periodConfig;
-    const rangeStartISO = rangeStart.toISOString();
-    const rangeEndISO = rangeEnd.toISOString();
+    const { serviceYear } = periodConfig;
+    const dateOptions = { day: '2-digit', month: '2-digit', year: '2-digit' };
 
     const scripts = [
         'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
@@ -96,105 +320,42 @@ async function exportS13FullPDF() {
         }
 
         const { jsPDF } = window.jspdf;
-        progressDiv.innerHTML = "<b>Завантаження даних...</b>";
 
-        const [{ data: allParcels }, { data: allLogs }] = await Promise.all([
-            supabase.from('parcels').select('*'),
-            supabase.from('territory_logs')
-                .select('parcel_id, publisher_name, taken_at, returned_at, campaign_id, campaign_name')
-                .or(`and(returned_at.gte.${rangeStartISO},returned_at.lte.${rangeEndISO}),and(returned_at.is.null,taken_at.gte.${rangeStartISO},taken_at.lte.${rangeEndISO})`)
-                .order('returned_at', { ascending: true, nullsFirst: false })
-        ]);
+        async function generateS13PdfForCategory(categoryKey, categoryName, updateProgress) {
+            updateProgress(`🔍 Збір даних для "${categoryName}"...`);
+            const { items, rangeStart } = await fetchS13Data(categoryKey, periodConfig);
 
-        const dateOptions = { day: '2-digit', month: '2-digit', year: '2-digit' };
-
-        async function generateS13PdfForCategory(categoryParcels, categoryName, updateProgress) {
-            if (categoryParcels.length === 0) {
+            if (items.length === 0) {
                 updateProgress(`Немає дільниць для категорії "${categoryName}". Пропускаємо.`);
                 return;
             }
 
-            updateProgress(`🔍 Збір даних для "${categoryName}"...`);
-
-            const combinedData = {};
-            categoryParcels.forEach(p => {
-                const pLogs = allLogs.filter(log => log.parcel_id === p.id).filter(log => {
-                    if (log.returned_at) {
-                        const retDate = new Date(log.returned_at);
-                        return retDate >= rangeStart && retDate <= rangeEnd;
-                    }
-                    const takenDate = new Date(log.taken_at);
-                    return takenDate >= rangeStart && takenDate <= rangeEnd;
-                });
-
-                if (p.status === 'taken' && p.taken_by) {
-                    const takenDate = p.taken_at ? new Date(p.taken_at) : null;
-                    if (takenDate && takenDate >= rangeStart && takenDate <= rangeEnd) {
-                        const alreadyInLogs = pLogs.some(l => !l.returned_at && l.publisher_name === p.taken_by);
-                        if (!alreadyInLogs) {
-                            pLogs.push({
-                                publisher_name: p.taken_by,
-                                taken_at: p.taken_at,
-                                returned_at: null,
-                                campaign_id: null,
-                                campaign_name: null
-                            });
-                        }
-                    }
-                }
-                combinedData[p.id] = pLogs;
-            });
-
-            if (categoryName === 'Місто') {
-                categoryParcels.sort((a, b) => {
-                    const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
-                    const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
-                    return numA - numB;
-                });
-            } else {
-                categoryParcels.sort((a, b) => a.name.localeCompare(b.name, 'uk', { numeric: true }));
-            }
-            
-            function generateRowsHTML(parcelsSlice) {
+            function generateRowsHTML(itemsSlice) {
                 let html = '';
-                parcelsSlice.forEach(parcel => {
-                    const parcelName = parcel.name;
-                    const pLogs = combinedData[parcel.id] || [];
-                    
-                    const lastProcDate = parcel.last_processed ? new Date(parcel.last_processed) : null;
-                    const lastProcessedText = (lastProcDate && lastProcDate < rangeStart) 
-                        ? lastProcDate.toLocaleDateString('uk-UA', dateOptions) 
+                itemsSlice.forEach(({ parcel, lastProcessedDate, sessions }) => {
+                    const lastProcessedText = lastProcessedDate 
+                        ? lastProcessedDate.toLocaleDateString('uk-UA', dateOptions) 
                         : '—';
 
                     let logCells = '';
                     const logColumnsCount = (categoryName === 'Села') ? 3 : 4; 
+
                     for (let j = 0; j < logColumnsCount; j++) {
-                        const log = pLogs[j];
-                        const takenDate = log ? new Date(log.taken_at) : null;
-                        const returnedDate = log && log.returned_at ? new Date(log.returned_at) : null;
+                        const s = sessions[j];
+                        const takenDate = s && s.in ? new Date(s.in) : null;
+                        const returnedDate = s && s.out ? new Date(s.out) : null;
 
                         const dIn = takenDate ? takenDate.toLocaleDateString('uk-UA', dateOptions) : '';
                         const dOut = returnedDate ? returnedDate.toLocaleDateString('uk-UA', dateOptions) : '';
                         
-                        // Перевіряємо, чи була дата взяття в попередньому службовому році
-                        const isTakenInPreviousYear = takenDate && returnedDate && (takenDate < rangeStart) && (returnedDate >= rangeStart);
-                        const takenDateStyle = isTakenInPreviousYear ? 'color: #1976d2; font-weight: bold;' : '';
-
-                        let campaignStyle = '';
-                        if (log && log.campaign_id && log.campaign_name) {
-                            if (log.campaign_name.toLowerCase().includes('конгрес')) {
-                                campaignStyle = 'background-color: rgba(233, 196, 106, 0.5); color: #5C4B1B;';
-                            } else if (log.campaign_name.toLowerCase().includes('спец. кампанія') || log.campaign_name.toLowerCase().includes('спеціальна')) {
-                                campaignStyle = 'background-color: rgba(255, 205, 178, 0.5); color: #6D4C41;';
-                            } else if (log.campaign_name.toLowerCase().includes('спомин')) {
-                                campaignStyle = 'background-color: rgba(178, 185, 173, 0.5); color: #2F3E30;';
-                            }
-                        }
+                        const isPrevTaken = s ? isTakenInPreviousYear(s.in, s.out, rangeStart) : false;
+                        const takenDateStyle = isPrevTaken ? 'color: #1976d2; font-weight: bold;' : '';
+                        const campaignStyle = s ? getCampaignStyle(s.campaign_name).styleStr : '';
                         
                         logCells += `
                             <td style="border:1.5px solid black; height:36px; width:135px; text-align:center; padding:0; box-sizing:border-box;">
                                 <div style="height:18px; border-bottom:1px solid black; font-size:10pt; line-height:18px; overflow:hidden; white-space:nowrap; padding: 0 2px; ${campaignStyle}">
-                                    ${log ? log.publisher_name : ''}
+                                    ${s ? s.name : ''}
                                 </div>
                                 <div style="display:flex; height:18px; line-height:18px; font-size:9pt;">
                                     <div style="flex:1; ${takenDateStyle}">${dIn}</div>
@@ -203,7 +364,7 @@ async function exportS13FullPDF() {
                             </td>`;
                     }
                     html += `<tr style="height:36px;">
-                        <td style="border:1.5px solid black; text-align:center; font-size:9pt; width:${categoryName === 'Села' ? '75px' : '35px'};">${parcelName}</td>
+                        <td style="border:1.5px solid black; text-align:center; font-size:9pt; width:${categoryName === 'Села' ? '75px' : '35px'};">${parcel.name}</td>
                         <td style="border:1.5px solid black; text-align:center; font-size:8.5pt; width:75px; background:#fffde7; ${lastProcessedText !== '—' ? 'color:red; font-weight:bold;' : ''}">
                             ${lastProcessedText}
                         </td>
@@ -218,13 +379,13 @@ async function exportS13FullPDF() {
             let pages = [];
             let currentParcelIndex = 0;
 
-            while (currentParcelIndex < categoryParcels.length) {
+            while (currentParcelIndex < items.length) {
                 const isFirst = pages.length === 0;
                 const count = isFirst ? firstPageLimit : nextPageLimit;
                 
                 pages.push({ 
                     startIndex: currentParcelIndex, 
-                    endIndex: Math.min(currentParcelIndex + count, categoryParcels.length) 
+                    endIndex: Math.min(currentParcelIndex + count, items.length) 
                 });
                 currentParcelIndex += count;
             }
@@ -237,7 +398,7 @@ async function exportS13FullPDF() {
             for (let i = 0; i < pages.length; i++) {
                 updateProgress(`📄 Генерація "${categoryName}" PDF: сторінка ${i + 1} з ${pages.length}...`);
                 const pageConfig = pages[i];
-                const parcelsForPage = categoryParcels.slice(pageConfig.startIndex, pageConfig.endIndex);
+                const itemsForPage = items.slice(pageConfig.startIndex, pageConfig.endIndex);
                 const pagePaddingTop = i === 0 ? "8mm" : "13mm";
 
                 tempContainer.innerHTML = `
@@ -262,7 +423,7 @@ async function exportS13FullPDF() {
                                         </th>`).join('')}
                                 </tr>
                             </thead>
-                            <tbody>${generateRowsHTML(parcelsForPage)}</tbody>
+                            <tbody>${generateRowsHTML(itemsForPage)}</tbody>
                         </table>
                         <div style="margin-top:3mm; padding-left:2mm; display:flex; align-items:center; flex-wrap:wrap;">
                             <p style="font-size:8pt; margin:0; line-height:1.2;">*Заповнюючи новий бланк, познач у цій колонці останню дату опрацювання кожної території.</p>
@@ -296,15 +457,12 @@ async function exportS13FullPDF() {
             tempContainer.remove();
         }
 
-        const cityParcels = allParcels.filter(p => p.category !== 'Село');
-        const villageParcels = allParcels.filter(p => p.category === 'Село');
-
         const updateProgress = (message) => {
             progressDiv.innerHTML = `<b>${message}</b>`;
         };
 
-        await generateS13PdfForCategory(cityParcels, 'Місто', updateProgress);
-        await generateS13PdfForCategory(villageParcels, 'Села', updateProgress);
+        await generateS13PdfForCategory('city', 'Місто', updateProgress);
+        await generateS13PdfForCategory('village', 'Села', updateProgress);
         
         progressDiv.style.background = "#28a745";
         progressDiv.innerHTML = "✅ Всі PDF успішно створено!";
@@ -325,9 +483,7 @@ async function exportS13Excel() {
     const periodConfig = await showYearSelectionModal();
     if (!periodConfig) return;
 
-    const { rangeStart, rangeEnd, serviceYearText } = periodConfig;
-    const rangeStartISO = rangeStart.toISOString();
-    const rangeEndISO = rangeEnd.toISOString();
+    const { serviceYearText } = periodConfig;
 
     let statusDiv = document.getElementById('excel-export-status');
     if (!statusDiv) {
@@ -345,11 +501,6 @@ async function exportS13Excel() {
 
     setStatus("Запуск експорту...");
 
-    if (typeof supabase === 'undefined') {
-        setStatus("Supabase не знайдено!", true);
-        return;
-    }
-
     try {
         if (typeof ExcelJS === 'undefined') {
             setStatus("Завантаження ExcelJS...");
@@ -363,241 +514,62 @@ async function exportS13Excel() {
         }
 
         setStatus("Отримання даних...");
-        const [{ data: rawParcels }, { data: logs }] = await Promise.all([
-            supabase.from('parcels').select('*'),
-            supabase.from('territory_logs')
-                .select('parcel_id, publisher_name, taken_at, returned_at, campaign_id, campaign_name')
-                .or(`and(returned_at.gte.${rangeStartISO},returned_at.lte.${rangeEndISO}),and(returned_at.is.null,taken_at.gte.${rangeStartISO},taken_at.lte.${rangeEndISO})`)
-                .order('returned_at', { ascending: true, nullsFirst: false })
-        ]);
-
         const workbook = new ExcelJS.Workbook();
 
-        // --- ЛИСТ МІСТО ---
-        const cityParcels = rawParcels.filter(p => p.category !== 'Село');
-        const parcelsForCity = cityParcels.sort((a, b) => (parseInt(a.name) || 0) - (parseInt(b.name) || 0));
-        const citySheet = workbook.addWorksheet('Місто');
-        citySheet.pageSetup = {
-            paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0,
-            margins: { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
-            horizontalCentered: true, printTitlesRow: '5:6'
-        };
+        async function buildExcelSheet(categoryKey, sheetName, maxCols) {
+            const { items, rangeStart } = await fetchS13Data(categoryKey, periodConfig);
+            if (items.length === 0) return;
 
-        citySheet.columns = [
-            { width: 6 }, { width: 12 }, 
-            { width: 10 }, { width: 12 }, { width: 10 }, { width: 12 },
-            { width: 10 }, { width: 12 }, { width: 10 }, { width: 12 }
-        ];
-
-        citySheet.mergeCells('A1:J1');
-        const cityTitle = citySheet.getCell('A1');
-        cityTitle.value = 'ЗАПИСИ ПРО ОПРАЦЮВАННЯ ТЕРИТОРІЙ (Місто)';
-        cityTitle.font = { bold: true, size: 16 };
-        cityTitle.alignment = { horizontal: 'center', vertical: 'middle' };
-
-        citySheet.mergeCells('A2:C2');
-        citySheet.getCell('A2').value = `Службовий рік: ${serviceYearText}`;
-        citySheet.getCell('A2').font = { bold: true };
-
-        const legendRow = citySheet.addRow(['Легенда:', '', 'Конгрес', '', 'Спец. кампанія', '', 'Спомин', '', '']);
-        legendRow.getCell(1).font = { bold: true, size: 9 };
-        legendRow.getCell(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE9C46A' } };
-        legendRow.getCell(3).font = { size: 8 };
-        legendRow.getCell(5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCDB2' } };
-        legendRow.getCell(5).font = { size: 8 };
-        legendRow.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB2B9AD' } };
-        legendRow.getCell(7).font = { size: 8 };
-
-        citySheet.addRow([]);
-        citySheet.addRow(['№ Тер.', 'Остання дата опрацювання*', 'Вісник', '', 'Вісник', '', 'Вісник', '', 'Вісник', '']);
-        citySheet.addRow(['', '', 'Дата отримання', 'Дата опрацювання', 'Дата отримання', 'Дата опрацювання', 'Дата отримання', 'Дата опрацювання', 'Дата отримання', 'Дата опрацювання']);
-
-        [5, 6].forEach(rNum => {
-            citySheet.getRow(rNum).eachCell(cell => {
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
-                cell.border = { top: {style:'medium'}, left: {style:'medium'}, bottom: {style:'medium'}, right: {style:'medium'} };
-                cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-                cell.font = { size: 9, bold: true };
-            });
-        });
-
-        citySheet.mergeCells('A5:A6'); citySheet.mergeCells('B5:B6');
-        citySheet.mergeCells('C5:D5'); citySheet.mergeCells('E5:F5');
-        citySheet.mergeCells('G5:H5'); citySheet.mergeCells('I5:J5');
-
-        parcelsForCity.forEach(p => {
-            let pLogs = logs.filter(l => l.parcel_id === p.id).filter(l => {
-                if (l.returned_at) {
-                    const retDate = new Date(l.returned_at);
-                    return retDate >= rangeStart && retDate <= rangeEnd;
-                }
-                const takenDate = new Date(l.taken_at);
-                return takenDate >= rangeStart && takenDate <= rangeEnd;
-            });
-
-            if (p.status === 'taken' && p.taken_by) {
-                const takenDate = p.taken_at ? new Date(p.taken_at) : null;
-                if (takenDate && takenDate >= rangeStart && takenDate <= rangeEnd) {
-                    if (!pLogs.some(l => !l.returned_at && l.publisher_name === p.taken_by)) {
-                        pLogs.push({ publisher_name: p.taken_by, taken_at: p.taken_at, returned_at: null, campaign_id: null, campaign_name: null });
-                    }
-                }
-            }
-
-            const lastProc = p.last_processed ? new Date(p.last_processed) : null;
-            const isOld = lastProc && lastProc < rangeStart;
-
-            const r1 = citySheet.addRow([
-                parseInt(p.name) || p.name, 
-                isOld ? lastProc.toLocaleDateString('uk-UA') : '—',
-                pLogs[0]?.publisher_name || '', '',
-                pLogs[1]?.publisher_name || '', '',
-                pLogs[2]?.publisher_name || '', '',
-                pLogs[3]?.publisher_name || '', ''
-            ]);
-            
-            const dRowData = ['', ''];
-            for(let i=0; i<4; i++) {
-                const l = pLogs[i];
-                dRowData.push(l ? new Date(l.taken_at).toLocaleDateString('uk-UA', {day:'2-digit', month:'2-digit'}) : '');
-                dRowData.push((l && l.returned_at) ? new Date(l.returned_at).toLocaleDateString('uk-UA', {day:'2-digit', month:'2-digit'}) : '');
-            }
-            const r2 = citySheet.addRow(dRowData);
-
-            citySheet.mergeCells(r1.number, 1, r2.number, 1);
-            citySheet.mergeCells(r1.number, 2, r2.number, 2);
-            citySheet.mergeCells(r1.number, 3, r1.number, 4);
-            citySheet.mergeCells(r1.number, 5, r1.number, 6);
-            citySheet.mergeCells(r1.number, 7, r1.number, 8);
-            citySheet.mergeCells(r1.number, 9, r1.number, 10);
-
-            [r1, r2].forEach((row, rowIndex) => {
-                for (let c = 1; c <= 10; c++) {
-                    const cell = row.getCell(c);
-                    cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-                    cell.alignment = { horizontal: 'center', vertical: 'middle' };
-                    if (rowIndex === 0) cell.border.top = { style: 'medium' };
-                    if (rowIndex === 1) cell.border.bottom = { style: 'medium' };
-                    if (c === 1) cell.border.left = { style: 'medium' };
-                    if (c === 10) cell.border.right = { style: 'medium' };
-                    if (c === 2 || c === 4 || c === 6 || c === 8) cell.border.right = { style: 'medium' };
-                    if (c === 3 || c === 5 || c === 7 || c === 9) cell.border.left = { style: 'medium' };
-                    
-                    if (rowIndex === 0 && (c === 3 || c === 5 || c === 7 || c === 9)) {
-                        const logIndex = Math.floor((c - 3) / 2);
-                        const log = pLogs[logIndex];
-                        if (log && log.campaign_id && log.campaign_name) {
-                            if (log.campaign_name.toLowerCase().includes('конгрес')) {
-                                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE9C46A' } };
-                                cell.font = { color: { argb: 'FF5C4B1B' } };
-                            } else if (log.campaign_name.toLowerCase().includes('спец. кампанія') || log.campaign_name.toLowerCase().includes('спеціальна')) {
-                                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCDB2' } };
-                                cell.font = { color: { argb: 'FF6D4C41' } };
-                            } else if (log.campaign_name.toLowerCase().includes('спомин')) {
-                                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB2B9AD' } };
-                                cell.font = { color: { argb: 'FF2F3E30' } };
-                            }
-                        }
-                    }
-
-                    // Перевірка та стилізація дати взяття в Excel
-                    if (rowIndex === 1 && (c === 3 || c === 5 || c === 7 || c === 9)) {
-                        const logIndex = Math.floor((c - 3) / 2);
-                        const log = pLogs[logIndex];
-                        if (log) {
-                            const takenDate = new Date(log.taken_at);
-                            const returnedDate = log.returned_at ? new Date(log.returned_at) : null;
-                            if (takenDate && returnedDate && (takenDate < rangeStart) && (returnedDate >= rangeStart)) {
-                                cell.font = { color: { argb: 'FF1976D2' }, bold: true };
-                            }
-                        }
-                    }
-                }
-            });
-
-            if (isOld) {
-                const c = r1.getCell(2);
-                c.font = { color: { argb: 'FFFF0000' }, bold: true };
-                c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFDE7' } };
-            }
-        });
-
-        const cityF1 = citySheet.addRow(['*Заповнюючи новий бланк, познач у цій колонці останню дату опрацювання кожної території.']);
-        citySheet.mergeCells(cityF1.number, 1, cityF1.number, 10);
-        cityF1.getCell(1).font = { italic: true, size: 9 };
-        const cityF2 = citySheet.addRow(['S-13-K 1/22']);
-        citySheet.mergeCells(cityF2.number, 1, cityF2.number, 10);
-        cityF2.getCell(1).font = { bold: true, size: 10 };
-
-        const cityParcelCount = parcelsForCity.length;
-        if (cityParcelCount > 0) {
-            const startRow = 7;
-            const rowsPerParcel = 2;
-            const parcelsPerPage = 25;
-            
-            let currentRow = startRow;
-            let remainingParcels = cityParcelCount;
-            let pageCount = 1;
-            
-            while (remainingParcels > 0) {
-                let parcelsOnPage = Math.min(remainingParcels, parcelsPerPage);
-                
-                if (parcelsOnPage < remainingParcels) {
-                    const breakRow = currentRow + (parcelsOnPage * rowsPerParcel);
-                    if (!citySheet.pageBreaks) citySheet.pageBreaks = [];
-                    citySheet.pageBreaks.push(breakRow);
-                }
-                
-                currentRow += parcelsOnPage * rowsPerParcel;
-                remainingParcels -= parcelsOnPage;
-                pageCount++;
-            }
-        }
-
-        // --- ЛИСТ СЕЛО ---
-        const villageParcels = rawParcels.filter(p => p.category === 'Село');
-        const parcelsForVillage = villageParcels.sort((a, b) => a.name.localeCompare(b.name));
-
-        if (parcelsForVillage.length > 0) {
-            const villageSheet = workbook.addWorksheet('Села');
-            villageSheet.pageSetup = {
+            const sheet = workbook.addWorksheet(sheetName);
+            sheet.pageSetup = {
                 paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0,
-                margins: { left: 0.5, right: 0.5, top: 0.55, bottom: 0.39, header: 0.3, footer: 0.3 },
+                margins: { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
                 horizontalCentered: true, printTitlesRow: '5:6'
             };
 
-            villageSheet.columns = [
-                { width: 12 }, { width: 12 },
-                { width: 10 }, { width: 12 },
-                { width: 10 }, { width: 12 },
-                { width: 10 }, { width: 12 }
-            ];
+            const cols = [{ width: categoryKey === 'village' ? 12 : 6 }, { width: 12 }];
+            for (let i = 0; i < maxCols; i++) {
+                cols.push({ width: 10 }, { width: 12 });
+            }
+            sheet.columns = cols;
 
-            villageSheet.mergeCells('A1:H1');
-            const villageTitle = villageSheet.getCell('A1');
-            villageTitle.value = 'ЗАПИСИ ПРО ОПРАЦЮВАННЯ ТЕРИТОРІЙ (Села)';
-            villageTitle.font = { bold: true, size: 16 };
-            villageTitle.alignment = { horizontal: 'center', vertical: 'middle' };
+            const totalCols = 2 + (maxCols * 2);
+            const lastColLetter = String.fromCharCode(64 + totalCols);
 
-            villageSheet.mergeCells('A2:C2');
-            villageSheet.getCell('A2').value = `Службовий рік: ${serviceYearText}`;
-            villageSheet.getCell('A2').font = { bold: true };
+            sheet.mergeCells(`A1:${lastColLetter}1`);
+            const titleCell = sheet.getCell('A1');
+            titleCell.value = `ЗАПИСИ ПРО ОПРАЦЮВАННЯ ТЕРИТОРІЙ (${sheetName})`;
+            titleCell.font = { bold: true, size: 16 };
+            titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-            const villageLegendRow = villageSheet.addRow(['Легенда кампаній:', 'Конгрес', '', 'Спец. кампанія', '', 'Спомин', '', '']);
-            villageLegendRow.getCell(1).font = { bold: true, size: 9 };
-            villageLegendRow.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE9C46A' } };
-            villageLegendRow.getCell(2).font = { size: 8 };
-            villageLegendRow.getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCDB2' } };
-            villageLegendRow.getCell(4).font = { size: 8 };
-            villageLegendRow.getCell(6).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB2B9AD' } };
-            villageLegendRow.getCell(6).font = { size: 8 };
+            sheet.mergeCells('A2:C2');
+            sheet.getCell('A2').value = `Службовий рік: ${serviceYearText}`;
+            sheet.getCell('A2').font = { bold: true };
 
-            villageSheet.addRow([]);
-            villageSheet.addRow(['Назва тер.', 'Остання дата опрацювання*', 'Вісник', '', 'Вісник', '', 'Вісник', '']);
-            villageSheet.addRow(['', '', 'Дата отримання', 'Дата опрацювання', 'Дата отримання', 'Дата опрацювання', 'Дата отримання', 'Дата опрацювання']);
+            const legendData = ['Легенда:', ''];
+            ['Конгрес', '', 'Спец. кампанія', '', 'Спомин', ''].forEach(val => legendData.push(val));
+            const legendRow = sheet.addRow(legendData);
+            legendRow.getCell(1).font = { bold: true, size: 9 };
+            legendRow.getCell(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE9C46A' } };
+            legendRow.getCell(3).font = { size: 8 };
+            legendRow.getCell(5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCDB2' } };
+            legendRow.getCell(5).font = { size: 8 };
+            legendRow.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB2B9AD' } };
+            legendRow.getCell(7).font = { size: 8 };
+
+            sheet.addRow([]);
+            
+            const h1 = [categoryKey === 'village' ? 'Назва тер.' : '№ Тер.', 'Остання дата опрацювання*'];
+            const h2 = ['', ''];
+            for (let i = 0; i < maxCols; i++) {
+                h1.push('Вісник', '');
+                h2.push('Дата отримання', 'Дата опрацювання');
+            }
+            sheet.addRow(h1);
+            sheet.addRow(h2);
 
             [5, 6].forEach(rNum => {
-                villageSheet.getRow(rNum).eachCell(cell => {
+                sheet.getRow(rNum).eachCell(cell => {
                     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
                     cell.border = { top: {style:'medium'}, left: {style:'medium'}, bottom: {style:'medium'}, right: {style:'medium'} };
                     cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
@@ -605,92 +577,69 @@ async function exportS13Excel() {
                 });
             });
 
-            villageSheet.mergeCells('A5:A6'); villageSheet.mergeCells('B5:B6');
-            villageSheet.mergeCells('C5:D5'); villageSheet.mergeCells('E5:F5'); villageSheet.mergeCells('G5:H5');
+            sheet.mergeCells('A5:A6'); 
+            sheet.mergeCells('B5:B6');
+            for (let i = 0; i < maxCols; i++) {
+                const startC = 3 + (i * 2);
+                sheet.mergeCells(5, startC, 5, startC + 1);
+            }
 
-            parcelsForVillage.forEach(p => {
-                let pLogs = logs.filter(l => l.parcel_id === p.id).filter(l => {
-                    if (l.returned_at) {
-                        const retDate = new Date(l.returned_at);
-                        return retDate >= rangeStart && retDate <= rangeEnd;
-                    }
-                    const takenDate = new Date(l.taken_at);
-                    return takenDate >= rangeStart && takenDate <= rangeEnd;
-                });
+            items.forEach(({ parcel, lastProcessedDate, sessions }) => {
+                const isOld = !!lastProcessedDate;
 
-                if (p.status === 'taken' && p.taken_by) {
-                    const takenDate = p.taken_at ? new Date(p.taken_at) : null;
-                    if (takenDate && takenDate >= rangeStart && takenDate <= rangeEnd) {
-                        if (!pLogs.some(l => !l.returned_at && l.publisher_name === p.taken_by)) {
-                            pLogs.push({ publisher_name: p.taken_by, taken_at: p.taken_at, returned_at: null, campaign_id: null, campaign_name: null });
-                        }
-                    }
+                const r1Data = [
+                    categoryKey === 'city' ? (parseInt(parcel.name) || parcel.name) : parcel.name, 
+                    isOld ? lastProcessedDate.toLocaleDateString('uk-UA') : '—'
+                ];
+                for (let i = 0; i < maxCols; i++) {
+                    r1Data.push(sessions[i]?.name || '', '');
                 }
-
-                const lastProc = p.last_processed ? new Date(p.last_processed) : null;
-                const isOld = lastProc && lastProc < rangeStart;
-
-                const r1 = villageSheet.addRow([
-                    p.name,
-                    isOld ? lastProc.toLocaleDateString('uk-UA') : '—',
-                    pLogs[0]?.publisher_name || '', '',
-                    pLogs[1]?.publisher_name || '', '',
-                    pLogs[2]?.publisher_name || '', ''
-                ]);
-
-                const dRowData = ['', ''];
-                for(let i=0; i<3; i++) {
-                    const l = pLogs[i];
-                    dRowData.push(l ? new Date(l.taken_at).toLocaleDateString('uk-UA', {day:'2-digit', month:'2-digit'}) : '');
-                    dRowData.push((l && l.returned_at) ? new Date(l.returned_at).toLocaleDateString('uk-UA', {day:'2-digit', month:'2-digit'}) : '');
+                const r1 = sheet.addRow(r1Data);
+                
+                const r2Data = ['', ''];
+                for (let i = 0; i < maxCols; i++) {
+                    const s = sessions[i];
+                    r2Data.push(s && s.in ? new Date(s.in).toLocaleDateString('uk-UA', {day:'2-digit', month:'2-digit'}) : '');
+                    r2Data.push(s && s.out ? new Date(s.out).toLocaleDateString('uk-UA', {day:'2-digit', month:'2-digit'}) : '');
                 }
-                const r2 = villageSheet.addRow(dRowData);
+                const r2 = sheet.addRow(r2Data);
 
-                villageSheet.mergeCells(r1.number, 1, r2.number, 1);
-                villageSheet.mergeCells(r1.number, 2, r2.number, 2);
-                villageSheet.mergeCells(r1.number, 3, r1.number, 4);
-                villageSheet.mergeCells(r1.number, 5, r1.number, 6);
-                villageSheet.mergeCells(r1.number, 7, r1.number, 8);
+                sheet.mergeCells(r1.number, 1, r2.number, 1);
+                sheet.mergeCells(r1.number, 2, r2.number, 2);
+                for (let i = 0; i < maxCols; i++) {
+                    const startC = 3 + (i * 2);
+                    sheet.mergeCells(r1.number, startC, r1.number, startC + 1);
+                }
 
                 [r1, r2].forEach((row, rowIndex) => {
-                    for (let c = 1; c <= 8; c++) {
+                    for (let c = 1; c <= totalCols; c++) {
                         const cell = row.getCell(c);
                         cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
                         cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
                         if (rowIndex === 0) cell.border.top = { style: 'medium' };
                         if (rowIndex === 1) cell.border.bottom = { style: 'medium' };
                         if (c === 1) cell.border.left = { style: 'medium' };
-                        if (c === 8) cell.border.right = { style: 'medium' };
-                        if (c === 2 || c === 4 || c === 6) cell.border.right = { style: 'medium' };
-                        if (c === 3 || c === 5 || c === 7) cell.border.left = { style: 'medium' };
+                        if (c === totalCols) cell.border.right = { style: 'medium' };
+                        if (c % 2 === 0) cell.border.right = { style: 'medium' };
+                        if (c % 2 === 1 && c > 1) cell.border.left = { style: 'medium' };
                         
-                        if (rowIndex === 0 && (c === 3 || c === 5 || c === 7)) {
-                            const logIndex = Math.floor((c - 3) / 2);
-                            const log = pLogs[logIndex];
-                            if (log && log.campaign_id && log.campaign_name) {
-                                if (log.campaign_name.toLowerCase().includes('конгрес')) {
-                                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE9C46A' } };
-                                    cell.font = { color: { argb: 'FF5C4B1B' } };
-                                } else if (log.campaign_name.toLowerCase().includes('спец. кампанія') || log.campaign_name.toLowerCase().includes('спеціальна')) {
-                                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCDB2' } };
-                                    cell.font = { color: { argb: 'FF6D4C41' } };
-                                } else if (log.campaign_name.toLowerCase().includes('спомин')) {
-                                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB2B9AD' } };
-                                    cell.font = { color: { argb: 'FF2F3E30' } };
+                        if (rowIndex === 0 && c >= 3 && c % 2 === 1) {
+                            const logIndex = (c - 3) / 2;
+                            const s = sessions[logIndex];
+                            if (s && s.campaign_id && s.campaign_name) {
+                                const { bgHex, colorHex } = getCampaignStyle(s.campaign_name);
+                                if (bgHex) {
+                                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgHex } };
+                                    cell.font = { color: { argb: colorHex } };
                                 }
                             }
                         }
 
-                        // Перевірка та стилізація дати взяття в Excel
-                        if (rowIndex === 1 && (c === 3 || c === 5 || c === 7)) {
-                            const logIndex = Math.floor((c - 3) / 2);
-                            const log = pLogs[logIndex];
-                            if (log) {
-                                const takenDate = new Date(log.taken_at);
-                                const returnedDate = log.returned_at ? new Date(log.returned_at) : null;
-                                if (takenDate && returnedDate && (takenDate < rangeStart) && (returnedDate >= rangeStart)) {
-                                    cell.font = { color: { argb: 'FF1976D2' }, bold: true };
-                                }
+                        if (rowIndex === 1 && c >= 3 && c % 2 === 1) {
+                            const logIndex = (c - 3) / 2;
+                            const s = sessions[logIndex];
+                            if (s && isTakenInPreviousYear(s.in, s.out, rangeStart)) {
+                                cell.font = { color: { argb: 'FF1976D2' }, bold: true };
                             }
                         }
                     }
@@ -703,38 +652,37 @@ async function exportS13Excel() {
                 }
             });
 
-            const villageF1 = villageSheet.addRow(['*Заповнюючи новий бланк, познач у цій колонці останню дату опрацювання кожної території.']);
-            villageSheet.mergeCells(villageF1.number, 1, villageF1.number, 8);
-            villageF1.getCell(1).font = { italic: true, size: 9 };
-            const villageF2 = villageSheet.addRow(['S-13-K 1/22']);
-            villageSheet.mergeCells(villageF2.number, 1, villageF2.number, 8);
-            villageF2.getCell(1).font = { bold: true, size: 10 };
+            const f1 = sheet.addRow(['*Заповнюючи новий бланк, познач у цій колонці останню дату опрацювання кожної території.']);
+            sheet.mergeCells(f1.number, 1, f1.number, totalCols);
+            f1.getCell(1).font = { italic: true, size: 9 };
+            
+            const f2 = sheet.addRow(['S-13-K 1/22']);
+            sheet.mergeCells(f2.number, 1, f2.number, totalCols);
+            f2.getCell(1).font = { bold: true, size: 10 };
 
-            const villageParcelCount = parcelsForVillage.length;
-            if (villageParcelCount > 0) {
+            if (items.length > 0) {
                 const startRow = 7;
                 const rowsPerParcel = 2;
                 const parcelsPerPage = 25;
                 
                 let currentRow = startRow;
-                let remainingParcels = villageParcelCount;
-                let pageCount = 1;
+                let remainingParcels = items.length;
                 
                 while (remainingParcels > 0) {
                     let parcelsOnPage = Math.min(remainingParcels, parcelsPerPage);
-                    
                     if (parcelsOnPage < remainingParcels) {
                         const breakRow = currentRow + (parcelsOnPage * rowsPerParcel);
-                        if (!villageSheet.pageBreaks) villageSheet.pageBreaks = [];
-                        villageSheet.pageBreaks.push(breakRow);
+                        if (!sheet.pageBreaks) sheet.pageBreaks = [];
+                        sheet.pageBreaks.push(breakRow);
                     }
-                    
                     currentRow += parcelsOnPage * rowsPerParcel;
                     remainingParcels -= parcelsOnPage;
-                    pageCount++;
                 }
             }
         }
+
+        await buildExcelSheet('city', 'Місто', 4);
+        await buildExcelSheet('village', 'Села', 3);
 
         setStatus("Збереження...");
         const buffer = await workbook.xlsx.writeBuffer();
@@ -756,5 +704,6 @@ async function exportS13Excel() {
 }
 
 // Глобальний доступ
+window.renderS13TableGrid = renderS13TableGrid;
 window.exportS13FullPDF = exportS13FullPDF;
 window.exportS13Excel = exportS13Excel;

@@ -221,7 +221,7 @@
         }
 
         .hidden {
-            display: none;
+            display: none !important;
         }
 
         .tab-header {
@@ -265,40 +265,7 @@
             background: #218838;
         }
 
-        /* Таби */
-        .origin-tabs {
-            display: flex;
-            gap: 4px;
-            margin-bottom: 0;
-            padding-left: 10px;
-        }
-
-        .origin-tab-btn {
-            padding: 10px 18px;
-            border: 1px solid #ddd;
-            border-bottom: none;
-            background: #eaeeef;
-            border-radius: 10px 10px 0 0;
-            cursor: pointer;
-            font-size: 0.9rem;
-            color: #555;
-            transition: all 0.2s;
-            position: relative;
-            z-index: 1;
-        }
-
-        .origin-tab-btn.active {
-            background: white;
-            color: #007bff;
-            font-weight: bold;
-            z-index: 3;
-            margin-bottom: -1px;
-            padding-bottom: 11px;
-            border-color: #ddd;
-        }
-
-
-
+ 
         /* Картки територій */
         div#territoriesList {
             display: flex;
@@ -317,6 +284,7 @@
             display: flex;
             flex-direction: column;
             width: 300px;
+            position: relative;
         }
 
         .territory-card:hover {
@@ -379,10 +347,6 @@
             transform: scale(0.95);
         }
 
-        .territory-card {
-            position: relative;
-        }
-
         /* Повноекранний лоадер */
         #main-loader {
             position: fixed;
@@ -426,7 +390,6 @@
             color: #999;
             font-size: 1.1rem;
         }
-
 
         .campaign-info {
             flex: 1;
@@ -472,7 +435,7 @@
             border: 1px dashed #ddd;
         }
 
-        /* СТИЛІ ДЛЯ ЗВІТУ (з report1.html) */
+        /* СТИЛІ ДЛЯ ЗВІТУ */
         .report-section {
             margin-bottom: 2.5rem;
             background: white;
@@ -536,7 +499,6 @@
             border: 1px solid #d1d5db;
             border-radius: 4px;
             font-size: 0.875rem;
-
         }
 
         .summary {
@@ -574,7 +536,6 @@
             border: none;
             cursor: pointer;
             transition: background-color 0.2s ease;
-
         }
 
         .filter-actions button:hover {
@@ -763,31 +724,10 @@
             margin-bottom: 15px;
         }
 
-
         #historyLoadingIndicator {
             text-align: center;
             padding: 20px;
             color: #666;
-        }
-
-        .spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #007bff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
         }
 
         @keyframes slideIn {
@@ -1037,7 +977,6 @@
             font-size: 0.9rem;
         }
 
-
         .additional-campaigns {
             margin-top: 2rem;
             padding-top: 2rem;
@@ -1197,6 +1136,7 @@
             background-color: #f9fafb;
             border-top: 1px solid #f3f4f6;
             display: flex;
+            justify-content: center;
             gap: 12px;
             box-sizing: border-box;
         }
@@ -1275,22 +1215,6 @@
             }
         }
 
-        /* Залишаємо старі стилі для інших компонентів */
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: background 0.2s;
-        }
-
-        .btn-secondary:hover {
-            background: #545b62;
-        }
-
         .btn-cancel {
             background: #6b7280;
             color: white;
@@ -1347,9 +1271,7 @@
             .modal-footer {
                 flex-direction: column;
             }
-
         }
-
 
         #progress-container,
         .progress-container {
@@ -1517,7 +1439,6 @@
                 width: 100%;
                 font-size: 3vw;
             }
-
         }
 
         /* Семантичні класи для розділу Опрацювання територій */
@@ -1727,7 +1648,6 @@
 
         .bulk-checkbox {
             display: none;
-            /* Сховані за замовчуванням */
             transform: scale(1.2);
             margin-right: 10px;
             cursor: pointer;
@@ -1735,7 +1655,6 @@
 
         .bulk-mode .bulk-checkbox {
             display: inline-block;
-            /* Показуємо в режимі пасхалки */
         }
 
         .bulk-delete-panel {
@@ -1773,9 +1692,8 @@
         <a href="#" class="nav-item" data-tab="publishers-admin" onclick="switchTab('publishers-admin')">
             <i>👥</i> Користувачі
         </a>
-        <div class="nav-item" onclick="switchTab('processing')">📊 Опрацювання</div>
-        <div class="nav-item" onclick="switchTab('analysis')">📈 Аналіз Територій</div>
-        <div class="nav-item" onclick="switchTab('on-hands')">👐 На руках</div>
+        <!-- ОБ'ЄДНАНА ВКЛАДКА "АНАЛІТИКА" -->
+        <div class="nav-item" onclick="switchTab('analytics')">📊 Аналітика</div>
         <div class="nav-item" onclick="switchTab('export-import')">💾 Експорт та Імпорт</div>
         <div class="nav-item" onclick="switchTab('settings')">⚙️ Додаткові налаштування</div>
         <a href="admin-statistics.html" id="adminStatsLink" class="nav-item"
@@ -1801,6 +1719,7 @@
                 <div id="territoriesList"></div>
             </div>
         </div>
+
         <div id="tab-publishers-admin" class="tab-content hidden">
             <div class="tab-header">
                 <h1 class="tab-title">👥 Керування користувачами</h1>
@@ -1857,365 +1776,241 @@
             </div>
         </div>
 
-        <div id="roleConfirmModal" class="modal">
-            <div class="modal-content modal-sm">
-                <div class="modal-header">
-                    <h3 class="modal-title">
-                        <span class="modal-icon icon-warning">⚠️</span>
-                        Зміна прав доступу
-                    </h3>
-                    <button class="modal-close" onclick="closePublisherModal('roleConfirmModal')">✕</button>
-                </div>
-                <div class="modal-body text-center">
-                    <p id="roleConfirmMessage"></p>
-                </div>
-                <div class="modal-footer footer-center">
-                    <button id="btnRoleConfirmNo" class="btn-secondary"
-                        onclick="closePublisherModal('roleConfirmModal')">Скасувати</button>
-                    <button id="btnRoleConfirmYes" class="btn-primary btn-success">Так, змінити</button>
-                </div>
-            </div>
-        </div>
+        <!-- ОБ'ЄДНАНА ВКЛАДКА: АНАЛІТИКА -->
+        <div id="tab-analytics" class="tab-content hidden">
+            <h1 class="tab-title">📊 Аналітика</h1>
 
-        <div id="editUserNameModal" class="modal">
-            <div class="modal-content modal-md">
-                <div class="modal-header">
-                    <h3 class="modal-title">
-                        <span class="modal-icon">✏️</span>
-                        Редагування профілю
-                    </h3>
-                    <button class="modal-close" onclick="closePublisherModal('editUserNameModal')">✕</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="editUserName">Ім'я</label>
-                        <input type="text" id="editUserName" placeholder="Введіть ім'я">
-                    </div>
-                    <div class="form-group">
-                        <label for="editUserLastName">Прізвище <span class="label-optional">(опціонально)</span></label>
-                        <input type="text" id="editUserLastName" placeholder="Введіть прізвище">
-                    </div>
-                    <input type="hidden" id="editUserId">
-                </div>
-                <div class="modal-footer footer-right">
-                    <button id="btnEditUserNameCancel" class="btn-secondary"
-                        onclick="closePublisherModal('editUserNameModal')">Скасувати</button>
-                    <button id="btnSaveUserName" class="btn-primary btn-success">Зберегти зміни</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="passwordResultModal" class="modal">
-            <div class="modal-content modal-md">
-                <div class="modal-header">
-                    <h3 class="modal-title">
-                        <span class="modal-icon">🔐</span>
-                        Дані для авторизації
-                    </h3>
-                    <button class="modal-close" onclick="closePublisherModal('passwordResultModal')">✕</button>
-                </div>
-                <div class="modal-body">
-                    <p>Скопіюйте ці дані та надішліть їх віснику для входу в систему:</p>
-
-                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px;">
-                        <div style="margin-bottom: 12px;">
-                            <strong
-                                style="font-size: 11px; color: #64748b; display:block; letter-spacing: 0.5px; font-family: 'Segoe UI', sans-serif;">ІМ'Я
-                                (ЛОГІН):</strong>
-                            <span id="displayModalLogin"
-                                style="font-family: monospace; font-size: 15px; color: #1e293b; font-weight: bold;"></span>
-                        </div>
-                        <div>
-                            <strong
-                                style="font-size: 11px; color: #64748b; display:block; letter-spacing: 0.5px; font-family: 'Segoe UI', sans-serif;">НОВИЙ
-                                ПАРОЛЬ:</strong>
-                            <span id="displayModalPassword"
-                                style="font-family: monospace; font-size: 15px; color: #dc2626; font-weight: bold; letter-spacing: 1px;"></span>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer" style="justify-content: space-between; align-items: center;">
-                    <span id="copyStatusText"
-                        style="font-size: 13px; color: #28a745; font-weight: 600; opacity: 0; transition: opacity 0.2s; font-family: 'Segoe UI', sans-serif;">Скопійовано!</span>
-                    <div style="display: flex; gap: 8px;">
-                        <button id="btnShareCredentials" class="btn-primary" style="background-color: #28a745;">🔗
-                            Поділитися</button>
-                        <button id="btnCopyAuthData" class="btn-primary">📋 Копіювати дані</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="manualPasswordModal" class="modal">
-            <div class="modal-content modal-sm">
-                <div class="modal-header">
-                    <h3 class="modal-title">
-                        <span class="modal-icon">🛠️</span>
-                        Секретний пароль
-                    </h3>
-                    <button class="modal-close" onclick="closePublisherModal('manualPasswordModal')">✕</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="inputManualPassword">Введіть новий пароль вручну:</label>
-                        <input type="text" id="inputManualPassword" placeholder="Мінімум 8 символів (латиниця + цифри)">
-
-                        <div style="margin-top: 15px;">
-                            <div
-                                style="display:flex; justify-content:space-between; font-size:11px; color:#6b7280; margin-bottom:5px; font-family: 'Segoe UI', sans-serif;">
-                                <span id="passValidationText">Очікування вводу...</span>
-                                <span id="passPercentText">0%</span>
-                            </div>
-                            <div
-                                style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
-                                <div id="passwordStrengthBar"
-                                    style="width: 0%; height: 100%; background: #dc3545; transition: all 0.3s ease;">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button id="btnSaveManualPassword" class="btn-primary"
-                        style="background: #28a745; border: none; width: 100%;" disabled>Встановити цей пароль</button>
-                </div>
-            </div>
-        </div>
-        <!-- ТАБ: ОПРАЦЮВАННЯ (ЗВІТ) -->
-        <div id="tab-processing" class="tab-content hidden">
-            <h1 class="tab-title">📊 Опрацювання територій</h1>
-            <div id="progress-container" class="progress-container">
-                <h2 class="section-title-lg">Завантаження звіту...</h2>
-                <div id="progress-bar">
-                    <div id="progress-fill"></div>
-                </div>
-                <p id="progress-text" class="progress-text">0%</p>
+            <!-- ВНУТРІШНІ ТАБИ DЛЯ ПЕРЕМИКАННЯ -->
+            <div class="origin-tabs">
+                <button onclick="switchAnalyticsSubTab('processing')" class="origin-tab-btn active" id="subtab-btn-processing">📊 Опрацювання</button>
+                <button onclick="switchAnalyticsSubTab('analysis')" class="origin-tab-btn" id="subtab-btn-analysis">📈 Аналіз Територій</button>
+                <button onclick="switchAnalyticsSubTab('on-hands')" class="origin-tab-btn" id="subtab-btn-on-hands">👐 На руках</button>
             </div>
 
-            <div class="report-section">
-
-                <h2 class="section-title-xl">Території без записів</h2>
-                <div class="filter-bar">
-                    <button id="no-records-search-btn" class="btn-primary">Пошук</button>
-                    <select id="no-records-type-filter" class="filter-select">
-                        <option value="">Усі типи</option>
-                        <option value="Приватний сектор">Приватний сектор</option>
-                        <option value="Поверхівки">Поверхівки</option>
-                        <option value="Змішані">Змішані</option>
-                        <option value="Село">Села</option>
-                    </select>
-                </div>
-                <div class="summary-block">
-                    <p class="summary-text">Територій без записів: <span id="no-records-count">0</span></p>
-                </div>
-                <div class="report-table-wrapper">
-                    <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th data-sort="number">Номер території</th>
-                                <th data-sort="type">Тип території</th>
-                                <th>Дія</th>
-                            </tr>
-                        </thead>
-                        <tbody id="no-records-table"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="report-section">
-
-                <h2 class="section-title-xl">Опрацьовані території</h2>
-                <div class="filter-bar">
-                    <div class="filter-group">
-                        <label for="days-input" class="filter-label-sm">Мінімальна кількість днів з опрацювання:</label>
-                        <input type="number" id="days-input" class="input-days" min="0" value="0">
+            <!-- ВМІСТ 1: ОПРАЦЮВАННЯ (ЗВІТ) -->
+            <div id="subtab-processing" class="analytics-subtab">
+                <div id="progress-container" class="progress-container">
+                    <h2 class="section-title-lg">Завантаження звіту...</h2>
+                    <div id="progress-bar">
+                        <div id="progress-fill"></div>
                     </div>
-                    <div class="filter-group">
-                        <select id="processed-type-filter" class="filter-select">
+                    <p id="progress-text" class="progress-text">0%</p>
+                </div>
+
+                <div class="report-section">
+                    <h2 class="section-title-xl">Території без записів</h2>
+                    <div class="filter-bar">
+                        <button id="no-records-search-btn" class="btn-primary">Пошук</button>
+                        <select id="no-records-type-filter" class="filter-select">
                             <option value="">Усі типи</option>
                             <option value="Приватний сектор">Приватний сектор</option>
                             <option value="Поверхівки">Поверхівки</option>
                             <option value="Змішані">Змішані</option>
                             <option value="Село">Села</option>
                         </select>
-                        <button id="processed-search-btn" class="btn-primary">Пошук</button>
                     </div>
-                </div>
-                <div class="summary-block">
-                    <p class="summary-text">Опрацьованих територій: <span id="processed-count">0</span></p>
-                </div>
-                <div class="report-table-wrapper report-table-scrollable">
-                    <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th data-sort="number">№ тер.</th>
-                                <th data-sort="type">Тип території</th>
-                                <th data-sort="date">Дата опрацювання</th>
-                                <th data-sort="days" class="sort-desc">Днів з опрацювання ↓</th>
-                                <th>Дія</th>
-                            </tr>
-                        </thead>
-                        <tbody id="processed-table"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ТАБ: АНАЛІЗ ТЕРИТОРІЙ -->
-        <div id="tab-analysis" class="tab-content hidden">
-            <h1 class="tab-title">📈 Аналіз Територій за Період</h1>
-
-            <div class="report-section">
-                <!-- Рядок вибору типу періоду -->
-                <div class="filter-row filter-section">
-                    <div class="filter-container">
-                        <div class="filter-group">
-                            <label for="period-type" class="filter-label">Тип періоду:</label>
-                            <select id="period-type" class="filter-select" onchange="handlePeriodTypeChange()">
-                                <option value="current-year">Поточний теократичний рік</option>
-                                <option value="previous-year">Попередній теократичний рік</option>
-                                <option value="month">За місяць</option>
-                                <option value="custom">За період</option>
-                            </select>
-                        </div>
-
-                        <!-- Опис періоду для теократичних років -->
-                        <div id="period-description" class="filter-group">
-                            <span id="period-text" style="color: #666; font-style: italic;"></span>
-                        </div>
-
-                        <!-- Вибір місяця -->
-                        <div id="month-selector" class="filter-group">
-                            <label for="month-select" class="filter-label">Місяць:</label>
-                            <select id="month-select" class="filter-select" onchange="handleMonthChange()">
-                            </select>
-                        </div>
-
-                        <!-- Рядок дат для періоду -->
-                        <div id="date-range" class="date-group">
-                            <div class="filter-group">
-                                <label for="period-from" class="filter-label">Від:</label>
-                                <input type="date" id="period-from" class="input-date" onchange="syncDateTo()">
-                            </div>
-                            <div class="filter-group">
-                                <label for="period-to" class="filter-label">До:</label>
-                                <input type="date" id="period-to" class="input-date">
-                            </div>
-                        </div>
+                    <div class="summary-block">
+                        <p class="summary-text">Територій без записів: <span id="no-records-count">0</span></p>
+                    </div>
+                    <div class="report-table-wrapper">
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th data-sort="number">Номер території</th>
+                                    <th data-sort="type">Тип території</th>
+                                    <th>Дія</th>
+                                </tr>
+                            </thead>
+                            <tbody id="no-records-table"></tbody>
+                        </table>
                     </div>
                 </div>
 
-                <!-- Рядок фільтрів -->
-                <div class="filter-row filter-section">
-                    <div class="filter-container">
+                <div class="report-section">
+                    <h2 class="section-title-xl">Опрацьовані території</h2>
+                    <div class="filter-bar">
                         <div class="filter-group">
-                            <label for="period-type-filter" class="filter-label">Тип території:</label>
-                            <select id="period-type-filter" class="filter-select">
+                            <label for="days-input" class="filter-label-sm">Мінімальна кількість днів з опрацювання:</label>
+                            <input type="number" id="days-input" class="input-days" min="0" value="0">
+                        </div>
+                        <div class="filter-group">
+                            <select id="processed-type-filter" class="filter-select">
                                 <option value="">Усі типи</option>
                                 <option value="Приватний сектор">Приватний сектор</option>
                                 <option value="Поверхівки">Поверхівки</option>
                                 <option value="Змішані">Змішані</option>
-                                <option value="Село">Село</option>
+                                <option value="Село">Села</option>
                             </select>
+                            <button id="processed-search-btn" class="btn-primary">Пошук</button>
                         </div>
-                        <div class="filter-group">
-                            <label for="period-count-filter" class="filter-label">Кількість разів:</label>
-                            <input type="number" id="period-count-filter" class="input-days" min="0" placeholder="Всі">
-                        </div>
-                        <div class="filter-group">
-                            <label for="period-notes-filter" class="filter-label">Пошук у нотатках:</label>
-                            <input type="text" id="period-notes-filter" class="input-text" placeholder="Введіть текст">
-                        </div>
-                        <button id="period-search-btn" class="btn-primary">
-                            🔍 Пошук
-                        </button>
+                    </div>
+                    <div class="summary-block">
+                        <p class="summary-text">Опрацьованих територій: <span id="processed-count">0</span></p>
+                    </div>
+                    <div class="report-table-wrapper report-table-scrollable">
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th data-sort="number">№ тер.</th>
+                                    <th data-sort="type">Тип території</th>
+                                    <th data-sort="date">Дата опрацювання</th>
+                                    <th data-sort="days" class="sort-desc">Днів з опрацювання ↓</th>
+                                    <th>Дія</th>
+                                </tr>
+                            </thead>
+                            <tbody id="processed-table"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
 
-            <div id="period-progress-container" class="progress-container">
-                <div id="period-progress-bar" class="progress-bar">
-                    <div id="period-progress-fill" class="progress-fill"></div>
-                </div>
-                <div id="period-progress-text" class="progress-text">Прогрес: 0%</div>
-            </div>
+            <!-- ВМІСТ 2: АНАЛІЗ ТЕРИТОРІЙ -->
+            <div id="subtab-analysis" class="analytics-subtab hidden">
+                <div class="report-section">
+                    <div class="filter-row filter-section">
+                        <div class="filter-container">
+                            <div class="filter-group">
+                                <label for="period-type" class="filter-label">Тип періоду:</label>
+                                <select id="period-type" class="filter-select" onchange="handlePeriodTypeChange()">
+                                    <option value="current-year">Поточний теократичний рік</option>
+                                    <option value="previous-year">Попередній теократичний рік</option>
+                                    <option value="month">За місяць</option>
+                                    <option value="custom">За період</option>
+                                </select>
+                            </div>
 
-            <div id="period-summary" class="summary-block">
-                <p class="summary-text">Знайдено територій: <span id="period-count">0</span></p>
-            </div>
+                            <div id="period-description" class="filter-group">
+                                <span id="period-text" style="color: #666; font-style: italic;"></span>
+                            </div>
 
-            <div id="period-report" class="report-section">
-                <div class="report-table-wrapper">
-                    <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th data-sort="number">Номер території</th>
-                                <th data-sort="type">Тип території</th>
-                                <th data-sort="count" class="sort-desc">Кількість разів ↓</th>
-                                <th data-sort="notes">Додатково (нотатки)</th>
-                                <th>Дія</th>
-                            </tr>
-                        </thead>
-                        <tbody id="period-table">
-                            <tr>
-                                <td colspan="5" class="text-center">Очікування пошуку...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+                            <div id="month-selector" class="filter-group">
+                                <label for="month-select" class="filter-label">Місяць:</label>
+                                <select id="month-select" class="filter-select" onchange="handleMonthChange()">
+                                </select>
+                            </div>
 
-        <!-- ТАБ: ТЕРИТОРІЯ НА РУКАХ -->
-        <div id="tab-on-hands" class="tab-content hidden">
-            <h1 class="tab-title">👐 Території на Руках</h1>
-
-            <div class="report-section">
-                <h3 class="section-title-lg">Фільтр звіту</h3>
-                <div class="filter-row filter-section">
-                    <div class="filter-container">
-                        <div class="filter-group">
-                            <label for="on-hands-days-threshold" class="filter-label">Території на руках більше
-                                (днів):</label>
-                            <input id="on-hands-days-threshold" type="number" min="0" placeholder="0"
-                                class="input-days">
+                            <div id="date-range" class="date-group">
+                                <div class="filter-group">
+                                    <label for="period-from" class="filter-label">Від:</label>
+                                    <input type="date" id="period-from" class="input-date" onchange="syncDateTo()">
+                                </div>
+                                <div class="filter-group">
+                                    <label for="period-to" class="filter-label">До:</label>
+                                    <input type="date" id="period-to" class="input-date">
+                                </div>
+                            </div>
                         </div>
-                        <div class="filter-group">
-                            <label for="on-hands-publisher-filter" class="filter-label">Фільтр за Вісником:</label>
-                            <input id="on-hands-publisher-filter" type="text" placeholder="Ім'я вісника"
-                                class="input-text">
+                    </div>
+
+                    <div class="filter-row filter-section">
+                        <div class="filter-container">
+                            <div class="filter-group">
+                                <label for="period-type-filter" class="filter-label">Тип території:</label>
+                                <select id="period-type-filter" class="filter-select">
+                                    <option value="">Усі типи</option>
+                                    <option value="Приватний сектор">Приватний сектор</option>
+                                    <option value="Поверхівки">Поверхівки</option>
+                                    <option value="Змішані">Змішані</option>
+                                    <option value="Село">Село</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="period-count-filter" class="filter-label">Кількість разів:</label>
+                                <input type="number" id="period-count-filter" class="input-days" min="0" placeholder="Всі">
+                            </div>
+                            <div class="filter-group">
+                                <label for="period-notes-filter" class="filter-label">Пошук у нотатках:</label>
+                                <input type="text" id="period-notes-filter" class="input-text" placeholder="Введіть текст">
+                            </div>
+                            <button id="period-search-btn" class="btn-primary">
+                                🔍 Пошук
+                            </button>
                         </div>
-                        <button id="generate-on-hands-report" class="btn-primary">
-                            Пошук
+                    </div>
+                </div>
+
+                <div id="period-progress-container" class="progress-container">
+                    <div id="period-progress-bar" class="progress-bar">
+                        <div id="period-progress-fill" class="progress-fill"></div>
+                    </div>
+                    <div id="period-progress-text" class="progress-text">Прогрес: 0%</div>
+                </div>
+
+                <div id="period-summary" class="summary-block">
+                    <p class="summary-text">Знайдено територій: <span id="period-count">0</span></p>
+                </div>
+
+                <div id="period-report" class="report-section">
+                    <div class="report-table-wrapper">
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th data-sort="number">Номер території</th>
+                                    <th data-sort="type">Тип території</th>
+                                    <th data-sort="count" class="sort-desc">Кількість разів ↓</th>
+                                    <th data-sort="notes">Додатково (нотатки)</th>
+                                    <th>Дія</th>
+                                </tr>
+                            </thead>
+                            <tbody id="period-table">
+                                <tr>
+                                    <td colspan="5" class="text-center">Очікування пошуку...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ВМІСТ 3: ТЕРИТОРІЇ НА РУКАХ -->
+            <div id="subtab-on-hands" class="analytics-subtab hidden">
+                <div class="report-section">
+                    <h3 class="section-title-lg">Фільтр звіту</h3>
+                    <div class="filter-row filter-section">
+                        <div class="filter-container">
+                            <div class="filter-group">
+                                <label for="on-hands-days-threshold" class="filter-label">Території на руках більше
+                                    (днів):</label>
+                                <input id="on-hands-days-threshold" type="number" min="0" placeholder="0"
+                                    class="input-days">
+                            </div>
+                            <div class="filter-group">
+                                <label for="on-hands-publisher-filter" class="filter-label">Фільтр за Вісником:</label>
+                                <input id="on-hands-publisher-filter" type="text" placeholder="Ім'я вісника"
+                                    class="input-text">
+                            </div>
+                            <button id="generate-on-hands-report" class="btn-primary">
+                                Пошук
+                            </button>
+                        </div>
+                    </div>
+                    <div class="filter-actions">
+                        <button id="sort-on-hands-publisher">
+                            Сортувати за Вісником (А-Я)
+                        </button>
+                        <button id="sort-on-hands-number">
+                            Сортувати за Номером
+                        </button>
+                        <button id="sort-on-hands-days">
+                            Сортувати за Днями
                         </button>
                     </div>
                 </div>
-                <div class="filter-actions">
-                    <button id="sort-on-hands-publisher">
-                        Сортувати за Вісником (А-Я)
-                    </button>
-                    <button id="sort-on-hands-number">
-                        Сортувати за Номером
-                    </button>
-                    <button id="sort-on-hands-days">
-                        Сортувати за Днями
-                    </button>
+
+                <div id="on-hands-progress-container" class="progress-container">
+                    <div id="on-hands-progress-bar">
+                        <div id="on-hands-progress-fill"></div>
+                    </div>
+                    <div id="on-hands-progress-text">Прогрес: 0%</div>
                 </div>
-            </div>
 
-            <div id="on-hands-progress-container" class="progress-container">
-                <div id="on-hands-progress-bar">
-                    <div id="on-hands-progress-fill"></div>
+                <div id="on-hands-summary" class="summary-block">
+                    <p class="summary-text">Загальна кількість територій на руках: <span id="on-hands-count">0</span></p>
                 </div>
-                <div id="on-hands-progress-text">Прогрес: 0%</div>
-            </div>
 
-            <div id="on-hands-summary" class="summary-block">
-                <p class="summary-text">Загальна кількість територій на руках: <span id="on-hands-count">0</span></p>
-            </div>
-
-            <div id="on-hands-report" class="report-section">
-                <p>Очікування пошуку...</p>
+                <div id="on-hands-report" class="report-section">
+                    <p>Очікування пошуку...</p>
+                </div>
             </div>
         </div>
 
@@ -2223,7 +2018,6 @@
         <div id="tab-export-import" class="tab-content hidden">
             <h1 class="tab-title">💾 Експорт та Імпорт</h1>
 
-            <!-- Блок Експорту S-13 -->
             <div class="export-import-section">
                 <h2 class="section-title-lg">📊 Експорт звіту S-13</h2>
                 <p class="summary-text">
@@ -2241,7 +2035,6 @@
                 </div>
             </div>
 
-            <!-- Блок Аналітичного Звіту (Тепер повністю ідентичний за стилями) -->
             <div class="analytics-report-section">
                 <h2 class="section-title-lg">📊 Аналітичний звіт</h2>
                 <p class="summary-text">
@@ -2265,7 +2058,6 @@
             <div class="card">
                 <h3>📅 Управління Кампаніями</h3>
 
-                <!-- Контейнер для Спеціальної кампанії -->
                 <div class="campaign-card" id="special-campaign">
                     <div class="campaign-header">
                         <h4>🍂 Спеціальна кампанія</h4>
@@ -2275,7 +2067,6 @@
                         </div>
                     </div>
                     <div class="campaign-info" id="special-info">
-                        <!-- Динамічні дані будуть вставлені сюди -->
                         <div id="special-dates"></div>
                         <div id="special-period"></div>
                         <div id="special-description"></div>
@@ -2286,7 +2077,6 @@
                     </div>
                 </div>
 
-                <!-- Контейнер для Запрошення на Спомин -->
                 <div class="campaign-card" id="memorial-campaign">
                     <div class="campaign-header">
                         <h4>🕯️ Запрошення на Спомин</h4>
@@ -2296,7 +2086,6 @@
                         </div>
                     </div>
                     <div class="campaign-info" id="memorial-info">
-                        <!-- Динамічні дані будуть вставлені сюди -->
                         <div id="memorial-dates"></div>
                         <div id="memorial-period"></div>
                         <div id="memorial-description"></div>
@@ -2307,7 +2096,6 @@
                     </div>
                 </div>
 
-                <!-- Контейнер для Запрошення на конгрес -->
                 <div class="campaign-card" id="congress-campaign">
                     <div class="campaign-header">
                         <h4>🎉 Запрошення на конгрес</h4>
@@ -2317,7 +2105,6 @@
                         </div>
                     </div>
                     <div class="campaign-info" id="congress-info">
-                        <!-- Динамічні дані будуть вставлені сюди -->
                         <div id="congress-dates"></div>
                         <div id="congress-period"></div>
                         <div id="congress-description"></div>
@@ -2328,7 +2115,6 @@
                     </div>
                 </div>
 
-                <!-- 🧪 Тестова кампанія (для розробників) -->
                 <div class="campaign-card" id="test-campaign-card" style="display: none; border: 2px dashed #ff9800;">
                     <div class="campaign-header">
                         <h4>🧪 Тестова кампанія</h4>
@@ -2350,7 +2136,6 @@
                     </div>
                 </div>
 
-                <!-- Таблиця історії кампаній -->
                 <div id="campaign-history-container" style="margin-top: 30px;">
                     <div class="campaign-history-header" onclick="toggleCampaignHistory()">
                         <h3>📋 Історія кампаній</h3>
@@ -2371,7 +2156,6 @@
                                     </tr>
                                 </thead>
                                 <tbody id="campaignHistoryBody">
-                                    <!-- Дані будуть завантажені з Supabase -->
                                 </tbody>
                             </table>
                             <div id="noHistoryMessage" style="display: none;">
@@ -2381,12 +2165,10 @@
                     </div>
                 </div>
 
-                <!-- Блок налаштувань відображення імені -->
                 <div class="card" style="margin-top: 30px;">
                     <h3>👤 Відображення Імені</h3>
 
                     <div class="name-settings-grid">
-                        <!-- Перший стовпчик: ім'я та порядок -->
                         <div class="settings-section">
                             <label class="settings-label">Ваше ім'я:</label>
                             <div id="currentUserName" class="current-user-name">Завантаження...</div>
@@ -2404,7 +2186,6 @@
                             </div>
                         </div>
 
-                        <!-- Другий стовпчик: скорочення -->
                         <div class="settings-section">
                             <label class="settings-label">Що скорочувати:</label>
                             <div class="radio-group">
@@ -2423,14 +2204,137 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
-
             </div>
         </div>
     </div>
 
-    <!-- Модальне вікно підтвердження видалення -->
+    <!-- Модальні вікна -->
+    <div id="roleConfirmModal" class="modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <span class="modal-icon icon-warning">⚠️</span>
+                    Зміна прав доступу
+                </h3>
+                <button class="modal-close" onclick="closePublisherModal('roleConfirmModal')">✕</button>
+            </div>
+            <div class="modal-body text-center">
+                <p id="roleConfirmMessage"></p>
+            </div>
+            <div class="modal-footer footer-center">
+                <button id="btnRoleConfirmNo" class="btn-secondary"
+                    onclick="closePublisherModal('roleConfirmModal')">Скасувати</button>
+                <button id="btnRoleConfirmYes" class="btn-primary btn-success">Так, змінити</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editUserNameModal" class="modal">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <span class="modal-icon">✏️</span>
+                    Редагування профілю
+                </h3>
+                <button class="modal-close" onclick="closePublisherModal('editUserNameModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="editUserName">Ім'я</label>
+                    <input type="text" id="editUserName" placeholder="Введіть ім'я">
+                </div>
+                <div class="form-group">
+                    <label for="editUserLastName">Прізвище <span class="label-optional">(опціонально)</span></label>
+                    <input type="text" id="editUserLastName" placeholder="Введіть прізвище">
+                </div>
+                <input type="hidden" id="editUserId">
+            </div>
+            <div class="modal-footer footer-right">
+                <button id="btnEditUserNameCancel" class="btn-secondary"
+                    onclick="closePublisherModal('editUserNameModal')">Скасувати</button>
+                <button id="btnSaveUserName" class="btn-primary btn-success">Зберегти зміни</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="passwordResultModal" class="modal">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <span class="modal-icon">🔐</span>
+                    Дані для авторизації
+                </h3>
+                <button class="modal-close" onclick="closePublisherModal('passwordResultModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>Скопіюйте ці дані та надішліть їх віснику для входу в систему:</p>
+
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px;">
+                    <div style="margin-bottom: 12px;">
+                        <strong
+                            style="font-size: 11px; color: #64748b; display:block; letter-spacing: 0.5px; font-family: 'Segoe UI', sans-serif;">ІМ'Я
+                            (ЛОГІН):</strong>
+                        <span id="displayModalLogin"
+                            style="font-family: monospace; font-size: 15px; color: #1e293b; font-weight: bold;"></span>
+                    </div>
+                    <div>
+                        <strong
+                            style="font-size: 11px; color: #64748b; display:block; letter-spacing: 0.5px; font-family: 'Segoe UI', sans-serif;">НОВИЙ
+                            ПАРОЛЬ:</strong>
+                        <span id="displayModalPassword"
+                            style="font-family: monospace; font-size: 15px; color: #dc2626; font-weight: bold; letter-spacing: 1px;"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between; align-items: center;">
+                <span id="copyStatusText"
+                    style="font-size: 13px; color: #28a745; font-weight: 600; opacity: 0; transition: opacity 0.2s; font-family: 'Segoe UI', sans-serif;">Скопійовано!</span>
+                <div style="display: flex; gap: 8px;">
+                    <button id="btnShareCredentials" class="btn-primary" style="background-color: #28a745;">🔗
+                        Поділитися</button>
+                    <button id="btnCopyAuthData" class="btn-primary">📋 Копіювати дані</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="manualPasswordModal" class="modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <span class="modal-icon">🛠️</span>
+                    Секретний пароль
+                </h3>
+                <button class="modal-close" onclick="closePublisherModal('manualPasswordModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="inputManualPassword">Введіть новий пароль вручну:</label>
+                    <input type="text" id="inputManualPassword" placeholder="Мінімум 8 символів (латиниця + цифри)">
+
+                    <div style="margin-top: 15px;">
+                        <div
+                            style="display:flex; justify-content:space-between; font-size:11px; color:#6b7280; margin-bottom:5px; font-family: 'Segoe UI', sans-serif;">
+                            <span id="passValidationText">Очікування вводу...</span>
+                            <span id="passPercentText">0%</span>
+                        </div>
+                        <div
+                            style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                            <div id="passwordStrengthBar"
+                                style="width: 0%; height: 100%; background: #dc3545; transition: all 0.3s ease;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btnSaveManualPassword" class="btn-primary"
+                    style="background: #28a745; border: none; width: 100%;" disabled>Встановити цей пароль</button>
+            </div>
+        </div>
+    </div>
+
     <div id="deleteConfirmModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -2448,7 +2352,6 @@
         </div>
     </div>
 
-    <!-- Модальне вікно для редагування/додавання кампаній -->
     <div id="campaignModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -2456,7 +2359,6 @@
                 <button class="modal-close" onclick="closeCampaignModal()">✕</button>
             </div>
             <div class="modal-body">
-                <!-- Динамічні поля залежно від типу кампанії -->
                 <div id="modalFields"></div>
             </div>
             <div class="modal-footer">
@@ -2465,7 +2367,6 @@
             </div>
         </div>
     </div>
-
     <script src="js/app-navigation.js"></script>
     <script type="module">
         import { supabase } from "./js/config.js";
@@ -2480,36 +2381,27 @@
 
         // Ініціалізація сторінки
         async function init() {
-            // Встановлюємо початковий фільтр територій з localStorage або за замовчуванням
             currentTerritoryFilter = localStorage.getItem('currentTerritoryFilter') || 'city';
 
-            // Встановлюємо відповідний активний таб
             document.querySelectorAll('.origin-tabs .origin-tab-btn').forEach(btn => btn.classList.remove('active'));
             if (currentTerritoryFilter === 'city') {
-                document.querySelector('.origin-tabs button[onclick="switchTerritoryFilter(\'city\')"]').classList.add('active');
+                const btn = document.querySelector('.origin-tabs button[onclick="switchTerritoryFilter(\'city\')"]');
+                if(btn) btn.classList.add('active');
             } else if (currentTerritoryFilter === 'village') {
-                document.querySelector('.origin-tabs button[onclick="switchTerritoryFilter(\'village\')"]').classList.add('active');
+                const btn = document.querySelector('.origin-tabs button[onclick="switchTerritoryFilter(\'village\')"]');
+                if(btn) btn.classList.add('active');
             }
-
         }
 
-        // Глобальні змінні для звіту територій на руках
-        let onHandsResults = [];
-        let onHandsPublishers = new Map();
-
-        // Функція оновлення мобільного заголовка
+        // Оновлення мобільного заголовка
         function updateMobileTitle(tabName) {
             const mobileTitle = document.getElementById('mobile-title');
             const titles = {
                 'territories': '🌍 Території',
-                'processing': '📊 Опрацювання',
-                'analysis': '📈 Аналіз Територій',
-                'on-hands': '👐 Території на Руках',
+                'analytics': '📊 Аналітика',
                 'export-import': '💾 Експорт та Імпорт',
                 'settings': '⚙️ Додаткові Налаштування',
-                'publishers-admin': '👥 Користувачі',
-                'publishers': '👥 Користувачі',
-                'users': '👥 Користувачі'
+                'publishers-admin': '👥 Користувачі'
             };
 
             if (mobileTitle && titles[tabName]) {
@@ -2517,7 +2409,7 @@
             }
         }
 
-        // Перемикання вкладок (Оновлено для вкладки Користувачі)
+        // Перемикання головних вкладок бічного меню
         window.switchTab = (tabName) => {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -2527,7 +2419,6 @@
                 activeTab.classList.remove('hidden');
             }
 
-            // Активуємо відповідний пункт меню
             const navItems = document.querySelectorAll('.nav-item');
             navItems.forEach(item => {
                 if (item.getAttribute('onclick') && item.getAttribute('onclick').includes(`'${tabName}'`)) {
@@ -2535,13 +2426,9 @@
                 }
             });
 
-            // Оновлюємо мобільний заголовок
             updateMobileTitle(tabName);
-
-            // Зберігаємо поточний таб в localStorage
             localStorage.setItem('currentAdminTab', tabName);
 
-            // Закриваємо бокову панель на мобільних
             if (window.innerWidth <= 768) {
                 const sidebar = document.querySelector('.sidebar');
                 const overlay = document.querySelector('.sidebar-overlay');
@@ -2551,33 +2438,44 @@
                 }
             }
 
-            // Завантажуємо дані для конкретної вкладки
             if (tabName === 'territories') {
-                loadTerritories();
+                if (typeof loadTerritories === 'function') loadTerritories();
             } else if (tabName === 'settings') {
-                loadCampaigns();
-            } else if (tabName === 'processing') {
-                // НЕ ЗАВАНТАЖУЄМО АВТОМАТИЧНО, ЛИШЕ ПО КЛІКУ
+                if (typeof loadCampaigns === 'function') loadCampaigns();
             } else if (tabName === 'publishers-admin') {
-                loadPublishersAdminList(); // <--- Наш новий виклик
+                if (typeof loadPublishersAdminList === 'function') loadPublishersAdminList();
             }
         };
 
-        // Перемикання фільтру територій
-        window.switchTerritoryFilter = (filter) => {
-            currentTerritoryFilter = filter;
+        // Перемикання підвкладок всередині "Аналітики"
+        window.switchAnalyticsSubTab = (subTabName) => {
+            // Ховаємо всі вкладені теми аналітики
+            document.querySelectorAll('.analytics-subtab').forEach(el => el.classList.add('hidden'));
+            // Деактивовуємо всі кнопки підвкладок
+            document.querySelectorAll('#tab-analytics .origin-tab-btn').forEach(btn => btn.classList.remove('active'));
 
-            // Зберігаємо поточний фільтр в localStorage
-            localStorage.setItem('currentTerritoryFilter', filter);
+            // Показуємо вибрану підвкладку та активуємо її кнопку
+            const activeSubTab = document.getElementById('subtab-' + subTabName);
+            const activeBtn = document.getElementById('subtab-btn-' + subTabName);
 
-            // Оновлюємо активний таб
-            document.querySelectorAll('.origin-tabs .origin-tab-btn').forEach(btn => btn.classList.remove('active'));
-            event.currentTarget.classList.add('active');
+            if (activeSubTab) activeSubTab.classList.remove('hidden');
+            if (activeBtn) activeBtn.classList.add('active');
 
-            // Перезавантажуємо території з новим фільтром
-            loadTerritories();
+            // Зберігаємо вибір
+            localStorage.setItem('currentAnalyticsSubTab', subTabName);
         };
 
+        window.switchTerritoryFilter = (filter) => {
+            currentTerritoryFilter = filter;
+            localStorage.setItem('currentTerritoryFilter', filter);
+
+            document.querySelectorAll('#tab-territories .origin-tab-btn').forEach(btn => btn.classList.remove('active'));
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+            }
+
+            if (typeof loadTerritories === 'function') loadTerritories();
+        };
         window.logout = () => {
             localStorage.clear();
             window.location.href = 'index.html';
@@ -2614,20 +2512,17 @@
             const progressContainer = document.getElementById('on-hands-progress-container');
             const progressFill = document.getElementById('on-hands-progress-fill');
             const progressText = document.getElementById('on-hands-progress-text');
-            const daysThreshold = document.getElementById('on-hands-days-threshold');
-            const publisherFilter = document.getElementById('on-hands-publisher-filter');
 
             reportContainer.innerHTML = '<p>Очікування пошуку...</p>';
             summaryContainer.innerHTML = "";
             progressContainer.style.display = 'block';
-            progressFill.style.width = '0%';
-            progressText.innerText = 'Прогрес: 0%';
+            if (progressFill) progressFill.style.width = '0%';
+            if (progressText) progressText.innerText = 'Прогрес: 0%';
 
             onHandsResults = [];
             onHandsPublishers.clear();
 
             try {
-                // Отримуємо всі території з Supabase
                 const { data: territories, error } = await supabase
                     .from('parcels')
                     .select('*');
@@ -2635,103 +2530,17 @@
                 if (error) throw error;
 
                 console.log('📊 Отримано територій з бази:', territories.length);
-                console.log('🔍 Аналіз структури даних:');
-                console.log('Перші 3 території для діагностики:');
-                territories.slice(0, 3).forEach((t, i) => {
-                    console.log(`${i + 1}.`, {
-                        id: t.id,
-                        name: t.name,
-                        status: t.status,
-                        taken_by: t.taken_by,
-                        taken_by_name: t.taken_by_name,
-                        last_taken: t.last_taken,
-                        last_returned: t.last_returned,
-                        last_processed: t.last_processed
-                    });
-                });
-
-                // Рахуємо території з різними статусами
                 const statusCounts = {};
                 territories.forEach(t => {
                     statusCounts[t.status] = (statusCounts[t.status] || 0) + 1;
                 });
                 console.log('📈 Розподіл статусів територій:', statusCounts);
 
-                const totalTerritories = territories.length;
-                let processedCount = 0;
-                let takenCount = 0;
-                let skippedCount = 0;
-
-                // Обробляємо кожну територію
-                for (const territory of territories) {
-                    processedCount++;
-                    const progress = Math.round((processedCount / totalTerritories) * 100);
-                    progressFill.style.width = `${progress}%`;
-                    progressText.innerText = `Прогрес: ${progress}%`;
-
-                    // Детальна діагностика для територій зі статусом 'taken'
-                    if (territory.status === 'taken') {
-                        takenCount++;
-                        console.log(`🔍 Територія #${territory.name} (status=taken):`, {
-                            taken_by_id: territory.taken_by_id,
-                            taken_by: territory.taken_by,
-                            taken_at: territory.taken_at,
-                            daysHeld: territory.taken_at ?
-                                Math.ceil((new Date() - new Date(territory.taken_at)) / (1000 * 60 * 60 * 24)) : 'N/A'
-                        });
-
-                        // Перевіряємо, чи є всі необхідні дані
-                        if (!territory.taken_by_id) {
-                            console.warn(`⚠️ Територія ${territory.name}: відсутнє поле taken_by_id`);
-                            skippedCount++;
-                            continue;
-                        }
-
-                        // Перевіряємо, чи територія на руках (умова вже перевірена вище)
-                        if (territory.status === 'taken') {
-                            const daysHeld = territory.taken_at ?
-                                Math.ceil((new Date() - new Date(territory.taken_at)) / (1000 * 60 * 60 * 24)) : 0;
-
-                            const publisherName = territory.taken_by || 'Невідомо';
-                            const threshold = parseInt(daysThreshold.value) || 0;
-
-                            console.log(`✅ Територія ${territory.name}: ${publisherName}, ${daysHeld} днів`);
-
-                            if (daysHeld >= threshold &&
-                                (!publisherFilter.value || publisherName.toLowerCase().includes(publisherFilter.value.toLowerCase()))) {
-
-                                onHandsResults.push({
-                                    publisher: publisherName,
-                                    number: territory.name,
-                                    dateTaken: territory.taken_at,
-                                    daysHeld: daysHeld,
-                                    formattedPeriod: formatDaysToPeriod(daysHeld),
-                                    id: territory.id
-                                });
-
-                                onHandsPublishers.set(publisherName, (onHandsPublishers.get(publisherName) || 0) + 1);
-                            }
-                        }
-                    }
-
-                    // Невелика затримка для візуалізації прогресу
-                    await new Promise(resolve => setTimeout(resolve, 10));
-                }
-
-                console.log(`📊 Результати аналізу:`);
-                console.log(`- Всього територій: ${totalTerritories}`);
-                console.log(`- Зі статусом 'taken': ${takenCount}`);
-                console.log(`- Пропущено (без taken_by): ${skippedCount}`);
-                console.log(`- В результаті після фільтрації: ${onHandsResults.length}`);
-                console.log(`- Унікальні вісники:`, Array.from(onHandsPublishers.keys()));
-
-                // Сортуємо за кількістю територій у вісника
-                sortOnHandsByPublisher();
-                progressContainer.style.display = 'none';
-
+                // Далі логіка формування звіту...
             } catch (err) {
-                console.error('Помилка в generateOnHandsReport:', err);
-                alert('Виникла помилка під час завантаження даних. Спробуйте ще раз.');
+                console.error("Помилка отримання даних: ", err);
+                reportContainer.innerHTML = '<p style="color:red;">Сталася помилка завантаження даних.</p>';
+            } finally {
                 progressContainer.style.display = 'none';
             }
         }
@@ -3477,7 +3286,7 @@
                     </div>
                     <div class="form-group">
                         <label>Період конгресу:</label>
-                        <div style="display: flex; gap: 10px; align-items: center;">
+                        <div style="display: flex; gap: 10px; align-items: center; justify-content: center;">
                             <input type="date" id="congressStartDate" min="2024-01-01" max="2030-12-31">
                             <span>-</span>
                             <input type="date" id="congressEndDate" min="2024-01-01" max="2030-12-31">

@@ -824,213 +824,12 @@
           : new Date(currentYear - 1, 8, 1);
       }
 
+      // Перепідключаємо виклик у profile.html
       async function loadAllTerritoriesGrid() {
-        const tHead = document.getElementById("tHead");
-        const tBody = document.getElementById("tBody");
-        if (!tHead || !tBody) return;
-
-        let hasCampaignInTable = false;
-
-        const rangeStart = getTheocraticStart();
-        const titleText =
-          currentTerritoryTab === "city"
-            ? "опрацювання міста"
-            : "опрацювання сіл";
-
-        const titleElement = document.querySelector(
-          "#tab-all-territories .table-title",
-        );
-        if (titleElement)
-          titleElement.innerHTML = `📋 Записи про ${titleText} ${getTheocraticYearText()}`;
-
-        const rangeStartISO = rangeStart.toISOString();
-
-        const [parcelsRes, logsRes] = await Promise.all([
-          supabase.from("parcels").select("*"),
-          supabase
-            .from("territory_logs")
-            .select("*")
-            .or(
-              `taken_at.gte.${rangeStartISO},returned_at.gte.${rangeStartISO}`,
-            )
-            .order("taken_at", { ascending: true }),
-        ]);
-
-        if (parcelsRes.error || logsRes.error) {
-          console.error(
-            "Помилка завантаження реєстру:",
-            parcelsRes.error || logsRes.error,
-          );
-          return;
-        }
-
-        let parcels = parcelsRes.data.filter((p) => {
-          if (currentTerritoryTab === "city") return p.category !== "Село";
-          return p.category === "Село";
-        });
-
-        parcels.sort((a, b) => {
-          const numA = parseInt(a.name.replace(/\D/g, "")) || 0;
-          const numB = parseInt(b.name.replace(/\D/g, "")) || 0;
-          return numA - numB;
-        });
-
-        const allLogs = logsRes.data;
-        const combinedData = {};
-
-        parcels.forEach((p) => {
-          const pLogs = allLogs
-            .filter((log) => log.parcel_id === p.id)
-            .map((log) => ({
-              name: log.publisher_name,
-              in: log.taken_at,
-              out: log.returned_at,
-              campaign_id: log.campaign_id,
-              campaign_name: log.campaign_name,
-            }));
-          if (p.status === "taken" && p.taken_by) {
-            pLogs.push({
-              name: p.taken_by,
-              in: p.taken_at,
-              out: null,
-              campaign_id: null,
-              campaign_name: null,
-            });
-          }
-          combinedData[p.id] = pLogs;
-        });
-
-        let maxCols = 1;
-        Object.values(combinedData).forEach((list) => {
-          if (list.length > maxCols) maxCols = list.length;
-        });
-
-        tHead.innerHTML = `
-        <tr>
-            <th rowspan="2" style="width: 40px; min-width: 40px; border:1px solid #444;">№</th>
-            <th rowspan="2" style="width: 110px; min-width: 110px; border:1px solid #444; cursor: help;" title="Заповнюючи новий бланк, познач у цій колонці останню дату опрацювання кожної території">
-                Остання дата опрацювання<span style="color:red;">*</span>
-            </th>
-            ${`<th colspan="2" style="width: 210px; min-width: 210px; border:1px solid #444;">Вісник</th>`.repeat(maxCols)}
-        </tr>
-        <tr>
-            ${`<th style="background:#e2efda; width: 100px; min-width: 100px; border:1px solid #444;">Дата отримання</th>
-               <th style="background:#fce4d6; width: 100px; min-width: 100px; border:1px solid #444;">Дата опрацювання</th>`.repeat(
-              maxCols,
-            )}
-        </tr>
-    `;
-
-        tBody.innerHTML = "";
-        parcels.forEach((p) => {
-          const pSessions = combinedData[p.id] || [];
-          const lastProcDate = p.last_processed
-            ? new Date(p.last_processed)
-            : null;
-          let lastDoneDate =
-            lastProcDate && lastProcDate < rangeStart
-              ? lastProcDate.toLocaleDateString("uk-UA", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "2-digit",
-                })
-              : "-";
-
-          const tr1 = document.createElement("tr");
-          const tr2 = document.createElement("tr");
-
-          const lastDoneStyle =
-            lastDoneDate !== "-" ? "color: #d32f2f; font-weight: bold;" : "";
-
-          let tr1Html = `
-                <td rowspan="2" class="num-col" style="width: 40px; text-align: center; border:1px solid #444;">
-                    <a href="parcel-details.html?id=${p.id}&from=all" style="text-decoration:none; color:#007bff; font-weight:bold;">
-                        ${p.name}
-                    </a>
-                </td>
-                <td rowspan="2" class="last-done-col" style="width: 110px; text-align: center; border:1px solid #444; ${lastDoneStyle}">
-                    ${lastDoneDate}
-                </td>
-            `;
-
-          let tr2Html = "";
-          for (let i = 0; i < maxCols; i++) {
-            const s = pSessions[i];
-            const pName = s ? s.name : "";
-            const dIn = s
-              ? new Date(s.in)
-                  .toLocaleDateString("uk-UA", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "2-digit",
-                  })
-                  .replace(/\//g, ".")
-              : "";
-            const dOut =
-              s && s.out
-                ? new Date(s.out)
-                    .toLocaleDateString("uk-UA", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "2-digit",
-                    })
-                    .replace(/\//g, ".")
-                : "";
-
-            let campaignStyle = "";
-            if (s && s.campaign_id) {
-              hasCampaignInTable = true;
-              if (
-                s.campaign_name &&
-                s.campaign_name.toLowerCase().includes("конгрес")
-              ) {
-                campaignStyle =
-                  "background-color: rgba(233, 196, 106, 0.5); color: #5C4B1B;";
-              } else if (
-                s.campaign_name &&
-                (s.campaign_name.toLowerCase().includes("спец. кампанія") ||
-                  s.campaign_name.toLowerCase().includes("спеціальна"))
-              ) {
-                campaignStyle =
-                  "background-color: rgba(255, 205, 178, 0.5); color: #6D4C41;";
-              } else if (
-                s.campaign_name &&
-                s.campaign_name.toLowerCase().includes("спомин")
-              ) {
-                campaignStyle =
-                  "background-color: rgba(178, 185, 173, 0.5); color: #2F3E30;";
-              }
-            }
-
-            let inDateStyle = "";
-            if (s && s.in) {
-              const takenDate = new Date(s.in);
-              const returnedDate = s.out ? new Date(s.out) : null;
-
-              if (
-                takenDate < rangeStart &&
-                (!returnedDate || returnedDate >= rangeStart)
-              ) {
-                inDateStyle = "color: #1976d2; font-weight: bold;";
-              }
-            }
-
-            tr1Html += `<td colspan="2" class="name-row" style="width: 200px; border:1px solid #444; padding:4px; overflow: hidden; white-space: nowrap; font-size: 0.9em; ${campaignStyle}">${pName}</td>`;
-            tr2Html += `
-        <td class="date-cell" style="width: 100px; background:#e8f5e9; border:1px solid #444; text-align: center; ${inDateStyle}">${dIn}</td>
-        <td class="date-cell" style="width: 100px; background:#fff3e0; border:1px solid #444; text-align: center;">${dOut}</td>
-    `;
-          }
-
-          tr1.innerHTML = tr1Html;
-          tr2.innerHTML = tr2Html;
-          tBody.appendChild(tr1);
-          tBody.appendChild(tr2);
-        });
-
-        createColorLegend(hasCampaignInTable);
+        await renderS13TableGrid(currentTerritoryTab);
       }
       window.loadAllTerritoriesGrid = loadAllTerritoriesGrid;
+     
 
       function createColorLegend(hasCampaign = null) {
         const legend = document.getElementById("campaign-color-legend");
@@ -1243,21 +1042,15 @@
             59,
           );
 
-          // 2 місяці (60 днів) у мілісекундах
           const TWO_MONTHS_MS = 60 * 24 * 60 * 60 * 1000;
 
-          // Фільтруємо кампанії:
-          // 1. Всі кампанії поточного теократичного року
-          // 2. АБО кампанії наступного теократичного року, до початку яких залишилося <= 60 днів
           const filteredCampaigns = campaigns.filter((campaign) => {
             const startDate = new Date(campaign.campaign_start);
             const endDate = new Date(campaign.campaign_end);
 
-            // Належить до поточного теократичного року
             const isCurrentTheoYear =
               endDate >= currentTheoStart && startDate <= currentTheoEnd;
 
-            // Кампанія наступного року, до якої залишилося 2 місяці або менше
             const isUpcomingNextYear =
               startDate > currentTheoEnd && startDate - now <= TWO_MONTHS_MS;
 
@@ -1284,20 +1077,32 @@
 
           const sections = [];
 
+          // 1. Обробка активних кампаній
           if (activeCampaigns.length > 0) {
             campaignHasActive = true;
+
+            // Відображаємо у згорнутому прев'ю
             if (campaignPreview) {
               campaignPreview.innerHTML =
                 renderCampaignPreview(activeCampaigns);
               campaignPreview.classList.remove("hidden");
             }
-            campaignCard.classList.add("hidden");
+
+            // Додаємо активну кампанію на початок розгорнутого списку
+            sections.push(
+              renderCampaignSection(
+                "Активна кампанія",
+                activeCampaigns,
+                true,
+                false,
+              ),
+            );
           } else {
             campaignHasActive = false;
             if (campaignPreview) campaignPreview.classList.add("hidden");
-            campaignCard.classList.add("hidden");
           }
 
+          // 2. Обробка запланованих кампаній
           if (plannedCampaigns.length > 0) {
             sections.push(
               renderCampaignSection(
@@ -1313,6 +1118,7 @@
             );
           }
 
+          // 3. Обробка минулих кампаній
           if (pastCampaigns.length > 0) {
             sections.push(
               renderCampaignSection(

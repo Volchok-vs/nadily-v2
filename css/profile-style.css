@@ -179,7 +179,7 @@ body {
 /* Таблиці та списки */
 table {
     border-collapse: collapse;
-    margin-top: 15px;
+    margin: 15px
 }
 
 th,
@@ -576,12 +576,6 @@ h3 {
     background: #218838;
 }
 
-/* Стилізація таблиці */
-.publishers-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
 .publishers-table th,
 .publishers-table td {
     padding: 12px;
@@ -853,7 +847,7 @@ h3 {
 
     .card {
         margin: 0 0 20px 0 !important;
-        padding: 15px !important;
+        padding: 15px 0 !important;
     }
 
     .tab-header {
