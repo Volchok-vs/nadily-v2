@@ -1505,65 +1505,78 @@
         }
 
         function initMiniMap(geom) {
-            if (map) map.remove();
+    if (map) map.remove();
 
-            const mapContainer = document.getElementById('miniMap');
+    const mapContainer = document.getElementById('miniMap');
 
-            map = L.map('miniMap', { 
-                zoomControl: false, 
-                attributionControl: false, 
-                dragging: true, 
-                scrollWheelZoom: true,
-                touchZoom: true
-            });
+    map = L.map('miniMap', { 
+        zoomControl: false, 
+        attributionControl: false, 
+        dragging: true, 
+        scrollWheelZoom: true,
+        touchZoom: true
+    });
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-            const layer = L.geoJSON(geom, { 
-                style: { 
-                    color: "#6750A4", 
-                    weight: 2, 
-                    opacity: 1, 
-                    fillColor: "#6750A4", 
-                    fillOpacity: 0.2 
-                } 
-            }).addTo(map);
+    const layer = L.geoJSON(geom, { 
+        style: { 
+            color: "#6750A4", 
+            weight: 2, 
+            opacity: 1, 
+            fillColor: "#6750A4", 
+            fillOpacity: 0.2 
+        } 
+    }).addTo(map);
 
-            map.fitBounds(layer.getBounds(), { padding: [20, 20] });
+    // Спочатку центруємо карту чітко по межах дільниці
+    const bounds = layer.getBounds();
+    map.fitBounds(bounds, { padding: [20, 20] });
 
-            // Очищення старої кнопки
-            const existingBtn = mapContainer.querySelector('.map-fullscreen-btn');
-            if (existingBtn) existingBtn.remove();
+    // Очищення старої кнопки перед створенням нової
+    const existingBtn = mapContainer.querySelector('.map-fullscreen-btn');
+    if (existingBtn) existingBtn.remove();
 
-            // Повні SVG-коди з тегами <path>
-            const expandIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>`;
-            const compressIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>`;
+    // SVG-іконки Material Design
+    const expandIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>`;
+    const compressIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>`;
 
-            const fsBtn = document.createElement('button');
-            fsBtn.className = 'map-fullscreen-btn';
-            fsBtn.type = 'button';
-            fsBtn.title = 'Розгорнути карту';
-            fsBtn.innerHTML = expandIcon;
+    const fsBtn = document.createElement('button');
+    fsBtn.className = 'map-fullscreen-btn';
+    fsBtn.type = 'button';
+    fsBtn.title = 'Розгорнути карту';
+    fsBtn.innerHTML = expandIcon;
 
-            L.DomEvent.disableClickPropagation(fsBtn);
-            L.DomEvent.disableScrollPropagation(fsBtn);
+    L.DomEvent.disableClickPropagation(fsBtn);
+    L.DomEvent.disableScrollPropagation(fsBtn);
 
-            fsBtn.addEventListener('click', () => {
-                const isFullscreen = mapContainer.classList.toggle('fullscreen');
+    fsBtn.addEventListener('click', () => {
+        const isFullscreen = mapContainer.classList.toggle('fullscreen');
 
-                fsBtn.innerHTML = isFullscreen ? compressIcon : expandIcon;
-                fsBtn.title = isFullscreen ? 'Згорнути карту' : 'Розгорнути карту';
+        fsBtn.innerHTML = isFullscreen ? compressIcon : expandIcon;
+        fsBtn.title = isFullscreen ? 'Згорнути карту' : 'Розгорнути карту';
 
-                setTimeout(() => {
-                    map.invalidateSize();
-                    if (layer.getBounds().isValid()) {
-                        map.fitBounds(layer.getBounds(), { padding: [20, 20] });
-                    }
-                }, 200);
-            });
+        setTimeout(() => {
+            map.invalidateSize();
+            if (bounds.isValid()) {
+                if (isFullscreen) {
+                    // Ззнаходимо центр дільниці та охоплюємо радіус ~500 м
+                    const center = bounds.getCenter();
+                    const radiusMeters = 500;
+                    
+                    // Створюємо буферну зону в 500 метрів навколо центру і центруємо карту за нею
+                    const circleBounds = center.toBounds(radiusMeters * 2);
+                    map.fitBounds(circleBounds);
+                } else {
+                    // При поверненні в звичайний режим знову крупно показуємо лише дільницю
+                    map.fitBounds(bounds, { padding: [20, 20] });
+                }
+            }
+        }, 200);
+    });
 
-            mapContainer.appendChild(fsBtn);
-        }
+    mapContainer.appendChild(fsBtn);
+}
 
         async function loadHistory() {
             const historyBody = document.getElementById('historyBody');
