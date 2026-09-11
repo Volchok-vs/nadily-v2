@@ -513,6 +513,60 @@
         .close-btn:hover {
             color: #000;
         }
+
+        /* Контейнер карти робимо відносним для позиціонування кнопки */
+#miniMap {
+    position: relative;
+}
+
+/* Повноекранний режим для контейнера карти */
+#miniMap.fullscreen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 99999 !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+}
+
+/* Кнопка розгортання/згортання карти */
+.map-fullscreen-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    width: 36px;
+    height: 36px;
+    background: #ffffff;
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #49454F;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.map-fullscreen-btn:hover {
+    background: #f1f0f5;
+}
+
+.map-fullscreen-btn:active {
+    transform: scale(0.95);
+}
+
+.map-fullscreen-btn svg {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px;
+    min-height: 20px;
+    fill: currentColor;
+    display: block;
+}
     </style>
     <link rel="stylesheet" href="css/responsive.css">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -1452,10 +1506,63 @@
 
         function initMiniMap(geom) {
             if (map) map.remove();
-            map = L.map('miniMap', { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false });
+
+            const mapContainer = document.getElementById('miniMap');
+
+            map = L.map('miniMap', { 
+                zoomControl: false, 
+                attributionControl: false, 
+                dragging: true, 
+                scrollWheelZoom: true,
+                touchZoom: true
+            });
+
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            const layer = L.geoJSON(geom, { style: { color: "#6750A4", weight: 1, opacity: 1, fillColor: "#6750A4", fillOpacity: 0.15 } }).addTo(map);
+
+            const layer = L.geoJSON(geom, { 
+                style: { 
+                    color: "#6750A4", 
+                    weight: 2, 
+                    opacity: 1, 
+                    fillColor: "#6750A4", 
+                    fillOpacity: 0.2 
+                } 
+            }).addTo(map);
+
             map.fitBounds(layer.getBounds(), { padding: [20, 20] });
+
+            // Очищення старої кнопки
+            const existingBtn = mapContainer.querySelector('.map-fullscreen-btn');
+            if (existingBtn) existingBtn.remove();
+
+            // Повні SVG-коди з тегами <path>
+            const expandIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>`;
+            const compressIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>`;
+
+            const fsBtn = document.createElement('button');
+            fsBtn.className = 'map-fullscreen-btn';
+            fsBtn.type = 'button';
+            fsBtn.title = 'Розгорнути карту';
+            fsBtn.innerHTML = expandIcon;
+
+            L.DomEvent.disableClickPropagation(fsBtn);
+            L.DomEvent.disableScrollPropagation(fsBtn);
+
+            fsBtn.addEventListener('click', () => {
+                const isFullscreen = mapContainer.classList.toggle('fullscreen');
+
+                fsBtn.innerHTML = isFullscreen ? compressIcon : expandIcon;
+                fsBtn.title = isFullscreen ? 'Згорнути карту' : 'Розгорнути карту';
+
+                setTimeout(() => {
+                    map.invalidateSize();
+                    if (layer.getBounds().isValid()) {
+                        map.fitBounds(layer.getBounds(), { padding: [20, 20] });
+                    }
+                }, 200);
+            });
+
+            mapContainer.appendChild(fsBtn);
         }
 
         async function loadHistory() {
@@ -2442,6 +2549,7 @@
     </script>
 
     <script src="js/dev-tools.js"></script>
+    <script src="js/app-navigation.js"></script>
 </body>
 
 </html>
