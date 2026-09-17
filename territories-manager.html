@@ -7,6 +7,7 @@
     <title>Менеджер Територій</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="css/profile-style.css" />
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -1685,6 +1686,10 @@
         <button class="mobile-nav-toggle-new" onclick="toggleSidebar()">☰</button>
         <div class="mobile-title" id="mobile-title">🌍 Території</div>
     </div>
+    <!-- Окрема кнопка "Назад" для PWA-режиму -->
+    <button class="pwa-back-btn" onclick="window.history.back()">
+    ← Назад
+    </button>
     <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div class="sidebar">
         <h2>🗺️ Адмін-панель</h2>

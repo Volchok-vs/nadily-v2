@@ -311,6 +311,18 @@
     body.is-device-landscape .sidebar {
       margin-bottom: 0;
     }
+      /* Приховуємо бокове меню та мобільну шапку у режимі додатка (PWA) */
+    body.is-pwa-active .mobile-header,
+    body.is-pwa-active .sidebar,
+    body.is-pwa-active .sidebar-overlay {
+      display: none !important;
+    }
+
+    /* Прибираємо лівий відступ для основного контенту, оскільки бічна панель прихована */
+    body.is-pwa-active .main-content {
+      margin-left: 0 !important;
+      padding-top: 15px; /* За потреби підкоригуйте верхній відступ */
+    }
   `;
   document.head.appendChild(style);
 
