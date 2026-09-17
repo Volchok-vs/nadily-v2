@@ -139,7 +139,7 @@
               <span id="historyHeaderLabel">Розгорнути</span>
             </span>
           </div>
-          <div id="historyContent" class="hidden" style="    margin-top: 12px; overflow-x: auto; overflow-y: visible;">
+          <div id="historyContent" class="hidden" style="margin-top: 12px; overflow-x: auto; overflow-y: visible;">
             <div id="myHistory">Завантаження історії...</div>
           </div>
         </div>
@@ -494,7 +494,7 @@
       }
 
       const userId = localStorage.getItem("userId");
-      const userRole = window.getUserRole();
+      const userRole = window.getUserRole ? window.getUserRole() : null;
 
       if (!userId) window.location.href = "index.html";
 
@@ -511,7 +511,7 @@
         const mobileTitle = document.getElementById("mobile-title");
         const titles = {
           "my-card": "👤 Моя картка",
-          "recommended-parcels": "📍 Рекомендовані", // ➕ Додано
+          "recommended-parcels": "📍 Рекомендовані",
           "group-cards": "👥 Вісники",
           "all-territories": "📋 S-13",
           "user-details": "👤 Картка вісника",
@@ -522,7 +522,7 @@
         }
       }
 
-      window.switchTab = (tabName) => {
+      window.switchTab = (tabName, skipPushState = false) => {
         document
           .querySelectorAll(".tab-content")
           .forEach((t) => t.classList.add("hidden"));
@@ -539,19 +539,21 @@
           const urlParams = new URLSearchParams(window.location.search);
           const uId = urlParams.get("uId");
 
-          let newUrl =
-            window.location.protocol +
-            "//" +
-            window.location.host +
-            window.location.pathname +
-            "?tab=" +
-            tabName;
+          if (!skipPushState) {
+            let newUrl =
+              window.location.protocol +
+              "//" +
+              window.location.host +
+              window.location.pathname +
+              "?tab=" +
+              tabName;
 
-          if (tabName === "user-details" && uId) {
-            newUrl += `&uId=${uId}`;
+            if (tabName === "user-details" && uId) {
+              newUrl += `&uId=${uId}`;
+            }
+
+            window.history.pushState({ tab: tabName }, "", newUrl);
           }
-
-          window.history.pushState({ path: newUrl }, "", newUrl);
 
           if (tabName === "all-territories") {
             loadAllTerritoriesGrid();
@@ -596,9 +598,6 @@
       window.showCustomConfirm = showCustomConfirm;
       window.triggerReturnParcelWithCustomModal =
         triggerReturnParcelWithCustomModal;
-      console.log(
-        "✅ Функції showCustomConfirm та triggerReturnParcelWithCustomModal додані в window",
-      );
 
       let currentSortCol = "name";
       let sortAsc = true;
@@ -694,19 +693,6 @@
 
         if (!userId) return (window.location.href = "index.html");
 
-        hideLoader();
-
-        setTimeout(() => {
-          const urlParams = new URLSearchParams(window.location.search);
-          const tab = urlParams.get("tab");
-
-          if (tab === "all-territories") {
-            setTimeout(() => {
-              createColorLegend();
-            }, 1000);
-          }
-        }, 500);
-
         document.querySelectorAll(".tab-filter").forEach((btn) => {
           btn.onclick = () => {
             document
@@ -730,7 +716,6 @@
           : localStorage.getItem("userName") || "Користувач";
         document.getElementById("userName").innerText = fullName;
 
-        // Використовуємо session для перевірки ролі
         document.getElementById("displayRole").innerText = session.isSuperAdmin
           ? "Супер  Адмін"
           : session.isAdmin
@@ -778,9 +763,10 @@
         }
 
         if (tab) {
-          window.switchTab(tab);
+          // Завантажуємо потрібну вкладку першим викликом, skipPushState = true
+          window.switchTab(tab, true);
         } else {
-          window.switchTab("my-card");
+          window.switchTab("my-card", true);
         }
 
         hideLoader();
@@ -794,14 +780,6 @@
         }
       }
 
-      function getTheocraticYearText() {
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        const startYear = now.getMonth() >= 8 ? currentYear : currentYear - 1;
-        const nextYearShort = (startYear + 1).toString().slice(-2);
-        return `${startYear}/${nextYearShort}`;
-      }
-
       function getTheocraticStart() {
         const now = new Date();
         const currentYear = now.getFullYear();
@@ -810,12 +788,13 @@
           : new Date(currentYear - 1, 8, 1);
       }
 
-      // Перепідключаємо виклик у profile.html
       async function loadAllTerritoriesGrid() {
-        await renderS13TableGrid(currentTerritoryTab);
+        if (typeof renderS13TableGrid === "function") {
+          await renderS13TableGrid(currentTerritoryTab);
+          createColorLegend();
+        }
       }
       window.loadAllTerritoriesGrid = loadAllTerritoriesGrid;
-     
 
       function createColorLegend(hasCampaign = null) {
         const legend = document.getElementById("campaign-color-legend");
@@ -844,36 +823,12 @@
         legend.style.display = hasCampaignCells ? "flex" : "none";
       }
 
-      const originalLoadAllTerritoriesGrid = loadAllTerritoriesGrid;
-      window.loadAllTerritoriesGrid = async function (...args) {
-        await originalLoadAllTerritoriesGrid.apply(this, args);
-
-        const activeTab = document.querySelector(".nav-item.active");
-        if (activeTab && activeTab.textContent.includes("S-13")) {
-          setTimeout(() => {
-            if (typeof highlightCampaignCells === "function") {
-              highlightCampaignCells();
-            }
-          }, 100);
-        }
-      };
-
       async function loadMyParcels() {
         const userId = localStorage.getItem("userId");
-        console.log(
-          "🔍 [Профіль] Починаємо завантаження дільниць для користувача UUID:",
-          userId,
-        );
 
-        if (!userId) {
-          console.error(
-            "❌ [Профіль] Помилка: userId відсутній у localStorage!",
-          );
-          return;
-        }
+        if (!userId) return;
 
         try {
-          // Прямий чистий запит, заголовки підтягнуться з config.js автоматично
           const { data, error } = await supabase
             .from("parcels")
             .select("*")
@@ -885,24 +840,10 @@
             return;
           }
 
-          console.log("📊 [Профіль] Отримані дільниці з бази даних:", data);
-
-          if (!data || data.length === 0) {
-            console.warn(
-              "⚠️ [Профіль] База повернула 0 дільниць для користувача:",
-              userId,
-            );
-          }
-
-          // Перевіряємо наявність функції рендерингу
           if (typeof renderParcelList === "function") {
             renderParcelList(data, "myParcels", true);
           } else if (typeof displayMyParcels === "function") {
             displayMyParcels(data);
-          } else {
-            console.error(
-              "❌ [Профіль] Не знайдено функцію для рендерингу списку дільниць!",
-            );
           }
         } catch (err) {
           console.error("❌ [Профіль] Критична помилка в loadMyParcels:", err);
@@ -988,7 +929,6 @@
 
       let campaignInfoLoaded = false;
       let campaignHasActive = false;
-      let campaignPreviewLoaded = false;
 
       async function loadCampaignInfo() {
         const campaignInfoContent = document.getElementById(
@@ -1063,18 +1003,15 @@
 
           const sections = [];
 
-          // 1. Обробка активних кампаній
           if (activeCampaigns.length > 0) {
             campaignHasActive = true;
 
-            // Відображаємо у згорнутому прев'ю
             if (campaignPreview) {
               campaignPreview.innerHTML =
                 renderCampaignPreview(activeCampaigns);
               campaignPreview.classList.remove("hidden");
             }
 
-            // Додаємо активну кампанію на початок розгорнутого списку
             sections.push(
               renderCampaignSection(
                 "Активна кампанія",
@@ -1088,7 +1025,6 @@
             if (campaignPreview) campaignPreview.classList.add("hidden");
           }
 
-          // 2. Обробка запланованих кампаній
           if (plannedCampaigns.length > 0) {
             sections.push(
               renderCampaignSection(
@@ -1104,7 +1040,6 @@
             );
           }
 
-          // 3. Обробка минулих кампаній
           if (pastCampaigns.length > 0) {
             sections.push(
               renderCampaignSection(
@@ -1211,7 +1146,6 @@
       window.toggleCampaignInfo = function () {
         const card = document.getElementById("campaignInfoCard");
         const preview = document.getElementById("campaignPreview");
-        const headerText = document.getElementById("campaignHeaderText");
         const headerIcon = document.getElementById("campaignHeaderIcon");
         if (!card) return;
         const hidden = card.classList.toggle("hidden");
@@ -1229,6 +1163,7 @@
           loadCampaignInfo();
         }
       };
+      
       window.toggleHistoryInfo = function () {
         const content = document.getElementById("historyContent");
         const headerLabel = document.getElementById("historyHeaderLabel");
@@ -1303,9 +1238,9 @@
 
       async function showUserDetails(uId, uName) {
         const newUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?tab=user-details&uId=${uId}`;
-        window.history.pushState({ path: newUrl }, "", newUrl);
+        window.history.pushState({ tab: "user-details" }, "", newUrl);
 
-        window.switchTab("user-details");
+        window.switchTab("user-details", true);
         document.getElementById("detailUserName").innerText = uName;
 
         const { data: parcels } = await supabase
@@ -1326,7 +1261,6 @@
         }
       }
 
-      // Допоміжна функція для форматування днів у період (роки, місяці, дні)
       function formatDaysToPeriod(days) {
         const years = Math.floor(days / 365);
         const months = Math.floor((days % 365) / 30);
@@ -1341,25 +1275,20 @@
         return parts.join(" ");
       }
 
-      // Допоміжна функція для отримання стилю попереджувального обрамлення
       function getBorderWarningStyle(days) {
-        const startWarn = 90; // 3 місяці (початок появи помаранчевої рамки)
-        const maxWarn = 120; // 4 місяці (рамка стає повністю червоною)
+        const startWarn = 90;
+        const maxWarn = 120;
 
         if (days < startWarn) {
-          return ""; // Стандартна нейтральна рамка
+          return "";
         }
 
-        // Обчислюємо прогрес від 0.0 (на 90-й день) до 1.0 (на 120-й день)
         const progress = Math.min(
           Math.max((days - startWarn) / (maxWarn - startWarn), 0),
           1,
         );
 
-        // Перехід Hue від 35 (Помаранчевий) до 0 (Червоний)
         const hue = Math.round(35 - progress * 35);
-
-        // Товщина рамки плавно змінюється від 2px до 3px
         const borderWidth = 2 + progress;
 
         return `border: ${borderWidth}px solid hsl(${hue}, 100%, 45%); box-shadow: 0 0 6px rgba(255, 0, 0, ${0.1 + progress * 0.3});`;
@@ -1369,7 +1298,7 @@
         const container = document.getElementById(containerId);
         if (!container) return;
 
-        const isAdmin = window.checkIsAdmin();
+        const isAdmin = window.checkIsAdmin ? window.checkIsAdmin() : false;
 
         if (!parcels || parcels.length === 0) {
           container.innerHTML =
@@ -1447,15 +1376,13 @@
         }
       }
 
-      // --- ЛОГІКА КАСТОМНОГО CONFIRM-ВІКНА ДЛЯ ВИДАЛЕННЯ ---
-      // Функція showCustomConfirm тепер імпортується з js/parcel-logic.js
-
       async function initAdminPanel(targetUserId, targetUserData) {
-        if (!window.checkIsAdmin()) return;
+        if (!window.checkIsAdmin || !window.checkIsAdmin()) return;
 
         currentTargetUserId = targetUserId;
 
-        document.getElementById("admin-settings-block").style.display = "block";
+        const adminBlock = document.getElementById("admin-settings-block");
+        if (adminBlock) adminBlock.style.display = "block";
       }
 
       // Ініціалізація сторінки
@@ -1468,7 +1395,6 @@
       window.openAddPublisherModal = () => {
         const modal = document.getElementById("addPublisherModal");
         modal.style.display = "flex";
-        // Очищуємо інпути при відкритті модалки
         document.getElementById("newPubFirstName").value = "";
         document.getElementById("newPubLastName").value = "";
         document.getElementById("newPubGroupTag").selectedIndex = 0;
@@ -1479,7 +1405,6 @@
         document.getElementById("newPubLastName").value = "";
         document.getElementById("newPubFirstName").value = "";
 
-        // Скидаємо і ховаємо текст помилки
         const errBox = document.getElementById("modalErrorMsg");
         if (errBox) {
           errBox.textContent = "";
@@ -1581,19 +1506,16 @@
         }
       };
 
-      // Відкрити модальне вікно
       window.openExportModal = function () {
         const modal = document.getElementById("exportS13Modal");
         if (modal) modal.style.display = "flex";
       };
 
-      // Закрити модальне вікно
       window.closeExportModal = function () {
         const modal = document.getElementById("exportS13Modal");
         if (modal) modal.style.display = "none";
       };
 
-      // Підтвердити та запустити відповідний експорт
       window.confirmS13Export = function () {
         const selectedFormat =
           document.querySelector('input[name="exportFormat"]:checked')?.value ||

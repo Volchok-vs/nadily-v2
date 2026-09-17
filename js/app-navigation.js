@@ -393,6 +393,21 @@
     </nav>
   `;
 
+  // Слухаємо зміну історії (коли користувач натискає "Назад")
+  window.addEventListener('popstate', (event) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab') || 'my-card';
+    
+    // Перемикаємо вкладку візуально без повторного pushState
+    document.querySelectorAll(".tab-content").forEach((t) => t.classList.add("hidden"));
+    document.querySelectorAll(".nav-item").forEach((n) => n.classList.remove("active"));
+
+    const activeTab = document.getElementById("tab-" + tab) || document.getElementById(tab);
+    if (activeTab) {
+      activeTab.classList.remove("hidden");
+    }
+  });
+
   if (document.body) {
     document.body.insertAdjacentHTML('beforeend', navHTML);
   } else {
